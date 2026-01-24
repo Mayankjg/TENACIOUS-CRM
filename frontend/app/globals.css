@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@import "quill/dist/quill.snow.css";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+/* .p-1 {
+  padding: calc(var(--spacing) * 1);
+}
+.mt-15 {
+  margin-top: calc(var(--spacing) * 15);
+} */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar in Firefox */
+.scrollbar-hidden {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* IE & Edge */
+}
+
+
+/* TodayLeadstable.jsx css  */
+
+/* Hide scrollbar globally */
+html, body {
+  overflow-x: hidden !important;
+}
+
+/* Hide scrollbars but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.tox-promotion,
+.tox-promotion-link,
+.tox-statusbar__branding,
+div[aria-label*="Upgrade"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+
+/* sendemailsection */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

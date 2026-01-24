@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+, "app/dashboard/page.tsx", "proxy.ts", "app/leads/leadpage/ActivityHistoryPage.js/ActivityHistory.tsx", "app/leads/leadpage/CreateLead.tsx", "app/newsletter/send-mail/CustomMessage/page.tsx", "app/newsletter/templates/AddCustomTemplate/page.tsx", "app/newsletter/templates/page.tsx", "app/newsletter/unsubscribed/page.tsx", "app/signup/page.tsx", "app/dashboard/SalesSummary.tsx", "app/dashboard/components/DatePicker.tsx", "app/dashboard/components/SalesSummary.tsx", "app/change-password/page.tsx", "app/leads/calendar/page.tsx", "app/leads/export-leads/page.tsx", "app/leads/import-leads/page.tsx", "app/leads/leadpage/page.tsx", "app/leads/leadpage/TodaysLeadsTable.tsx", "app/leads/leadpage/ActivityHistoryPage.js/comments/CommentsSection.tsx", "app/leads/leadpage/ActivityHistoryPage.js/email/EmailSection.tsx", "app/leads/leads-map/page.tsx", "app/login/page.tsx", "app/logout/page.tsx", "app/manage-salespersons/account-expiry-report/page.tsx", "app/newsletter/contact-list/invalid-emails/page.tsx", "app/newsletter/contact-list/page.tsx", "app/newsletter/from-email-list/page.tsx", "app/newsletter/import-contacts/ImportContactDetail/page.tsx", "app/newsletter/import-contacts/page.tsx", "context/AuthContext.tsx"  ],
+  "exclude": ["node_modules"]
+}
