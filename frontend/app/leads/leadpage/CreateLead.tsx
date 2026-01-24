@@ -1259,7 +1259,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
 
             {/* Analog Clock Time Picker Popup */}
             {showTimePicker && (
-              <div className="absolute mt-2 bg-white border border-gray-500 rounded-lg shadow-lg overflow-hidden w-52 z-30 left-[71%] transform -translate-x-1/2">
+              <div className="absolute mt-2 bg-white border border-gray-500 rounded-lg shadow-lg overflow-hidden w-52 z-30 left-[65%] transform -translate-x-1/2">
                 <div className="text-center mb-1 bg-white py-1.5">
                   <span className={`text-2xl font-light cursor-pointer ${selectingMinute ? 'text-gray-400' : 'text-cyan-400'}`}
                     onClick={() => setSelectingMinute(false)}>
