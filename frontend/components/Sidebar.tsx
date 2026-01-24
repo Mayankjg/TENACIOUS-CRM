@@ -249,6 +249,10 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
             isSidebarOpen={isSidebarOpen}
             items={[
               {
+                name: "Monthly Leads",
+                path: "/reports/monthly-leads",
+              },
+              {
                 name: "Leads by Products List",
                 path: "/reports/products-list",
               },
