@@ -17,6 +17,9 @@ interface Lead {
   leadStatus: string;
   category?: string;
   createdAt: string;
+  salesperson?: string;
+  createdBy?: string;
+  testerSalesman?: string;
   [key: string]: any;
 }
 
@@ -35,6 +38,7 @@ export default function LeadsPage() {
   const [isAddingLead, setIsAddingLead] = useState<boolean>(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [filter, setFilter] = useState<string>("");
+  const [salespersonFilter, setSalespersonFilter] = useState<string>("");
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_URL ||
@@ -43,9 +47,17 @@ export default function LeadsPage() {
   /* --------------------  CHECK URL PARAMETER -------------------- */
   useEffect(() => {
     const action = searchParams.get("action");
+    const salespersonParam = searchParams.get("salesperson");
+    
     if (action === "addLead") {
       setIsAddingLead(true);
       setEditingLead(null);
+    }
+    
+    // If salesperson parameter exists, set it as filter
+    if (salespersonParam) {
+      setSalespersonFilter(salespersonParam);
+      setFilter(""); // Reset status filter when viewing specific salesperson
     }
   }, [searchParams]);
 
@@ -141,12 +153,26 @@ export default function LeadsPage() {
 
   /* -------------------- GET TODAY'S LEADS COUNT -------------------- */
   const getTodayLeadsCount = (): number => {
-    return leads.filter((lead) => isToday(lead.createdAt)).length;
+    const filtered = salespersonFilter 
+      ? leads.filter((lead) => 
+          lead.salesperson === salespersonFilter ||
+          lead.createdBy === salespersonFilter ||
+          lead.testerSalesman === salespersonFilter
+        )
+      : leads;
+    return filtered.filter((lead) => isToday(lead.createdAt)).length;
   };
 
   /* -------------------- GET UNSCHEDULED COUNT -------------------- */
   const getUnscheduledCount = (): number => {
-    return leads.filter((l) =>
+    const filtered = salespersonFilter 
+      ? leads.filter((lead) => 
+          lead.salesperson === salespersonFilter ||
+          lead.createdBy === salespersonFilter ||
+          lead.testerSalesman === salespersonFilter
+        )
+      : leads;
+    return filtered.filter((l) =>
       l.leadStatus === "Unscheduled" ||
       l.category === "Unscheduled"
     ).length;
@@ -154,6 +180,17 @@ export default function LeadsPage() {
 
   /* -------------------- FILTER LOGIC -------------------- */
   const filteredLeads = leads.filter((lead) => {
+    // First apply salesperson filter if exists
+    if (salespersonFilter) {
+      const matchesSalesperson = 
+        lead.salesperson === salespersonFilter ||
+        lead.createdBy === salespersonFilter ||
+        lead.testerSalesman === salespersonFilter;
+      
+      if (!matchesSalesperson) return false;
+    }
+
+    // Then apply status filter
     if (!filter || filter === "all") return true;
 
     if (filter === "today") {
@@ -168,8 +205,16 @@ export default function LeadsPage() {
   });
 
   /* -------------------- GET STATUS COUNT -------------------- */
-  const getCount = (status: string): number =>
-    leads.filter((l) => l.leadStatus === status).length;
+  const getCount = (status: string): number => {
+    const filtered = salespersonFilter 
+      ? leads.filter((lead) => 
+          lead.salesperson === salespersonFilter ||
+          lead.createdBy === salespersonFilter ||
+          lead.testerSalesman === salespersonFilter
+        )
+      : leads;
+    return filtered.filter((l) => l.leadStatus === status).length;
+  };
 
   /* -------------------- HANDLE FILTER BUTTON CLICK -------------------- */
   const handleFilterClick = (filterValue: string): void => {
@@ -178,6 +223,26 @@ export default function LeadsPage() {
     setIsAddingLead(false);
     setEditingLead(null);
     setFilter(filterValue);
+  };
+
+  /* -------------------- CLEAR SALESPERSON FILTER -------------------- */
+  const clearSalespersonFilter = (): void => {
+    setSalespersonFilter("");
+    setFilter("");
+    // Update URL to remove salesperson parameter
+    window.history.pushState({}, '', '/leads/leadpage');
+  };
+
+  /* -------------------- GET TOTAL LEADS COUNT -------------------- */
+  const getTotalLeadsCount = (): number => {
+    if (salespersonFilter) {
+      return leads.filter((lead) => 
+        lead.salesperson === salespersonFilter ||
+        lead.createdBy === salespersonFilter ||
+        lead.testerSalesman === salespersonFilter
+      ).length;
+    }
+    return leads.length;
   };
 
   /* -------------------- UI -------------------- */
@@ -198,6 +263,27 @@ export default function LeadsPage() {
           }
         }
       `}</style>
+
+      
+
+      {/* SALESPERSON FILTER INDICATOR
+      {salespersonFilter && (
+        <div className="mb-4 mt-3 ml-0 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-blue-800 font-semibold">Viewing leads for:</span>
+            <span className="text-blue-900 font-bold text-lg">{salespersonFilter}</span>
+          </div>
+          <button
+            onClick={clearSalespersonFilter}
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Clear Filter
+          </button>
+        </div>
+      )} */}
+
+
+
 
       {/* FILTER BUTTONS - ALWAYS VISIBLE */}
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 mb-6 mt-5 ml-0 justify-items-center custom-grid">
@@ -222,7 +308,7 @@ export default function LeadsPage() {
             active: filter === "today",
           },
           {
-            label: <>All [{leads.length}]</>,
+            label: <>All [{getTotalLeadsCount()}]</>,
             onClick: () => handleFilterClick("all"),
             color: "bg-cyan-600",
             active: filter === "all" || filter === "",
