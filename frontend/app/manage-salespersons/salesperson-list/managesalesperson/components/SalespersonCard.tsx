@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, ChangeEvent } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { Mail, Phone, Briefcase, Trash2, Key } from "lucide-react";
 
 import NewPasswordModal from "./NewPasswordModal";
