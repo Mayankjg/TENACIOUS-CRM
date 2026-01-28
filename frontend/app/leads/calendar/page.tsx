@@ -258,6 +258,21 @@ const LeadsCalendar = () => {
     );
   };
 
+  // NEW: Handle navigation to leads page with date filter
+  const handleViewLeads = (date: Date, event: React.MouseEvent) => {
+    // Prevent event bubbling
+    event.stopPropagation();
+    
+    // Format date as YYYY-MM-DD for the URL parameter
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    // Navigate to leads page with date filter
+    window.location.href = `/leads/leadpage?date=${encodeURIComponent(dateStr)}`;
+  };
+
   // Handle Click: Open Modal
   const handleTimeSlotClick = (day: Date, time: string) => {
     const dateTimeLeads = getLeadsForDateTime(day, time);
@@ -281,7 +296,7 @@ const LeadsCalendar = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h1 className="text-xl sm:text-2xl font-normal text-[#4a4a4a]">
               Calendar :{" "}
-              <span className="text-[#ef4444] font-normal cursor-pointer">
+              <span className="text-[#ef4444] font-normal">
                 {monthNames[currentDate.getMonth()]}-{currentDate.getFullYear()}
               </span>
             </h1>
@@ -351,10 +366,10 @@ const LeadsCalendar = () => {
 
         {/* Month View */}
         {!loading && viewMode === "month" && (
-          <div className="px-2 cursor-pointer sm:px-6 pb-6">
+          <div className="px-2 sm:px-6 pb-6">
             <div className="bg-white rounded border border-gray-300 overflow-hidden">
               {/* Days Header */}
-              <div className="grid cursor-pointer grid-cols-7 bg-[#e5e7eb]">
+              <div className="grid grid-cols-7 bg-[#e5e7eb]">
                 {daysOfWeek.map((day) => (
                   <div
                     key={day}
@@ -376,14 +391,11 @@ const LeadsCalendar = () => {
                   return (
                     <div
                       key={index}
-                      className={`min-h-[80px] cursor-pointer sm:min-h-[120px] lg:min-h-[140px] border-b border-gray-300 p-2 sm:p-3 ${
-                        !isLastColumn ? "border-r border-gray-300 cursor-pointer" : ""
+                      className={`min-h-[80px] sm:min-h-[120px] lg:min-h-[140px] border-b border-gray-300 p-2 sm:p-3 ${
+                        !isLastColumn ? "border-r border-gray-300" : ""
                       } ${
                         !dayInfo.isCurrentMonth ? "bg-gray-50" : "bg-white"
-                      } hover:bg-gray-50  transition-colors relative cursor-pointer`}
-                      title={
-                        leadsCount > 0 ? `${leadsCount} leads scheduled` : ""
-                      }
+                      } hover:bg-gray-50 transition-colors relative`}
                     >
                       <div className="flex flex-col h-full">
                         <div className="text-left">
@@ -393,7 +405,7 @@ const LeadsCalendar = () => {
                             </span>
                           ) : (
                             <span
-                              className={`text-sm sm:text-base cursor-pointerfont-normal ${
+                              className={`text-sm sm:text-base font-normal ${
                                 !dayInfo.isCurrentMonth
                                   ? "text-gray-400"
                                   : "text-gray-700"
@@ -406,7 +418,11 @@ const LeadsCalendar = () => {
 
                         {dayInfo.isCurrentMonth && leadsCount > 0 && (
                           <div className="mt-auto">
-                            <div className="bg-[#334155] cursor-pointer text-white text-xs sm:text-sm font-semibold rounded px-2 sm:px-3 py-1 sm:py-1.5 inline-block">
+                            <div 
+                              className="bg-[#334155] hover:bg-[#1e293b] text-white text-xs sm:text-sm font-semibold rounded px-2 sm:px-3 py-1 sm:py-1.5 inline-block cursor-pointer transition-colors"
+                              onClick={(e) => handleViewLeads(dayInfo.date, e)}
+                              title={`Click to view ${leadsCount} lead${leadsCount > 1 ? 's' : ''}`}
+                            >
                               {leadsCount}
                             </div>
                             {/* Show lead names preview */}
@@ -433,7 +449,7 @@ const LeadsCalendar = () => {
           </div>
         )}
 
-        {/* Week View - Glassy (Thodu Hide) */}
+        {/* Week View */}
         {!loading && viewMode === "week" && (
           <div className="px-2 sm:px-6 pb-6">
             <div className="bg-white/90 backdrop-blur-sm rounded border border-gray-300 overflow-hidden shadow-xl">
@@ -454,7 +470,11 @@ const LeadsCalendar = () => {
                             {day.getDate()}
                           </div>
                           {dayLeads.length > 0 && (
-                            <div className="text-xs text-[#334155] font-semibold mt-1">
+                            <div 
+                              className="text-xs text-[#334155] font-semibold mt-1 cursor-pointer hover:text-[#1e293b] hover:underline transition-colors"
+                              onClick={(e) => handleViewLeads(day, e)}
+                              title={`Click to view ${dayLeads.length} lead${dayLeads.length > 1 ? 's' : ''}`}
+                            >
                               ({dayLeads.length} leads)
                             </div>
                           )}
@@ -495,7 +515,7 @@ const LeadsCalendar = () => {
                               onClick={() => handleTimeSlotClick(day, time)}
                             >
                               {timeLeads.length > 0 && (
-                                <div className="bg-[#3b82f6]/90 text-white text-xs rounded p-1 mb-1">
+                                <div className="bg-[#3b82f6]/90 hover:bg-[#2563eb] text-white text-xs rounded p-1 mb-1 transition-colors">
                                   <div className="font-semibold">
                                     {timeLeads.length} lead
                                     {timeLeads.length > 1 ? "s" : ""}
@@ -524,7 +544,7 @@ const LeadsCalendar = () => {
         )}
       </div>
 
-      {/* Modal for Time Slot Details - Shows ON TOP of Week Page */}
+      {/* Modal for Time Slot Details */}
       {selectedTimeSlot && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-200">
