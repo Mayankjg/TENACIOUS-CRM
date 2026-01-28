@@ -13,7 +13,6 @@ export default function LeadsMapPage() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Load Google Maps script
     const loadGoogleMaps = () => {
       if (window.google && window.google.maps) {
         setIsLoaded(true);
@@ -48,30 +47,30 @@ export default function LeadsMapPage() {
 
   return (
     <div className="w-full h-screen flex flex-col">
-      {/* Header with buttons */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button className="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700 transition">
-            Display On Map
-          </button>
+      <div className="bg-white mt-3 border-b px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+            <button className="w-full sm:w-auto bg-gray-800 text-white px-4 sm:px-6 py-2 rounded hover:bg-gray-700 transition text-sm sm:text-base whitespace-nowrap">
+              Display On Map
+            </button>
 
-          <span className="bg-red-50 text-red-400 text-sm py-2.5 rounded-sm">
-            Please Click Display On Map To View Your Sales Person On Map
-          </span>
-        </div>
+            <span className="w-full sm:w-auto bg-red-50 text-red-400 text-xs px-2 py-2.5 rounded-sm">
+              Please Click <span className="font-semibold">Display On Map</span> To View Your Sales Person On Map
+            </span>
+          </div>
         
-        <div className="flex gap-3">
-          <button className="bg-cyan-500 text-white px-6 py-2 rounded hover:bg-cyan-600 transition">
-            Refresh
-          </button>
-          <button className="bg-pink-500 text-white px-6 py-2 rounded hover:bg-pink-600 transition">
-            Show Online Salespersons
-          </button>
+          <div className="flex gap-3 w-full lg:w-auto">
+            <button className="flex-1 lg:flex-none bg-cyan-500 text-white px-4 sm:px-6 py-2 rounded hover:bg-cyan-600 transition text-sm sm:text-base whitespace-nowrap">
+              Refresh
+            </button>
+            <button className="flex-1 lg:flex-none bg-pink-500 text-white px-4 sm:px-6 py-2 rounded hover:bg-pink-600 transition text-sm sm:text-base whitespace-nowrap">
+              Show Online Salespersons
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Map Container */}
-      <div className="flex-1">
+      <div className="flex-1 w-full">
         <div ref={mapRef} className="w-full h-full" />
       </div>
     </div>
