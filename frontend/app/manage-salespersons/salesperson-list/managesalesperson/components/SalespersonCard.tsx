@@ -30,13 +30,11 @@ export default function SalespersonCard() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
 
-  // Image loading states
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set());
 
   const API_BASE = "https://tt-crm-pro.onrender.com/api";
   const SERVER_BASE = "https://tt-crm-pro.onrender.com";
 
-  // FETCH FROM BACKEND
   useEffect(() => {
     const fetchList = async (): Promise<void> => {
       try {
@@ -51,7 +49,6 @@ export default function SalespersonCard() {
     fetchList();
   }, []);
 
-  // DELETE SP
   const deleteSP = async (id: string): Promise<void> => {
     if (!confirm("Delete this salesperson?")) return;
 
@@ -68,16 +65,13 @@ export default function SalespersonCard() {
     }
   };
 
-  // FIXED IMAGE RESOLUTION FUNCTION - HANDLES WRONG DOMAIN
   const resolveImageSrc = (profileImage?: string): string => {
-    // If no profile image provided
     if (!profileImage || profileImage.trim() === "") {
       return "";
     }
 
     let resolvedUrl = profileImage;
 
-    // FIX WRONG DOMAIN - Replace incorrect domain with correct one
     if (resolvedUrl.includes("crm-tenacious-techies-pro-1.onrender.com")) {
       resolvedUrl = resolvedUrl.replace(
         "crm-tenacious-techies-pro-1.onrender.com",
@@ -87,57 +81,48 @@ export default function SalespersonCard() {
       return resolvedUrl;
     }
 
-    // If it's already a full URL with correct domain
     if (resolvedUrl.startsWith("https://tt-crm-pro.onrender.com")) {
       console.log("✅ Correct full URL:", resolvedUrl);
       return resolvedUrl;
     }
 
-    // If it's any other full URL (http:// or https://)
     if (/^https?:\/\//i.test(resolvedUrl)) {
       console.log("⚠️ External URL detected:", resolvedUrl);
       return resolvedUrl;
     }
 
-    // If it starts with /uploads/, prepend server base
     if (resolvedUrl.startsWith("/uploads/")) {
       resolvedUrl = `${SERVER_BASE}${resolvedUrl}`;
       console.log("📁 Path with /uploads/:", resolvedUrl);
       return resolvedUrl;
     }
 
-    // If it starts with uploads/ (without leading slash)
     if (resolvedUrl.startsWith("uploads/")) {
       resolvedUrl = `${SERVER_BASE}/${resolvedUrl}`;
       console.log("📁 Path with uploads/:", resolvedUrl);
       return resolvedUrl;
     }
 
-    // If it's just a filename
     if (!resolvedUrl.includes("/")) {
       resolvedUrl = `${SERVER_BASE}/uploads/${resolvedUrl}`;
       console.log("📄 Filename only:", resolvedUrl);
       return resolvedUrl;
     }
 
-    // Default: prepend server base
     resolvedUrl = `${SERVER_BASE}${resolvedUrl.startsWith("/") ? "" : "/"}${resolvedUrl}`;
     console.log("🔄 Default resolution:", resolvedUrl);
     return resolvedUrl;
   };
 
-  // Handle image load error
   const handleImageError = (id: string, imageSrc: string) => {
     console.error(`❌ Failed to load image for ${id}:`, imageSrc);
     setImageLoadErrors((prev) => new Set(prev).add(id));
   };
 
-  // Check if image failed to load
   const hasImageError = (id: string) => {
     return imageLoadErrors.has(id);
   };
 
-  // Navigate to leads page with salesperson filter
   const handleViewLeads = (salesperson: Salesperson) => {
     window.location.href = `/leads/leadpage?salesperson=${encodeURIComponent(
       salesperson.username
@@ -162,7 +147,6 @@ export default function SalespersonCard() {
 
   return (
     <div className="bg-[#f9fafb] p-5 min-h-[80vh] flex justify-center">
-      {/* PASSWORD MODAL */}
       {isModalOpen && selectedId && (
         <NewPasswordModal
           salespersonId={selectedId}
@@ -183,7 +167,6 @@ export default function SalespersonCard() {
         />
       )}
 
-      {/* EMAIL MODAL */}
       {isEmailModalOpen && selectedEmailId && (
         <ChangeEmailModal
           salespersonId={selectedEmailId}
@@ -213,7 +196,6 @@ export default function SalespersonCard() {
       )}
 
       <div className="bg-white w-full max-w-[1400px] border border-black text-black">
-        {/* HEADER */}
         <div className="py-4">
           <div className="px-6">
             <div className="flex flex-col md:flex-row justify-between gap-3 md:items-center">
@@ -237,7 +219,6 @@ export default function SalespersonCard() {
           <hr className="border-gray-300 mt-4" />
         </div>
 
-        {/* SEARCH BAR */}
         <div className="flex flex-col md:flex-row justify-end px-6 mb-4 gap-2">
           <input
             type="text"
@@ -252,7 +233,6 @@ export default function SalespersonCard() {
           </button>
         </div>
 
-        {/* LIST */}
         {filtered.length === 0 ? (
           <p className="text-center py-10 text-gray-500">
             {searchQuery ? "No matching salespersons found" : "No Salespersons Found"}
@@ -269,15 +249,12 @@ export default function SalespersonCard() {
                   className="p-4 bg-white border rounded-lg hover:bg-gray-50 shadow-sm transition-colors"
                 >
                   <div className="flex gap-4">
-                    {/* LEFT - Image */}
                     <div className="w-16 h-20 border rounded flex-shrink-0 overflow-hidden bg-gray-100">
                       {showPlaceholder ? (
-                        // Placeholder when no image
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
                           <User className="w-8 h-8 text-gray-400" />
                         </div>
                       ) : (
-                        // Actual image
                         <img
                           src={imageSrc}
                           className="w-full h-full object-cover"
@@ -288,16 +265,13 @@ export default function SalespersonCard() {
                       )}
                     </div>
 
-                    {/* MIDDLE - Info Grid */}
                     <div className="flex-1 min-w-0">
-                      {/* Row 1: Username */}
                       <div className="mb-2">
                         <h3 className="text-base font-bold text-gray-800">
                           {sp.username}
                         </h3>
                       </div>
 
-                      {/* Row 2: First Name | Designation | Delete | View Leads */}
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 mb-2">
                         <div className="text-sm text-gray-600 md:col-span-3">
                           {sp.firstname} {sp.lastname}
@@ -330,7 +304,6 @@ export default function SalespersonCard() {
                         </div>
                       </div>
 
-                      {/* Row 3: Email | Contact | Change Password | Change Email ID */}
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4">
                         <div className="flex items-center gap-1.5 min-w-0 md:col-span-3">
                           <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
