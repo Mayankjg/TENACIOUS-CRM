@@ -39,7 +39,6 @@ const LeadsCalendar = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
-  // State for Modal
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
 
   const API_BASE =
@@ -90,14 +89,12 @@ const LeadsCalendar = () => {
     "11pm",
   ];
 
-  // Auto attach token
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
   }, [token]);
 
-  // Fetch leads from API
   useEffect(() => {
     if (!tokenReady) return;
     if (!token) return;
@@ -125,7 +122,6 @@ const LeadsCalendar = () => {
     }
   };
 
-  // Group leads by date
   const leadsDataByDate = useMemo(() => {
     const grouped: Record<string, Lead[]> = {};
 
@@ -145,7 +141,6 @@ const LeadsCalendar = () => {
     return grouped;
   }, [leads]);
 
-  // Group leads by date and time for week view
   const leadsDataByDateTime = useMemo(() => {
     const grouped: Record<string, Lead[]> = {};
 
@@ -258,22 +253,17 @@ const LeadsCalendar = () => {
     );
   };
 
-  // NEW: Handle navigation to leads page with date filter
   const handleViewLeads = (date: Date, event: React.MouseEvent) => {
-    // Prevent event bubbling
     event.stopPropagation();
-    
-    // Format date as YYYY-MM-DD for the URL parameter
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
-    
-    // Navigate to leads page with date filter
+
     window.location.href = `/leads/leadpage?date=${encodeURIComponent(dateStr)}`;
   };
 
-  // Handle Click: Open Modal
   const handleTimeSlotClick = (day: Date, time: string) => {
     const dateTimeLeads = getLeadsForDateTime(day, time);
     if (dateTimeLeads.length > 0) {
@@ -291,7 +281,6 @@ const LeadsCalendar = () => {
   return (
     <div className="min-h-screen bg-[#e8ecef] p-2 sm:p-4 md:p-6">
       <div className="max-w-[1400px] mx-auto bg-white rounded shadow border border-gray-200">
-        {/* Header Section */}
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h1 className="text-xl sm:text-2xl font-normal text-[#4a4a4a]">
@@ -310,7 +299,7 @@ const LeadsCalendar = () => {
           <hr className="border-t border-gray-300 -mx-4 sm:-mx-6" />
         </div>
 
-        {/* Navigation and View Toggle */}
+
         <div className="px-4 sm:px-6 pb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex gap-0 bg-[#38bdf8] rounded overflow-hidden">
@@ -357,18 +346,15 @@ const LeadsCalendar = () => {
           </div>
         </div>
 
-        {/* Loading State */}
         {loading && (
           <div className="px-2 sm:px-6 pb-6 text-center">
             <p className="text-gray-500">Loading leads data...</p>
           </div>
         )}
 
-        {/* Month View */}
         {!loading && viewMode === "month" && (
           <div className="px-2 sm:px-6 pb-6">
             <div className="bg-white rounded border border-gray-300 overflow-hidden">
-              {/* Days Header */}
               <div className="grid grid-cols-7 bg-[#e5e7eb]">
                 {daysOfWeek.map((day) => (
                   <div
@@ -380,7 +366,6 @@ const LeadsCalendar = () => {
                 ))}
               </div>
 
-              {/* Calendar Grid */}
               <div className="grid grid-cols-7">
                 {days.map((dayInfo, index) => {
                   const dayLeads = getLeadsForDate(dayInfo.date);
@@ -449,13 +434,11 @@ const LeadsCalendar = () => {
           </div>
         )}
 
-        {/* Week View */}
         {!loading && viewMode === "week" && (
           <div className="px-2 sm:px-6 pb-6">
             <div className="bg-white/90 backdrop-blur-sm rounded border border-gray-300 overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <div className="min-w-[400px]">
-                  {/* Week Header - Days */}
                   <div className="grid grid-cols-8 bg-[#e5e7eb] border-b border-gray-300 bg-opacity-90">
                     <div className="bg-[#e5e7eb] border-r border-gray-300"></div>
                     {weekDays.map((day, dayIndex) => {
@@ -483,7 +466,6 @@ const LeadsCalendar = () => {
                     })}
                   </div>
 
-                  {/* All-day Row */}
                   <div className="grid grid-cols-8 border-b border-gray-300">
                     <div className="bg-[#e5e7eb] text-left py-2 sm:py-3 px-2 text-xs sm:text-sm font-normal text-gray-600 border-r border-gray-300">
                       all-day
@@ -496,7 +478,6 @@ const LeadsCalendar = () => {
                     ))}
                   </div>
 
-                  {/* Time Slots */}
                   <div className="overflow-y-auto max-h-[500px]">
                     {timeSlots.map((time, timeIndex) => (
                       <div
@@ -544,7 +525,6 @@ const LeadsCalendar = () => {
         )}
       </div>
 
-      {/* Modal for Time Slot Details */}
       {selectedTimeSlot && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-200">
