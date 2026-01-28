@@ -426,7 +426,7 @@ const LeadsCalendar = () => {
                               {leadsCount}
                             </div>
                             {/* Show lead names preview */}
-                            <div className="mt-1 text-xs text-gray-600 truncate">
+                            {/* <div className="mt-1 text-xs text-gray-600 truncate">
                               {dayLeads.slice(0, 2).map((lead, idx) => (
                                 <div key={idx} className="truncate">
                                   {lead.firstName} {lead.lastName}
@@ -437,7 +437,7 @@ const LeadsCalendar = () => {
                                   +{leadsCount - 2} more
                                 </div>
                               )}
-                            </div>
+                            </div> */}
                           </div>
                         )}
                       </div>
