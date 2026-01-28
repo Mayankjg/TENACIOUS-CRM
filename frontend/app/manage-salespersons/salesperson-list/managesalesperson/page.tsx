@@ -1,4 +1,3 @@
-// app/manage-salespersons/salesperson-list/managesalesperson/page.js
 "use client";
 import SalespersonCard from "./components/SalespersonCard";
 

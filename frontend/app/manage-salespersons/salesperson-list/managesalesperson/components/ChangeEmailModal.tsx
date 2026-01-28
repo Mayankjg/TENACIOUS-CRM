@@ -27,7 +27,6 @@ export default function ChangeEmailModal({
       return;
     }
 
-    // Call Parent Handler
     onEmailChange(salespersonId, newEmail);
 
     onClose();
