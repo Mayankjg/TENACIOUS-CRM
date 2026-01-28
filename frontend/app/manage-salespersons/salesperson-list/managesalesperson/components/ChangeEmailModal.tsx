@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, ChangeEvent, MouseEvent } from "react";
+import { useState, ChangeEvent, MouseEvent } from "react";
 
 interface ChangeEmailModalProps {
   salespersonId: string;
@@ -15,7 +15,6 @@ export default function ChangeEmailModal({
   const [newEmail, setNewEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
 
-  // Email Validation
   const validate = (email: string): boolean => 
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
