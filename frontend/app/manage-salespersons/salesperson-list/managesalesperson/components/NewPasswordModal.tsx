@@ -1,16 +1,22 @@
 "use client";
 import React, { useState } from "react";
 
+interface NewPasswordModalProps {
+  salespersonId: number | string;
+  onClose: () => void;
+  onPasswordChange: (id: number | string, newPassword: string) => Promise<void>;
+}
+
 export default function NewPasswordModal({
   salespersonId,
   onClose,
   onPasswordChange,
-}) {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+}: NewPasswordModalProps): React.ReactNode {
+  const [newPassword, setNewPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
-  const submit = () => {
+  const submit = (): void => {
     setError("");
 
     if (newPassword.length < 6) {

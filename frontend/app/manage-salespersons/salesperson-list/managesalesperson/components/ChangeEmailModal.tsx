@@ -1,18 +1,25 @@
 "use client";
 import React, { useState } from "react";
 
+interface ChangeEmailModalProps {
+  salespersonId: number | string;
+  onClose: () => void;
+  onEmailChange: (id: number | string, email: string) => Promise<void>;
+}
+
 export default function ChangeEmailModal({
   salespersonId,
   onClose,
   onEmailChange,
-}) {
-  const [newEmail, setNewEmail] = useState("");
-  const [error, setError] = useState("");
+}: ChangeEmailModalProps): React.ReactNode {
+  const [newEmail, setNewEmail] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   // Email Validation
-  const validate = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validate = (email: string): boolean => 
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const submit = () => {
+  const submit = (): void => {
     setError("");
 
     if (!validate(newEmail)) {

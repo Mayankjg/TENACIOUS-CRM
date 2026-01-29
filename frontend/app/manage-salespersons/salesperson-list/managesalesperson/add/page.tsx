@@ -1,21 +1,54 @@
-// frontend/app/manage-salespersons/salesperson-list/managesalesperson/add/page.jsx
+// frontend/app/manage-salespersons/salesperson-list/managesalesperson/add/page.tsx
 // MULTI-TENANT FIXED
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent, FormEvent, DragEvent } from "react";
 import { useRouter } from "next/navigation";
 
 // ✅ CRITICAL: Import tenant-aware utilities
 import { validateSession, isAdmin } from "@/utils/api";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
-export default function AddSalespersonForm() {
+// Type Definitions
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
+}
+
+interface FormData {
+  userName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  designation: string;
+  country: string;
+  countryCode: string;
+  contactNo: string;
+  profileImage: File | null;
+}
+
+interface FormErrors {
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  designation?: string;
+  country?: string;
+  contactNo?: string;
+}
+
+interface ErrorResponse {
+  message?: string;
+}
+
+export default function AddSalespersonForm(): React.ReactNode {
   const router = useRouter();
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
+  const API_BASE: string = process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     userName: "",
     firstName: "",
     lastName: "",
@@ -27,14 +60,14 @@ export default function AddSalespersonForm() {
     profileImage: null,
   });
 
-  const [imagePreview, setImagePreview] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [dragOver, setDragOver] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [dragOver, setDragOver] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   
   // Dynamic countries state
-  const [countries, setCountries] = useState([]);
-  const [loadingCountries, setLoadingCountries] = useState(true);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState<boolean>(true);
 
   // ✅ CRITICAL: Validate session and admin role on mount
   useEffect(() => {
@@ -60,8 +93,8 @@ export default function AddSalespersonForm() {
         );
         const data = await response.json();
 
-        const formattedCountries = data
-          .map((country) => {
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
             const name = country.name?.common || "";
             const root = country.idd?.root || "";
             const suffixes = country.idd?.suffixes || [];
@@ -77,8 +110,8 @@ export default function AddSalespersonForm() {
               displayName: callingCode ? `${name} (${callingCode})` : name,
             };
           })
-          .filter((c) => c.name && c.callingCode)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
 
         setCountries(formattedCountries);
         setLoadingCountries(false);
@@ -91,7 +124,7 @@ export default function AddSalespersonForm() {
     fetchCountries();
   }, []);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
     const { name, value } = e.target;
     
     // Auto-fill country code when country is selected
@@ -108,7 +141,7 @@ export default function AddSalespersonForm() {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
     
-    if (errors[name]) {
+    if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
@@ -116,7 +149,7 @@ export default function AddSalespersonForm() {
   // -------------------------------
   // HANDLE IMAGE (INPUT + DRAG / DROP)
   // -------------------------------
-  const processImageFile = (file) => {
+  const processImageFile = (file: File | undefined): void => {
     if (!file) return;
 
     // Validate file type
@@ -135,16 +168,16 @@ export default function AddSalespersonForm() {
     setFormData((prev) => ({ ...prev, profileImage: file }));
 
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     processImageFile(file);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     setDragOver(false);
 
@@ -152,21 +185,21 @@ export default function AddSalespersonForm() {
     processImageFile(file);
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     setDragOver(true);
   };
 
-  const handleDragLeave = () => setDragOver(false);
+  const handleDragLeave = (): void => setDragOver(false);
 
   // Remove image handler
-  const handleRemoveImage = () => {
+  const handleRemoveImage = (): void => {
     setFormData((prev) => ({ ...prev, profileImage: null }));
     setImagePreview(null);
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
     if (!formData.userName.trim()) newErrors.userName = "User Name is required";
     if (!formData.firstName.trim())
       newErrors.firstName = "First Name is required";
@@ -186,7 +219,7 @@ export default function AddSalespersonForm() {
   };
 
   // ✅ CRITICAL: Save with automatic tenant isolation (JWT token contains tenantId)
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!validateForm()) {
       alert("Please fill in all required fields correctly.");
       return;
@@ -245,13 +278,15 @@ export default function AddSalespersonForm() {
     } catch (error) {
       console.error("❌ Error creating salesperson:", error);
       
-      if (error.response?.status === 401) {
+      const axiosError = error as AxiosError<ErrorResponse>;
+      
+      if (axiosError.response?.status === 401) {
         alert("Session expired. Please login again.");
         router.push("/login");
       } else {
         alert(
-          error.response?.data?.message || 
-          `Error: ${error.message || "Unknown error occurred"}`
+          axiosError.response?.data?.message || 
+          `Error: ${axiosError.message || "Unknown error occurred"}`
         );
       }
     } finally {
@@ -259,7 +294,7 @@ export default function AddSalespersonForm() {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     if (
       typeof window !== "undefined" &&
       confirm(
