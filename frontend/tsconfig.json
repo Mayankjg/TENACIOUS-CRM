@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/dashboard/page.tsx", "proxy.ts"  ],
+, "app/dashboard/page.tsx", "proxy.ts", "app/manage-salespersons/salesperson-list/managesalesperson/add/page.js"  ],
   "exclude": ["node_modules"]
 }

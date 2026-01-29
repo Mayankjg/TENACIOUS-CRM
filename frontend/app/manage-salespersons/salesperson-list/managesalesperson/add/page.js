@@ -13,7 +13,7 @@ import axios from "axios";
 export default function AddSalespersonForm() {
   const router = useRouter();
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://tenacious-techies-crm-01.onrender.com";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
 
   const [formData, setFormData] = useState({
     userName: "",
@@ -31,6 +31,10 @@ export default function AddSalespersonForm() {
   const [errors, setErrors] = useState({});
   const [dragOver, setDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Dynamic countries state
+  const [countries, setCountries] = useState([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
 
   // ✅ CRITICAL: Validate session and admin role on mount
   useEffect(() => {
@@ -47,10 +51,66 @@ export default function AddSalespersonForm() {
     }
   }, [router]);
 
+  // Fetch countries dynamically
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,idd"
+        );
+        const data = await response.json();
+
+        const formattedCountries = data
+          .map((country) => {
+            const name = country.name?.common || "";
+            const root = country.idd?.root || "";
+            const suffixes = country.idd?.suffixes || [];
+
+            let callingCode = "";
+            if (root) {
+              callingCode = suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
+            }
+
+            return {
+              name,
+              callingCode,
+              displayName: callingCode ? `${name} (${callingCode})` : name,
+            };
+          })
+          .filter((c) => c.name && c.callingCode)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setCountries(formattedCountries);
+        setLoadingCountries(false);
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+        setLoadingCountries(false);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+    
+    // Auto-fill country code when country is selected
+    if (name === "country") {
+      const selectedCountry = countries.find((c) => c.name === value);
+      const newCode = selectedCountry?.callingCode || "";
+
+      setFormData((prev) => ({
+        ...prev,
+        country: value,
+        countryCode: newCode,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+    
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   // -------------------------------
@@ -58,6 +118,19 @@ export default function AddSalespersonForm() {
   // -------------------------------
   const processImageFile = (file) => {
     if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      alert('Image size should not exceed 5MB');
+      return;
+    }
 
     setFormData((prev) => ({ ...prev, profileImage: file }));
 
@@ -85,6 +158,12 @@ export default function AddSalespersonForm() {
   };
 
   const handleDragLeave = () => setDragOver(false);
+
+  // Remove image handler
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({ ...prev, profileImage: null }));
+    setImagePreview(null);
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -170,7 +249,10 @@ export default function AddSalespersonForm() {
         alert("Session expired. Please login again.");
         router.push("/login");
       } else {
-        alert(error.response?.data?.message || "Error: " + error.message);
+        alert(
+          error.response?.data?.message || 
+          `Error: ${error.message || "Unknown error occurred"}`
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -235,7 +317,7 @@ export default function AddSalespersonForm() {
                   onChange={handleImageChange}
                   className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
                   file:rounded file:border file:border-gray-300
-                  file:bg-white file:text-gray-700 cursor-pointer"
+                  file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer"
                 />
 
                 {/* Drag Drop Area */}
@@ -245,21 +327,52 @@ export default function AddSalespersonForm() {
                   onDragLeave={handleDragLeave}
                   className={`mt-3 border-2 ${
                     dragOver ? "border-cyan-500 bg-cyan-50" : "border-gray-300"
-                  } border-dashed rounded p-3 text-center text-gray-500 text-sm cursor-pointer`}
+                  } border-dashed rounded p-3 text-center text-gray-500 text-sm cursor-pointer transition-colors`}
                 >
-                  Drag & Drop Image Here
+                  {dragOver ? "Drop image here..." : "Drag & Drop Image Here"}
                 </div>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  Max size: 5MB | Formats: JPG, PNG, GIF, WEBP
+                </p>
               </div>
 
-              <div className="w-[120px] h-[120px] border border-gray-300 rounded bg-white flex items-start justify-center overflow-hidden">
+              {/* Image Preview Box */}
+              <div className="w-[120px] h-[120px] border border-gray-300 rounded bg-white flex items-center justify-center overflow-hidden relative">
                 {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Remove button */}
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                      title="Remove image"
+                    >
+                      ×
+                    </button>
+                  </>
                 ) : (
-                  <span className="text-gray-300 text-xs mt-2">No image</span>
+                  <div className="text-center p-2">
+                    <svg
+                      className="w-8 h-8 mx-auto text-gray-300 mb-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <span className="text-gray-400 text-xs">No image</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -357,16 +470,19 @@ export default function AddSalespersonForm() {
                 name="country"
                 value={formData.country}
                 onChange={handleInputChange}
+                disabled={loadingCountries}
                 className={`w-full px-4 py-2.5 border ${
                   errors.country ? "border-red-500" : "border-gray-300"
                 } rounded`}
               >
-                <option value="">Select Country</option>
-                <option value="United States">United States</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="Canada">Canada</option>
-                <option value="India">India</option>
-                <option value="Australia">Australia</option>
+                <option value="">
+                  {loadingCountries ? "Loading Countries..." : "Select Country"}
+                </option>
+                {countries.map((country) => (
+                  <option key={country.name} value={country.name}>
+                    {country.displayName}
+                  </option>
+                ))}
               </select>
               {errors.country && (
                 <p className="text-red-500 text-xs mt-1">{errors.country}</p>
@@ -383,8 +499,10 @@ export default function AddSalespersonForm() {
                   name="countryCode"
                   value={formData.countryCode}
                   onChange={handleInputChange}
+                  readOnly
+                  title="Country code is automatically selected based on Country"
                   placeholder="Code"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded bg-gray-50"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
                 />
               </div>
 
@@ -417,7 +535,7 @@ export default function AddSalespersonForm() {
           <button
             onClick={handleSave}
             disabled={isSubmitting}
-            className="px-8 cursor-pointer py-2 text-white bg-cyan-500 rounded hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 cursor-pointer py-2 text-white bg-cyan-500 rounded hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Saving..." : "Save"}
           </button>
@@ -425,7 +543,7 @@ export default function AddSalespersonForm() {
           <button
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="px-6 py-2 cursor-pointer text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+            className="px-6 py-2 cursor-pointer text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
