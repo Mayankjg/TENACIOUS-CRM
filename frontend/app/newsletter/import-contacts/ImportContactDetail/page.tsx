@@ -1,30 +1,102 @@
+// frontend/app/newsletter/import-contact-detail/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+
+const API_BASE = "https://tt-crm-pro.onrender.com";
+
+interface Product {
+  _id?: string;
+  id?: string;
+  name: string;
+}
+
+interface Contact {
+  id: number;
+  name: string;
+  email: string;
+  product: string;
+}
+
+interface ImportData {
+  fileData: string[][];
+  columnHeaders: string[];
+}
 
 export default function ImportContactDetail() {
   const router = useRouter();
-  const [fileData, setFileData] = useState([]);
-  const [columnHeaders, setColumnHeaders] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [nameColumnIndex, setNameColumnIndex] = useState("");
-  const [emailColumnIndex, setEmailColumnIndex] = useState("");
-  const [products, setProducts] = useState([]);
+  const [fileData, setFileData] = useState<string[][]>([]);
+  const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [nameColumnIndex, setNameColumnIndex] = useState<string>("");
+  const [emailColumnIndex, setEmailColumnIndex] = useState<string>("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+
+  // Fetch products from API
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async (): Promise<void> => {
+    try {
+      setLoadingProducts(true);
+      const res = await fetch(`${API_BASE}/api/manage-items/products/get-products`);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      // Handle different response formats
+      let productsArray: Product[] = [];
+      
+      if (Array.isArray(data)) {
+        // If response is directly an array
+        productsArray = data;
+      } else if (data.products && Array.isArray(data.products)) {
+        // If response has a products property
+        productsArray = data.products;
+      } else if (data.data && Array.isArray(data.data)) {
+        // If response has a data property
+        productsArray = data.data;
+      } else {
+        console.warn("Unexpected API response format:", data);
+        productsArray = [];
+      }
+      
+      setProducts(productsArray);
+    } catch (err) {
+      console.error("Fetch products error:", err);
+      alert("Error loading products. Please try again.");
+      setProducts([]); // Set empty array on error
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   useEffect(() => {
     const importData = localStorage.getItem('importFileData');
     if (importData) {
-      const data = JSON.parse(importData);
-      setFileData(data.fileData || []);
-      setColumnHeaders(data.columnHeaders || []);
+      try {
+        const data: ImportData = JSON.parse(importData);
+        setFileData(data.fileData || []);
+        setColumnHeaders(data.columnHeaders || []);
+      } catch (err) {
+        console.error("Error parsing import data:", err);
+        alert("Error loading import data. Please try importing again.");
+        router.push('/newsletter/import-contacts');
+      }
+    } else {
+      // No import data found, redirect back
+      alert("No import data found. Please upload a file first.");
+      router.push('/newsletter/import-contacts');
     }
-
-    const savedProducts = JSON.parse(localStorage.getItem("products") || "[]");
-    setProducts(savedProducts);
   }, [router]);
 
-  const handleSave = () => {
+  const handleSave = (): void => {
     if (!selectedProduct) {
       alert('Please select a product');
       return;
@@ -38,7 +110,7 @@ export default function ImportContactDetail() {
       return;
     }
 
-    const newContacts = fileData.map((row, index) => {
+    const newContacts: Contact[] = fileData.map((row, index) => {
       const name = row[parseInt(nameColumnIndex)] || '';
       const email = row[parseInt(emailColumnIndex)] || '';
 
@@ -46,7 +118,7 @@ export default function ImportContactDetail() {
         id: Date.now() + index,
         name: name.toString().trim(),
         email: email.toString().trim(),
-        product: selectedProduct
+        product: selectedProduct  // This now contains the product name
       };
     }).filter(contact => contact.name && contact.email);
 
@@ -55,7 +127,8 @@ export default function ImportContactDetail() {
       return;
     }
 
-    const existingContacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+    const existingContactsStr = localStorage.getItem('contacts');
+    const existingContacts: Contact[] = existingContactsStr ? JSON.parse(existingContactsStr) : [];
     const allContacts = [...existingContacts, ...newContacts];
     localStorage.setItem('contacts', JSON.stringify(allContacts));
 
@@ -65,7 +138,7 @@ export default function ImportContactDetail() {
     router.push('/newsletter/contact-list');
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     localStorage.removeItem('importFileData');
     router.push('/newsletter/contact-list');
   };
@@ -107,17 +180,23 @@ export default function ImportContactDetail() {
                     </label>
                     <select
                       value={selectedProduct}
-                      onChange={(e) => setSelectedProduct(e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedProduct(e.target.value)}
                       className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent"
+                      disabled={loadingProducts}
                     >
-                      <option value="">Select Products</option>
-                      {products.map((product) => (
-                        <option key={product.id} value={product.name}>
+                      <option value="">
+                        {loadingProducts ? "Loading products..." : "Select Products"}
+                      </option>
+                      {Array.isArray(products) && products.map((product) => (
+                        <option key={product._id || product.id} value={product.name}>
                           {product.name}
                         </option>
                       ))}
                     </select>
                   </div>
+                  {!loadingProducts && (!Array.isArray(products) || products.length === 0) && (
+                    <p className="text-amber-600 text-sm sm:ml-[152px]">No products available. Please add products first.</p>
+                  )}
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap sm:w-32">
@@ -125,7 +204,7 @@ export default function ImportContactDetail() {
                     </label>
                     <select
                       value={nameColumnIndex}
-                      onChange={(e) => setNameColumnIndex(e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setNameColumnIndex(e.target.value)}
                       className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent"
                     >
                       <option value="">None</option>
@@ -143,7 +222,7 @@ export default function ImportContactDetail() {
                     </label>
                     <select
                       value={emailColumnIndex}
-                      onChange={(e) => setEmailColumnIndex(e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setEmailColumnIndex(e.target.value)}
                       className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent"
                     >
                       <option value="">None</option>
@@ -158,13 +237,13 @@ export default function ImportContactDetail() {
                   <div className="flex flex-col sm:flex-row gap-3 pt-2 sm:ml-[152px]">
                     <button
                       onClick={handleSave}
-                      className="w-full sm:w-auto bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-12 py-2.5 rounded-md text-sm font-medium transition-colors"
+                      className="w-full sm:w-auto bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-12 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer"
                     >
                       Save
                     </button>
                     <button
                       onClick={handleCancel}
-                      className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-12 py-2.5 rounded-md text-sm font-medium transition-colors"
+                      className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-12 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>

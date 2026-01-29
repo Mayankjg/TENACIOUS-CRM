@@ -1,12 +1,25 @@
+// frontend/app/newsletter/contact-list/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  product: string;
+}
+
+interface ContactRowProps {
+  contact: Contact;
+  index: number;
+}
 
 export default function ContactListPage() {
   const router = useRouter();
-  const [contacts, setContacts] = useState([]);
-  const [selectedContacts, setSelectedContacts] = useState([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('contacts');
@@ -14,28 +27,28 @@ export default function ContactListPage() {
   }, []);
 
   useEffect(() => {
-    contacts.length > 0 
+    contacts.length > 0
       ? localStorage.setItem('contacts', JSON.stringify(contacts))
       : localStorage.removeItem('contacts');
   }, [contacts]);
 
-  const toggleSelectAll = (e) => {
+  const toggleSelectAll = (e: ChangeEvent<HTMLInputElement>): void => {
     setSelectedContacts(e.target.checked ? contacts.map(c => c.id) : []);
   };
 
-  const toggleSelect = (id) => {
-    setSelectedContacts(prev => 
+  const toggleSelect = (id: string): void => {
+    setSelectedContacts(prev =>
       prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
     );
   };
 
-  const deleteContact = (id) => {
+  const deleteContact = (id: string): void => {
     if (confirm('Are you sure you want to delete this contact?')) {
       setContacts(contacts.filter(c => c.id !== id));
     }
   };
 
-  const bulkDelete = () => {
+  const bulkDelete = (): void => {
     if (selectedContacts.length === 0) return alert('Please select contacts to delete');
     if (confirm(`Delete ${selectedContacts.length} contact(s)?`)) {
       setContacts(contacts.filter(c => !selectedContacts.includes(c.id)));
@@ -43,10 +56,10 @@ export default function ContactListPage() {
     }
   };
 
-  const ContactRow = ({ contact, index }) => (
+  const ContactRow = ({ contact, index }: ContactRowProps) => (
     <tr className="border-b border-gray-300 hover:bg-gray-50 transition-colors">
       <td className="py-4 px-4 lg:px-6 border-r border-gray-300">
-        <input type="checkbox" checked={selectedContacts.includes(contact.id)} 
+        <input type="checkbox" checked={selectedContacts.includes(contact.id)}
           onChange={() => toggleSelect(contact.id)} className="w-4 h-4 cursor-pointer" />
       </td>
       <td className="py-4 px-4 lg:px-6 text-xs lg:text-sm text-gray-600 border-r border-gray-300">{index + 1}</td>
@@ -63,7 +76,7 @@ export default function ContactListPage() {
     </tr>
   );
 
-  const MobileCard = ({ contact, index }) => (
+  const MobileCard = ({ contact, index }: ContactRowProps) => (
     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -94,7 +107,7 @@ export default function ContactListPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-xl sm:text-2xl font-normal text-gray-700">Contact <strong>List</strong></h1>
             <button onClick={() => router.push('/newsletter/import-contacts')}
-              className="w-full sm:w-auto bg-[#2d3e50] hover:bg-[#1a252f] text-white text-base px-5 py-2.5 rounded transition-colors">
+              className="w-full sm:w-auto bg-[#2d3e50] hover:bg-[#1a252f] text-white text-base px-5 py-2.5 rounded transition-colors cursor-pointer">
               Add Contacts
             </button>
           </div>
@@ -119,14 +132,14 @@ export default function ContactListPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-200">
-                      <th className="py-4 px-4 lg:px-6 text-left w-12 lg:w-16 border-r border-gray-300">
-                        <input type="checkbox" onChange={toggleSelectAll} 
+                      <th key="checkbox" className="py-4 px-4 lg:px-6 text-left w-12 lg:w-16 border-r border-gray-300">
+                        <input type="checkbox" onChange={toggleSelectAll}
                           checked={selectedContacts.length === contacts.length && contacts.length > 0} className="w-4 h-4 cursor-pointer" />
                       </th>
-                      {['SR NO.', 'NAME', 'EMAIL', 'PRODUCT'].map((h, idx) => (
-                        <th key={`header-${idx}`} className="py-4 px-4 lg:px-6 text-left text-xs lg:text-sm font-bold text-gray-600 uppercase tracking-wide border-r border-gray-300">{h}</th>
+                      {['SR NO.', 'NAME', 'EMAIL', 'PRODUCT'].map((h) => (
+                        <th key={h} className="py-4 px-4 lg:px-6 text-left text-xs lg:text-sm font-bold text-gray-600 uppercase tracking-wide border-r border-gray-300">{h}</th>
                       ))}
-                      <th className="py-4 px-4 lg:px-6 text-center text-xs lg:text-sm font-bold text-gray-600 uppercase tracking-wide">DELETE</th>
+                      <th key="delete" className="py-4 px-4 lg:px-6 text-center text-xs lg:text-sm font-bold text-gray-600 uppercase tracking-wide">DELETE</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white">
@@ -142,7 +155,7 @@ export default function ContactListPage() {
 
             <div className="px-4 sm:px-6 py-4 md:py-6">
               <button onClick={bulkDelete}
-                className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white px-12 py-2.5 rounded text-sm font-medium transition-colors">
+                className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white px-12 py-2.5 rounded text-sm font-medium transition-colors cursor-pointer">
                 Delete
               </button>
             </div>

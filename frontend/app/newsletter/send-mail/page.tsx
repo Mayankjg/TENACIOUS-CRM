@@ -1,12 +1,15 @@
+// frontend/app/newsletter/send-mail/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import Template from './template/page';
 import CustomMessage from './CustomMessage/page';
 
+type MessageType = 'template' | 'custom';
+
 export default function SendMailPage() {
-  const [messageType, setMessageType] = useState('template');
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [messageType, setMessageType] = useState<MessageType>('template');
+  const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
 
   useEffect(() => {
     const mailSent = localStorage.getItem('mailSentSuccess');
@@ -19,6 +22,10 @@ export default function SendMailPage() {
       }, 7000);
     }
   }, []);
+
+  const handleMessageTypeChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setMessageType(e.target.value as MessageType);
+  };
 
   return (
     <>
@@ -80,7 +87,7 @@ export default function SendMailPage() {
                       name="messageType"
                       value="template"
                       checked={messageType === 'template'}
-                      onChange={(e) => setMessageType(e.target.value)}
+                      onChange={handleMessageTypeChange}
                       className="w-4 h-4 text-cyan-600 focus:ring-cyan-500 border-gray-300"
                     />
                     <span className="text-sm text-gray-700">Template</span>
@@ -91,7 +98,7 @@ export default function SendMailPage() {
                       name="messageType"
                       value="custom"
                       checked={messageType === 'custom'}
-                      onChange={(e) => setMessageType(e.target.value)}
+                      onChange={handleMessageTypeChange}
                       className="w-4 h-4 text-cyan-600 focus:ring-cyan-500 border-gray-300"
                     />
                     <span className="text-sm text-gray-700">Custom Message</span>

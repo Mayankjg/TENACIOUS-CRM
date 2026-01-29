@@ -1,41 +1,66 @@
+// frontend/app/newsletter/templates/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, KeyboardEvent, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
+
+interface Template {
+  id: string;
+  name: string;
+  content: string;
+  product?: string;
+  visibility?: string;
+  isCustom: boolean;
+  previewImage?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ActionButtonProps {
+  onClick: () => void;
+  className: string;
+  children: React.ReactNode;
+}
+
+interface TableButtonProps {
+  onClick: () => void;
+  color: string;
+  children: React.ReactNode;
+}
 
 export default function TemplatesPage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [templates, setTemplates] = useState([]);
-  const [filteredTemplates, setFilteredTemplates] = useState([]);
-  const [selectedTemplates, setSelectedTemplates] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
+  const [search, setSearch] = useState<string>("");
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState<boolean>(false);
 
   useEffect(() => {
-    const savedTemplates = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
+    const savedTemplates: Template[] = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
     setTemplates(savedTemplates);
     setFilteredTemplates(savedTemplates);
   }, []);
 
-  const handleSearch = () => {
+  const handleSearch = (): void => {
     const filtered = search.trim() 
       ? templates.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
       : templates;
     setFilteredTemplates(filtered);
   };
 
-  const handleSelectAll = (e) => {
+  const handleSelectAll = (e: ChangeEvent<HTMLInputElement>): void => {
     setSelectAll(e.target.checked);
     setSelectedTemplates(e.target.checked ? filteredTemplates.map(t => t.id) : []);
   };
 
-  const handleSelectTemplate = (id) => {
+  const handleSelectTemplate = (id: string): void => {
     setSelectedTemplates(prev => 
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
     );
   };
 
-  const updateTemplates = (updatedTemplates) => {
+  const updateTemplates = (updatedTemplates: Template[]): void => {
     setTemplates(updatedTemplates);
     setFilteredTemplates(updatedTemplates.filter(t => 
       !search.trim() || t.name.toLowerCase().includes(search.toLowerCase())
@@ -43,14 +68,14 @@ export default function TemplatesPage() {
     localStorage.setItem("emailTemplates", JSON.stringify(updatedTemplates));
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: string): void => {
     if (confirm("Are you sure you want to delete this template?")) {
       updateTemplates(templates.filter(t => t.id !== id));
       setSelectedTemplates(prev => prev.filter(t => t !== id));
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = (): void => {
     if (selectedTemplates.length === 0) return alert("Please select templates to delete");
     if (confirm(`Are you sure you want to delete ${selectedTemplates.length} template(s)?`)) {
       updateTemplates(templates.filter(t => !selectedTemplates.includes(t.id)));
@@ -59,37 +84,41 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleView = (template) => {
+  const handleView = (template: Template): void => {
     const previewWindow = window.open('', '_blank', 'width=800,height=600');
-    previewWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${template.name} - Preview</title>
-          <style>body { margin: 20px; font-family: Arial, sans-serif; } h1 { color: #333; }</style>
-        </head>
-        <body><h1>${template.name}</h1>${template.content}</body>
-      </html>
-    `);
-    previewWindow.document.close();
+    if (previewWindow) {
+      previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${template.name} - Preview</title>
+            <style>body { margin: 20px; font-family: Arial, sans-serif; } h1 { color: #333; }</style>
+          </head>
+          <body><h1>${template.name}</h1>${template.content}</body>
+        </html>
+      `);
+      previewWindow.document.close();
+    }
   };
 
-  const handleEdit = (template) => {
+  const handleEdit = (template: Template): void => {
     localStorage.setItem("editingTemplate", JSON.stringify(template));
     router.push(`/newsletter/templates/AddCustomTemplate?edit=${template.id}`);
   };
 
-  const ActionButton = ({ onClick, className, children }) => (
+  const ActionButton = ({ onClick, className, children }: ActionButtonProps) => (
     <button onClick={onClick} className={`w-full sm:w-auto px-5 py-2.5 rounded transition-colors text-base ${className}`}>
       {children}
     </button>
   );
 
-  const TableButton = ({ onClick, color, children }) => (
-    <button onClick={onClick} className={`bg-${color}-500 hover:bg-${color}-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors`}>
+  const TableButton = ({ onClick, color, children }: TableButtonProps) => (
+    <button onClick={onClick} className={`bg-${color}-500 hover:bg-${color}-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer`}>
       {children}
     </button>
   );
+
+  const headers = ["SR NO", "TEMPLATE NAME", "PRODUCT NAME", "PREVIEW IMAGE", "TYPE", "VIEW", "DELETE", "EDIT"];
 
   return (
     <>
@@ -118,19 +147,19 @@ export default function TemplatesPage() {
               </h1>
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto"> 
                 {selectedTemplates.length > 0 && (
-                  <ActionButton onClick={handleBulkDelete} className="bg-red-500 hover:bg-red-600 text-white">
+                  <ActionButton onClick={handleBulkDelete} className="bg-red-500 hover:bg-red-600 text-white cursor-pointer">
                     Delete Selected ({selectedTemplates.length})
                   </ActionButton>
                 )}
                 <ActionButton 
                   onClick={() => router.push("/newsletter/templates/AddCustomTemplate")}
-                  className="bg-[#2d4456] hover:bg-[#1f2f3d] text-white"
+                  className="bg-[#2d4456] hover:bg-[#1f2f3d] text-white cursor-pointer"
                 >
                   Add Custom Template
                 </ActionButton>
                 <ActionButton 
                   onClick={() => router.push("/newsletter/templates/AddTemplate")}
-                  className="bg-[#2d4456] hover:bg-[#1f2f3d] text-white"
+                  className="bg-[#2d4456] hover:bg-[#1f2f3d] text-white cursor-pointer"
                 >
                   Add Template
                 </ActionButton>
@@ -144,13 +173,13 @@ export default function TemplatesPage() {
               type="text"
               placeholder="Template Name"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+              onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSearch()}
               className="w-full sm:w-[200px] text-black h-10 border border-gray-300 rounded-[5px] px-5 py-2 text-base sm:text-[18px] focus:outline-none focus:ring-1 focus:ring-black"
             />
             <button 
               onClick={handleSearch}
-              className="bg-[#0baad1] w-full sm:w-[70px] h-10 text-white px-2 py-1 text-base sm:text-[18px] font-medium rounded-[5px] hover:bg-[#0094b8] transition-colors"
+              className="bg-[#0baad1] w-full sm:w-[70px] h-10 text-white px-2 py-1 text-base sm:text-[18px] font-medium rounded-[5px] hover:bg-[#0094b8] transition-colors cursor-pointer"
             >
               Search
             </button>
@@ -164,8 +193,8 @@ export default function TemplatesPage() {
                     <th className="py-3 px-4 text-left w-12">
                       <input type="checkbox" className="w-4 h-4 cursor-pointer" checked={selectAll} onChange={handleSelectAll} />
                     </th>
-                    {["SR NO", "TEMPLATE NAME", "PRODUCT NAME", "PREVIEW IMAGE", "TYPE", "VIEW", "DELETE", "EDIT"].map(header => (
-                      <th key={header} className="py-3 px-4 text-center text-xs font-semibold text-[#6c757d] uppercase tracking-wider whitespace-nowrap">
+                    {headers.map((header, index) => (
+                      <th key={`${header}-${index}`} className="py-3 px-4 text-center text-xs font-semibold text-[#6c757d] uppercase tracking-wider whitespace-nowrap">
                         {header}
                       </th>
                     ))}
@@ -174,7 +203,7 @@ export default function TemplatesPage() {
                 <tbody className="bg-white">
                   {filteredTemplates.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="text-center py-8 text-red-500 text-base font-medium">No Record Found</td>
+                      <td colSpan={9} className="text-center py-8 text-red-500 text-base font-medium">No Record Found</td>
                     </tr>
                   ) : (
                     filteredTemplates.map((template, index) => (

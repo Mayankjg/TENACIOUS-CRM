@@ -1,31 +1,40 @@
+// frontend/app/newsletter/import-contacts/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 
+interface ImportFileData {
+  fileData: unknown[][];
+  columnHeaders: unknown[];
+  fileName: string;
+}
+
 export default function ImportContacts() {
   const router = useRouter();
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [fileData, setFileData] = useState([]);
-  const [columnHeaders, setColumnHeaders] = useState([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileData, setFileData] = useState<unknown[][]>([]);
+  const [columnHeaders, setColumnHeaders] = useState<unknown[]>([]);
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = (event: ProgressEvent<FileReader>) => {
         try {
-          const data = new Uint8Array(event.target.result);
+          if (!event.target?.result) return;
+          
+          const data = new Uint8Array(event.target.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
           if (jsonData.length > 0) {
             const headers = jsonData[0];
-            const rows = jsonData.slice(1).filter(row => row.some(cell => cell));
+            const rows = jsonData.slice(1).filter(row => Array.isArray(row) && row.some(cell => cell));
 
             setColumnHeaders(headers);
             setFileData(rows);
@@ -39,7 +48,7 @@ export default function ImportContacts() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = (): void => {
     const csvContent = "Name,Email\nMayank Jaglaganeshwala,mayank.jwala@gmail.com\nlalu jaglaganeshwala,lalu.jwala@gmail.com";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -52,7 +61,7 @@ export default function ImportContacts() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleNext = () => {
+  const handleNext = (): void => {
     if (!selectedFile) {
       alert('Please select a file first');
       return;
@@ -62,20 +71,22 @@ export default function ImportContacts() {
       return;
     }
     
-    localStorage.setItem('importFileData', JSON.stringify({
+    const importData: ImportFileData = {
       fileData: fileData,
       columnHeaders: columnHeaders,
       fileName: selectedFile.name
-    }));
+    };
+
+    localStorage.setItem('importFileData', JSON.stringify(importData));
 
     router.push('/newsletter/import-contacts/ImportContactDetail');
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setSelectedFile(null);
     setFileData([]);
     setColumnHeaders([]);
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
     if (fileInput) fileInput.value = '';
     router.push('/newsletter/contact-list');
   };

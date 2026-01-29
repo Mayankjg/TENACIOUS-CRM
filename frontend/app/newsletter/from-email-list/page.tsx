@@ -1,18 +1,31 @@
+// frontend/app/newsletter/from-email-list/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { Trash2 } from "lucide-react";
 
+interface EmailItem {
+    id: string;
+    email: string;
+}
+
+interface EmailRowProps {
+    item: EmailItem;
+    index: number;
+}
+
 export default function FromEmailList() {
-    const [search, setSearch] = useState("");
-    const [selectedRows, setSelectedRows] = useState([]);
-    const [selectAll, setSelectAll] = useState(false);
-    const [emails, setEmails] = useState([]);
-    const [filteredEmails, setFilteredEmails] = useState([]);
+    const [search, setSearch] = useState<string>("");
+    const [selectedRows, setSelectedRows] = useState<string[]>([]);
+    const [selectAll, setSelectAll] = useState<boolean>(false);
+    const [emails, setEmails] = useState<EmailItem[]>([]);
+    const [filteredEmails, setFilteredEmails] = useState<EmailItem[]>([]);
 
     useEffect(() => {
         loadEmails();
-        const handleStorageChange = (e) => e.key === 'fromEmails' && loadEmails();
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'fromEmails') loadEmails();
+        };
         window.addEventListener('storage', handleStorageChange);
         const interval = setInterval(loadEmails, 1000);
         return () => {
@@ -26,31 +39,34 @@ export default function FromEmailList() {
             emails.filter(email => email.email.toLowerCase().includes(search.toLowerCase())));
     }, [search, emails]);
 
-    const loadEmails = () => setEmails(JSON.parse(localStorage.getItem("fromEmails") || "[]"));
+    const loadEmails = (): void => {
+        const stored = localStorage.getItem("fromEmails");
+        setEmails(stored ? JSON.parse(stored) : []);
+    };
 
-    const saveEmails = (updatedEmails) => {
+    const saveEmails = (updatedEmails: EmailItem[]): void => {
         setEmails(updatedEmails);
         localStorage.setItem("fromEmails", JSON.stringify(updatedEmails));
     };
 
-    const toggleSelectAll = () => {
+    const toggleSelectAll = (): void => {
         setSelectedRows(selectAll ? [] : filteredEmails.map(item => item.id));
         setSelectAll(!selectAll);
     };
 
-    const toggleSelectRow = (id) => {
+    const toggleSelectRow = (id: string): void => {
         setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]);
         setSelectAll(false);
     };
 
-    const deleteEmail = (id) => {
+    const deleteEmail = (id: string): void => {
         if (confirm('Are you sure you want to delete this email?')) {
             saveEmails(emails.filter(email => email.id !== id));
             setSelectedRows(prev => prev.filter(rowId => rowId !== id));
         }
     };
 
-    const deleteSelected = () => {
+    const deleteSelected = (): void => {
         if (selectedRows.length === 0) return alert('Please select at least one email to delete');
         if (confirm(`Delete ${selectedRows.length} email(s)?`)) {
             saveEmails(emails.filter(email => !selectedRows.includes(email.id)));
@@ -59,7 +75,7 @@ export default function FromEmailList() {
         }
     };
 
-    const EmailRow = ({ item, index }) => (
+    const EmailRow = ({ item, index }: EmailRowProps) => (
         <tr className="hover:bg-gray-50 transition-colors">
             <td className="py-3 px-4 border-r border-b border-gray-300">
                 <input type="checkbox" className="w-4 h-4 cursor-pointer"
@@ -76,7 +92,7 @@ export default function FromEmailList() {
         </tr>
     );
 
-    const MobileCard = ({ item, index }) => (
+    const MobileCard = ({ item, index }: EmailRowProps) => (
         <div className="bg-white border border-gray-300 rounded-lg p-4 space-y-3">
             <div className="flex items-start justify-between">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -115,7 +131,7 @@ export default function FromEmailList() {
                     <div className="flex flex-col sm:flex-row justify-end gap-3 mb-6">
                         <input type="text" placeholder="Display Name/Email"
                             className="border border-gray-300 rounded px-4 py-2 w-full sm:w-50 text-sm text-gray-700 focus:outline-none focus:border-gray-400"
-                            value={search} onChange={(e) => setSearch(e.target.value)} />
+                            value={search} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)} />
                         <button onClick={() => console.log('Searching:', search)}
                             className="bg-[#0ea5e9] text-white px-4 py-2 rounded text-sm hover:bg-[#0284c7] w-full sm:w-auto transition-colors">
                             Search
@@ -139,7 +155,7 @@ export default function FromEmailList() {
                             </thead>
                             <tbody className="bg-white">
                                 {filteredEmails.length === 0 ? (
-                                    <tr><td colSpan="4" className="py-8 px-4 text-center text-gray-500 border-b border-gray-300">
+                                    <tr><td colSpan={4} className="py-8 px-4 text-center text-gray-500 border-b border-gray-300">
                                         {search ? 'No emails found matching your search' : 'No emails added yet'}
                                     </td></tr>
                                 ) : filteredEmails.map((item, index) => <EmailRow key={item.id} item={item} index={index} />)}
@@ -163,7 +179,7 @@ export default function FromEmailList() {
                     </div>
 
                     <div className="mt-6">
-                        <button className="bg-red-500 text-white px-6 py-2 rounded text-sm hover:bg-red-600 w-full sm:w-auto transition-colors"
+                        <button className="bg-red-500 text-white px-6 py-2 rounded text-sm hover:bg-red-600 w-full sm:w-auto transition-colors cursor-pointer"
                             onClick={deleteSelected} disabled={selectedRows.length === 0}>
                             Delete
                         </button>

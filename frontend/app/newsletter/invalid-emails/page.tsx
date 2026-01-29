@@ -1,5 +1,5 @@
+// frontend/app/newsletter/invalid-email-list/page.tsx
 "use client";
-
 
 export default function InvalidEmailList() {
     return (
@@ -44,7 +44,7 @@ export default function InvalidEmailList() {
                             </thead>
                             <tbody className="bg-white">
                                 <tr>
-                                    <td colSpan="5" className="py-8 text-center">
+                                    <td colSpan={5} className="py-8 text-center">
                                         <span className="text-red-500 text-base font-medium">No Record Found</span>
                                     </td>
                                 </tr>
