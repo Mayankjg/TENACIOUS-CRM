@@ -1,5 +1,7 @@
 "use client";
-export default function ExportLeads () {
+import React from "react";
+
+export default function ExportLeads(): React.ReactNode {
   return (
     <div>
       <h1 className="text-2xl font-bold mt-5">ExportLeads Page</h1>

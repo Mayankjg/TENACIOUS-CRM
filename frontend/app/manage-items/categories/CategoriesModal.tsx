@@ -1,8 +1,20 @@
+// frontend/app/manage-items/categories/CategoriesModal.tsx
+
 "use client";
 
 import React from "react";
 
-const CategoriesModal = ({
+/* --------------------------- TYPES --------------------------- */
+interface CategoriesModalProps {
+  showModal: boolean;
+  newCategoryName: string;
+  setNewCategoryName: (name: string) => void;
+  handleAddCategory: () => void;
+  setShowModal: (show: boolean) => void;
+}
+
+/* --------------------------- COMPONENT --------------------------- */
+const CategoriesModal: React.FC<CategoriesModalProps> = ({
   showModal,
   newCategoryName,
   setNewCategoryName,
@@ -11,9 +23,20 @@ const CategoriesModal = ({
 }) => {
   if (!showModal) return null;
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    setNewCategoryName(e.target.value);
+  };
+
+  const handleSaveClick = (): void => {
+    handleAddCategory();
+  };
+
+  const handleCloseClick = (): void => {
+    setShowModal(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-3 sm:p-5">
-
       <div
         className="
           bg-white rounded-lg shadow-lg 
@@ -55,7 +78,7 @@ const CategoriesModal = ({
             type="text"
             placeholder="Category"
             value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
+            onChange={handleInputChange}
             className="
               w-full border border-gray-300 rounded-md 
               px-3 py-2 
@@ -69,7 +92,7 @@ const CategoriesModal = ({
         {/* Buttons */}
         <div className="flex justify-end gap-3 px-4 sm:px-5 pb-4 mt-3">
           <button
-            onClick={handleAddCategory}
+            onClick={handleSaveClick}
             className="
               bg-sky-600 cursor-pointer hover:bg-sky-700 
               text-white text-sm sm:text-base 
@@ -80,7 +103,7 @@ const CategoriesModal = ({
           </button>
 
           <button
-            onClick={() => setShowModal(false)}
+            onClick={handleCloseClick}
             className="
               border cursor-pointer border-gray-300 hover:bg-gray-100 
               text-gray-700 text-sm sm:text-base 

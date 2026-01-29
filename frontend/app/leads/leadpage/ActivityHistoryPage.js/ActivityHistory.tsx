@@ -1,13 +1,23 @@
-// frontend/app/leadpage/ActivityHistoryPage/ActivityHistory.js
-
 "use client";
 
 import { useState } from "react";
 import CommentsSection from "./comments/CommentsSection";
 import EmailSection from "./email/EmailSection";
 
-export default function ActivityHistory({ leadId, leadEmail, currentComment, onCommentUpdate }) {
-  const [activeTab, setActiveTab] = useState("comments");
+interface ActivityHistoryProps {
+  leadId: string;
+  leadEmail?: string;
+  currentComment?: string;
+  onCommentUpdate?: (comment: string) => void;
+}
+
+export default function ActivityHistory({
+  leadId,
+  leadEmail,
+  currentComment,
+  onCommentUpdate,
+}: ActivityHistoryProps) {
+  const [activeTab, setActiveTab] = useState<"comments" | "email">("comments");
 
   return (
     <div className="bg-white w-full text-black p-4 sm:p-6 md:p-8 lg:p-10 xl:p-6">
@@ -21,9 +31,10 @@ export default function ActivityHistory({ leadId, leadEmail, currentComment, onC
             onClick={() => setActiveTab("comments")}
             className={`px-4 py-2 text-sm border-r border-gray-300
               w-1/2 sm:w-auto text-center transition-colors
-              ${activeTab === "comments"
-                ? "bg-white font-medium text-gray-900"
-                : "bg-[#d7dee3] text-gray-600 hover:bg-gray-200"
+              ${
+                activeTab === "comments"
+                  ? "bg-white font-medium text-gray-900"
+                  : "bg-[#d7dee3] text-gray-600 hover:bg-gray-200"
               }
             `}
           >
@@ -34,9 +45,10 @@ export default function ActivityHistory({ leadId, leadEmail, currentComment, onC
             onClick={() => setActiveTab("email")}
             className={`px-4 py-2 text-sm border-r border-gray-300
               w-1/2 sm:w-auto text-center transition-colors
-              ${activeTab === "email"
-                ? "bg-white font-medium text-gray-900"
-                : "bg-[#d7dee3] text-gray-600 hover:bg-gray-200"
+              ${
+                activeTab === "email"
+                  ? "bg-white font-medium text-gray-900"
+                  : "bg-[#d7dee3] text-gray-600 hover:bg-gray-200"
               }
             `}
           >
@@ -52,10 +64,7 @@ export default function ActivityHistory({ leadId, leadEmail, currentComment, onC
               onCommentUpdate={onCommentUpdate}
             />
           ) : (
-            <EmailSection
-              leadId={leadId}
-              leadEmail={leadEmail}
-            />
+            <EmailSection leadId={leadId} leadEmail={leadEmail} />
           )}
         </div>
       </div>

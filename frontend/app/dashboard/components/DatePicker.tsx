@@ -1,13 +1,21 @@
 "use client";
 import { FaCalendarAlt } from "react-icons/fa";
 
+interface DatePickerProps {
+  label: string;
+  date: Date;
+  showCalendar: boolean;
+  setShowCalendar: (show: boolean) => void;
+  setDate: (date: Date) => void;
+}
+
 export default function DatePicker({
   label,
   date,
   showCalendar,
   setShowCalendar,
   setDate,
-}) {
+}: DatePickerProps) {
   return (
     <div className="flex items-center gap-2 relative">
       <label className="text-gray-700 font-medium text-sm">{label}</label>

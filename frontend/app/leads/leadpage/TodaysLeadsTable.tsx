@@ -1,18 +1,57 @@
-// frontend/app/leads/TodaysLeadsTable.jsx - MULTI-TENANT COMPLETE
+// frontend/app/leads/TodaysLeadsTable.tsx - MULTI-TENANT COMPLETE
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { FaEdit, FaClipboard } from "react-icons/fa";
-// ✅ CRITICAL: Import tenant-aware API utilities
 import { apiGet } from "@/utils/api";
 
-export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
+/* --------------------------- TYPES --------------------------- */
+interface Tag {
+  _id: string;
+  name: string;
+  color: string;
+  description?: string;
+}
+
+interface Lead {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  city?: string;
+  leadStatus?: string;
+  category?: string;
+  product?: string;
+  tags?: string[];
+  comment?: string;
+  createdAt?: string;
+  [key: string]: any;
+}
+
+interface TodaysLeadsTableProps {
+  leads?: Lead[];
+  onDelete?: (ids: string[]) => void;
+  onEdit?: (lead: Lead) => void;
+}
+
+type SortOrder = "Ascending" | "Descending";
+
+/* --------------------------- COMPONENT --------------------------- */
+export default function TodaysLeadsTable({ 
+  leads = [], 
+  onDelete, 
+  onEdit 
+}: TodaysLeadsTableProps) {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [sortOrder, setSortOrder] = useState("Ascending");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("Ascending");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLeads, setSelectedLeads] = useState([]);
-  const [tags, setTags] = useState([]);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   // ✅ CRITICAL: Fetch tags using tenant-aware API
   useEffect(() => {
@@ -77,14 +116,14 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
 
     filtered = filtered.sort((a, b) =>
       sortOrder === "Ascending"
-        ? a.firstName?.localeCompare(b.firstName)
-        : b.firstName?.localeCompare(a.firstName)
+        ? (a.firstName || "").localeCompare(b.firstName || "")
+        : (b.firstName || "").localeCompare(a.firstName || "")
     );
 
     return filtered;
   }, [leads, selectedProduct, selectedStatus, searchTerm, sortOrder]);
 
-  const handleSelectAll = (e) => {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedLeads(filteredLeads.map((lead) => lead._id));
     } else {
@@ -92,21 +131,25 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
     }
   };
 
-  const handleSelectOne = (id) => {
+  const handleSelectOne = (id: string) => {
     setSelectedLeads((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
   const handleAssign = () => {
-    if (selectedLeads.length === 0)
-      return alert("Please select at least one lead to assign!");
+    if (selectedLeads.length === 0) {
+      alert("Please select at least one lead to assign!");
+      return;
+    }
     alert(`${selectedLeads.length} lead(s) assigned successfully!`);
   };
 
   const handleDeleteSelected = () => {
-    if (selectedLeads.length === 0)
-      return alert("Please select at least one lead to delete!");
+    if (selectedLeads.length === 0) {
+      alert("Please select at least one lead to delete!");
+      return;
+    }
 
     const message =
       selectedLeads.length === filteredLeads.length
@@ -120,7 +163,10 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
   };
 
   const handleExport = () => {
-    if (filteredLeads.length === 0) return alert("No leads to export!");
+    if (filteredLeads.length === 0) {
+      alert("No leads to export!");
+      return;
+    }
 
     const csv = [
       [
@@ -159,8 +205,14 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleCellClick = (lead) => {
+  const handleCellClick = (lead: Lead) => {
     onEdit?.(lead);
+  };
+
+  const getStatusColor = (status?: string): string => {
+    if (status === "Open") return "bg-emerald-500";
+    if (status === "Closed") return "bg-indigo-600";
+    return "bg-gray-400";
   };
 
   return (
@@ -224,7 +276,7 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
 
           <select
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
+            onChange={(e) => setSortOrder(e.target.value as SortOrder)}
             className="border cursor-pointer border-gray-300 rounded px-2 py-2 text-gray-700 text-sm"
           >
             <option value="Ascending">Ascending</option>
@@ -364,13 +416,9 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
 
                   <td className="border px-2 py-2 text-center">
                     <span
-                      className={`px-2 py-1 rounded text-white text-xs font-semibold whitespace-nowrap inline-block ${
-                        lead.leadStatus === "Open"
-                          ? "bg-emerald-500"
-                          : lead.leadStatus === "Closed"
-                          ? "bg-indigo-600"
-                          : "bg-gray-400"
-                      }`}
+                      className={`px-2 py-1 rounded text-white text-xs font-semibold whitespace-nowrap inline-block ${getStatusColor(
+                        lead.leadStatus
+                      )}`}
                     >
                       {lead.leadStatus}
                     </span>
@@ -439,7 +487,7 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
               ))
             ) : (
               <tr>
-                <td colSpan="11" className="text-center py-4 text-gray-500 text-sm">
+                <td colSpan={11} className="text-center py-4 text-gray-500 text-sm">
                   No leads found.
                 </td>
               </tr>
@@ -490,13 +538,9 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
               <div className="border-b p-2 text-sm flex items-center gap-2 flex-wrap">
                 <strong>Status:</strong>
                 <span
-                  className={`px-2 py-1 rounded text-white text-xs ${
-                    lead.leadStatus === "Open"
-                      ? "bg-emerald-500"
-                      : lead.leadStatus === "Closed"
-                      ? "bg-indigo-600"
-                      : "bg-gray-400"
-                  }`}
+                  className={`px-2 py-1 rounded text-white text-xs ${getStatusColor(
+                    lead.leadStatus
+                  )}`}
                 >
                   {lead.leadStatus}
                 </span>

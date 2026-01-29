@@ -1,10 +1,45 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, ChangeEvent, FormEvent } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+interface FormData {
+  firstName: string;
+  lastName: string;
+  company: string;
+  email: string;
+  phone: string;
+  mobile: string;
+  fax: string;
+  designation: string;
+  website: string;
+  testerSalesman: string;
+  category: string;
+  product: string;
+  leadSource: string;
+  leadStatus: string;
+  leadStartDate: string;
+  leadStartTime: string;
+  leadRemindDate: string;
+  leadRemindTime: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  expectedAmount: string;
+  paymentReceived: string;
+  comment: string;
+  facebook: string;
+  skype: string;
+  linkedIn: string;
+  gtalk: string;
+  twitter: string;
+  convertOption: string;
+}
+
 export default function CreateLead() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
     company: "",
@@ -39,16 +74,18 @@ export default function CreateLead() {
     convertOption: "",
   });
 
-  const [leads, setLeads] = useState([]);
+  const [leads, setLeads] = useState<FormData[]>([]);
 
   // dynamic input handler
-  const handleChange = (e) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // form submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
 
     // validation
@@ -71,7 +108,7 @@ export default function CreateLead() {
   };
 
   // reset form handler
-  const handleReset = () => {
+  const handleReset = (): void => {
     setFormData({
       firstName: "",
       lastName: "",
@@ -111,7 +148,7 @@ export default function CreateLead() {
   };
 
   // cancel handler (optional toast)
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     toast.warning("❌ Lead creation cancelled!");
   };
 
@@ -132,17 +169,19 @@ export default function CreateLead() {
         <h3 className="font-semibold"> Lead Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6">
           <div className="md:col-span-2 grid grid-cols-2 gap-4 pr-6 border-gray-300 border-r">
-            {[
-              ["firstName", "First Name *"],
-              ["lastName", "Last Name"],
-              ["company", "Company Name"],
-              ["email", "Email address"],
-              ["phone", "Phone Number"],
-              ["mobile", "Mobile"],
-              ["fax", "Fax"],
-              ["designation", "Designation"],
-              ["website", "Website"],
-            ].map(([name, placeholder]) => (
+            {(
+              [
+                ["firstName", "First Name *"],
+                ["lastName", "Last Name"],
+                ["company", "Company Name"],
+                ["email", "Email address"],
+                ["phone", "Phone Number"],
+                ["mobile", "Mobile"],
+                ["fax", "Fax"],
+                ["designation", "Designation"],
+                ["website", "Website"],
+              ] as const
+            ).map(([name, placeholder]) => (
               <input
                 key={name}
                 type="text"
@@ -156,13 +195,15 @@ export default function CreateLead() {
           </div>
 
           <div className="flex flex-col gap-3 pl-4">
-            {[
-              ["testerSalesman", "Tester_salesman"],
-              ["category", "Select Category *"],
-              ["product", "Select Product *"],
-              ["leadSource", "Select Lead Source"],
-              ["leadStatus", "Select Lead Status *"],
-            ].map(([name, label], i) => (
+            {(
+              [
+                ["testerSalesman", "Tester_salesman"],
+                ["category", "Select Category *"],
+                ["product", "Select Product *"],
+                ["leadSource", "Select Lead Source"],
+                ["leadStatus", "Select Lead Status *"],
+              ] as const
+            ).map(([name, label], i) => (
               <div key={i} className="flex gap-2">
                 <select
                   name={name}
@@ -319,7 +360,7 @@ export default function CreateLead() {
           <h3 className="font-semibold mb-2">Social Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="pr-4 space-y-4 border-r border-gray-300">
-              {["facebook", "skype", "linkedIn"].map((name) => (
+              {(["facebook", "skype", "linkedIn"] as const).map((name) => (
                 <input
                   key={name}
                   name={name}
@@ -332,7 +373,7 @@ export default function CreateLead() {
               ))}
             </div>
             <div className="pl-4 space-y-4">
-              {["gtalk", "twitter"].map((name) => (
+              {(["gtalk", "twitter"] as const).map((name) => (
                 <input
                   key={name}
                   name={name}

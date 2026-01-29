@@ -5,16 +5,64 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import SalesSummary from "./SalesSummary";
 
+interface LeadStats {
+  pending: number;
+  closed: number;
+  open: number;
+  today: number;
+}
+
+interface SalesPerson {
+  id: number;
+  name: string;
+  today: number;
+  all: number;
+  missed: number;
+  unscheduled: number;
+  closed: number;
+  void: number;
+}
+
+interface ContactStats {
+  total: number;
+}
+
+interface ConfigurationStats {
+  balanceEmail: number;
+}
+
+interface DashboardData {
+  leads: LeadStats;
+  salesPersons: SalesPerson[];
+  contacts: ContactStats;
+  configuration: ConfigurationStats;
+}
+
+interface Lead {
+  leadStatus: string;
+  createdAt: string;
+  salesperson?: string;
+  createdBy?: string | number;
+  testerSalesman?: string;
+  category?: string;
+}
+
+interface SalespersonData {
+  id?: string | number;
+  _id?: string;
+  username: string;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const [dashboardData, setDashboardData] = useState({
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
     leads: { pending: 0, closed: 0, open: 0, today: 0 },
     salesPersons: [],
     contacts: { total: 0 },
     configuration: { balanceEmail: 0 },
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_URL ||
@@ -26,13 +74,15 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (): Promise<void> => {
     try {
       setLoading(true);
 
       // Fetch all leads
-      const leadsRes = await axios.get(`${API_BASE}/api/leads/get-leads`);
-      const allLeads = Array.isArray(leadsRes.data)
+      const leadsRes = await axios.get<Lead[] | { data: Lead[] }>(
+        `${API_BASE}/api/leads/get-leads`
+      );
+      const allLeads: Lead[] = Array.isArray(leadsRes.data)
         ? leadsRes.data
         : leadsRes.data?.data || [];
 
@@ -40,7 +90,7 @@ export default function Dashboard() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const leadStats = {
+      const leadStats: LeadStats = {
         pending: allLeads.filter((l) => l.leadStatus === "Pending").length,
         closed: allLeads.filter((l) => l.leadStatus === "Closed").length,
         open: allLeads.filter((l) => l.leadStatus === "Open").length,
@@ -52,12 +102,14 @@ export default function Dashboard() {
       };
 
       // Fetch salespersons (admin only)
-      let salesPersonsData = [];
+      let salesPersonsData: SalesPerson[] = [];
       if (user.role === "admin") {
-        const spRes = await axios.get(
+        const spRes = await axios.get<SalespersonData[]>(
           `${API_BASE}/api/salespersons/get-salespersons`
         );
-        const salespersons = Array.isArray(spRes.data) ? spRes.data : [];
+        const salespersons: SalespersonData[] = Array.isArray(spRes.data)
+          ? spRes.data
+          : [];
 
         // Calculate stats for each salesperson
         salesPersonsData = salespersons.map((sp) => {
@@ -75,7 +127,7 @@ export default function Dashboard() {
           });
 
           return {
-            id: sp.id || sp._id,
+            id: (sp.id || sp._id) as number,
             name: sp.username,
             today: todayLeads.length,
             all: spLeads.length,
@@ -104,7 +156,7 @@ export default function Dashboard() {
   };
 
   // Navigate to LeadsPage with query parameter to open CreateLead form
-  const handleAddLead = () => {
+  const handleAddLead = (): void => {
     router.push("/leads/leadpage?action=addLead");
   };
 

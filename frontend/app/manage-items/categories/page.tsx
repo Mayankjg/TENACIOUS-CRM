@@ -1,4 +1,4 @@
-// frontend/app/manage-items/categories/page.jsx - MULTI-TENANT FIXED
+// frontend/app/manage-items/categories/page.tsx - MULTI-TENANT FIXED
 
 "use client";
 
@@ -15,17 +15,33 @@ import {
   validateSession 
 } from "@/utils/api";
 
-const CategoriesPage = () => {
-  const [selectAll, setSelectAll] = useState(false);
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+/* --------------------------- TYPES --------------------------- */
+interface Category {
+  _id: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-  const [showModal, setShowModal] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+/* --------------------------- COMPONENT --------------------------- */
+const CategoriesPage: React.FC = () => {
+  const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [newCategoryName, setNewCategoryName] = useState<string>("");
 
   // ✅ CRITICAL: Validate session on mount
   useEffect(() => {
@@ -38,7 +54,7 @@ const CategoriesPage = () => {
   }, []);
 
   // ✅ CRITICAL: Fetch with tenant filtering (done by backend)
-  const fetchCategories = async () => {
+  const fetchCategories = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch - invalid session");
       return;
@@ -48,7 +64,7 @@ const CategoriesPage = () => {
       setLoading(true);
       console.log("🔄 Fetching categories...");
 
-      const result = await apiGet("/api/manage-items/categories/get-categories");
+      const result: ApiResponse<Category[]> = await apiGet("/api/manage-items/categories/get-categories");
 
       if (!result.success) {
         throw new Error(result.error || "Failed to fetch categories");
@@ -56,7 +72,7 @@ const CategoriesPage = () => {
 
       console.log("✅ Fetched categories:", result.data?.length || 0);
       setCategories(result.data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Fetch categories error:", err);
       alert(err.message || "Failed to load categories");
     } finally {
@@ -65,25 +81,25 @@ const CategoriesPage = () => {
   };
 
   // ================= SELECT =================
-  const handleSelectAll = () => {
+  const handleSelectAll = (): void => {
     const value = !selectAll;
     setSelectAll(value);
     setSelectedRows(value ? categories.map(c => c._id) : []);
   };
 
-  const handleSelectRow = (id) => {
+  const handleSelectRow = (id: string): void => {
     setSelectedRows(prev =>
       prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
     );
   };
 
   // ✅ CRITICAL: Edit with tenant validation
-  const handleEdit = (id, name) => {
+  const handleEdit = (id: string, name: string): void => {
     setEditingId(id);
     setEditName(name);
   };
 
-  const handleUpdate = async (id) => {
+  const handleUpdate = async (id: string): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot update - invalid session");
       return;
@@ -92,7 +108,7 @@ const CategoriesPage = () => {
     try {
       console.log("💾 Updating category:", id);
 
-      const result = await apiPut(
+      const result: ApiResponse = await apiPut(
         `/api/manage-items/categories/update-category/${id}`,
         { name: editName }
       );
@@ -105,19 +121,19 @@ const CategoriesPage = () => {
       setEditingId(null);
       setEditName("");
       fetchCategories();
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Update category error:", err);
       alert(err.message || "Failed to update category");
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setEditingId(null);
     setEditName("");
   };
 
   // ✅ CRITICAL: Delete with tenant validation
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string): Promise<void> => {
     if (!confirm("Are you sure you want to delete this category?")) return;
 
     if (!validateSession()) {
@@ -128,7 +144,7 @@ const CategoriesPage = () => {
     try {
       console.log("🗑️ Deleting category:", id);
 
-      const result = await apiDelete(
+      const result: ApiResponse = await apiDelete(
         `/api/manage-items/categories/delete-category/${id}`
       );
 
@@ -138,13 +154,13 @@ const CategoriesPage = () => {
 
       console.log("✅ Category deleted successfully");
       fetchCategories();
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Delete category error:", err);
       alert(err.message || "Failed to delete category");
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = async (): Promise<void> => {
     if (selectedRows.length === 0) {
       alert("Please select categories to delete");
       return;
@@ -160,7 +176,7 @@ const CategoriesPage = () => {
     try {
       console.log("🗑️ Deleting categories:", selectedRows);
 
-      const results = await Promise.all(
+      const results: ApiResponse[] = await Promise.all(
         selectedRows.map(id =>
           apiDelete(`/api/manage-items/categories/delete-category/${id}`)
         )
@@ -174,14 +190,14 @@ const CategoriesPage = () => {
       setSelectedRows([]);
       setSelectAll(false);
       fetchCategories();
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Bulk delete error:", err);
       alert("Failed to delete categories");
     }
   };
 
   // ✅ CRITICAL: Add with automatic tenant isolation
-  const handleAddCategory = async () => {
+  const handleAddCategory = async (): Promise<void> => {
     if (!newCategoryName.trim()) {
       alert("Enter category name");
       return;
@@ -195,7 +211,7 @@ const CategoriesPage = () => {
     try {
       console.log("➕ Adding category:", newCategoryName);
 
-      const result = await apiPost(
+      const result: ApiResponse<Category> = await apiPost(
         "/api/manage-items/categories/create-category",
         { name: newCategoryName }
       );
@@ -208,20 +224,26 @@ const CategoriesPage = () => {
       setNewCategoryName("");
       setShowModal(false);
       fetchCategories();
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Add category error:", err);
       alert(err.message || "Failed to add category");
     }
   };
 
   // ================= FILTER =================
-  const filteredCategories = categories.filter(c =>
+  const filteredCategories: Category[] = categories.filter(c =>
     (c.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // ================= SEARCH =================
-  const handleSearch = () => {
+  const handleSearch = (): void => {
     console.log("🔍 Searching for:", searchTerm);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   // ================= UI =================
@@ -246,12 +268,8 @@ const CategoriesPage = () => {
             type="text"
             placeholder="Search Category"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={handleKeyPress}
             className="border border-gray-300 rounded-md px-3 py-2 w-full sm:w-60 focus:outline-none focus:ring-2 focus:ring-blue-300 text-black text-sm sm:text-base"
           />
           <button
@@ -377,7 +395,7 @@ const CategoriesPage = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan={6}
                       className="text-center py-4 sm:py-6 text-gray-500 border border-gray-300 text-black text-xs sm:text-sm"
                     >
                       No categories found
@@ -389,7 +407,7 @@ const CategoriesPage = () => {
               <tfoot>
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan={6}
                     className="px-2 sm:px-3 py-2 sm:py-3 text-left border-t border border-gray-300"
                   >
                     <button

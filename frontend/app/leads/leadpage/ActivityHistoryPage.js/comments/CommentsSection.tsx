@@ -1,21 +1,44 @@
-// frontend/app/leads/ActivityHistoryPage.js/comments/CommentsSection.js - MULTI-TENANT FIXED
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 
-//Import tenant-aware utilities
-import { apiGet, apiPost, apiDelete, validateSession, getUser } from "@/utils/api";
+// Import tenant-aware utilities
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+  validateSession,
+  getUser,
+} from "@/utils/api";
 
-export default function CommentsSection({ leadId, currentComment, onCommentUpdate }) {
-  // ✅ FIX: Ensure comments is always initialized as an array
-  const [comments, setComments] = useState([]);
-  const [inputComment, setInputComment] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+interface Comment {
+  _id: string;
+  text: string;
+  createdBy?: {
+    username: string;
+  };
+  role?: string;
+  createdAt: string;
+}
 
-  //Validate session and get user
+interface CommentsSectionProps {
+  leadId: string;
+  currentComment?: string;
+  onCommentUpdate?: (comment: string) => void;
+}
+
+export default function CommentsSection({
+  leadId,
+  currentComment,
+  onCommentUpdate,
+}: CommentsSectionProps) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [inputComment, setInputComment] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Validate session and get user
   useEffect(() => {
     if (!validateSession()) {
       console.error("❌ Invalid session in CommentsSection");
@@ -27,8 +50,8 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
     }
   }, [leadId]);
 
-  //Fetch comments with tenant filtering (done by backend)
-  const fetchComments = async () => {
+  // Fetch comments with tenant filtering (done by backend)
+  const fetchComments = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch comments - invalid session");
       return;
@@ -47,21 +70,21 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
 
       console.log("✅ Comments fetched:", result.data?.length || 0);
 
-      // ✅ FIX: Ensure we always set an array, even if result.data is null/undefined
       const commentsData = Array.isArray(result.data) ? result.data : [];
       setComments(commentsData);
     } catch (error) {
       console.error("❌ Error fetching comments:", error);
-      toast.error(error.message || "Failed to load comments");
-      // ✅ FIX: Set empty array on error to prevent map error
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load comments"
+      );
       setComments([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  //Add comment with automatic tenant isolation
-  const addComment = async () => {
+  // Add comment with automatic tenant isolation
+  const addComment = async (): Promise<void> => {
     if (!inputComment.trim()) {
       toast.error("Please enter a comment");
       return;
@@ -98,15 +121,18 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
       toast.success("Comment added successfully!");
     } catch (error) {
       console.error("❌ Error adding comment:", error);
-      toast.error(error.message || "Failed to add comment");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add comment"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  //Delete comment with tenant validation
-  const deleteComment = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+  // Delete comment with tenant validation
+  const deleteComment = async (id: string): Promise<void> => {
+    if (!window.confirm("Are you sure you want to delete this comment?"))
+      return;
 
     if (!validateSession()) {
       console.error("❌ Cannot delete comment - invalid session");
@@ -127,7 +153,6 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
 
       await fetchComments();
 
-      // ✅ FIX: Ensure comments is array before filtering
       const commentsArray = Array.isArray(comments) ? comments : [];
       const remaining = commentsArray.filter((c) => c._id !== id);
       onCommentUpdate?.(remaining[0]?.text || "");
@@ -135,11 +160,13 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
       toast.success("Comment deleted successfully");
     } catch (error) {
       console.error("❌ Error deleting comment:", error);
-      toast.error(error.message || "Failed to delete comment");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete comment"
+      );
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);
       return date.toLocaleString("en-GB", {
@@ -154,7 +181,6 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
     }
   };
 
-  // ✅ FIX: Ensure comments is always an array before rendering
   const safeComments = Array.isArray(comments) ? comments : [];
 
   return (
@@ -212,19 +238,28 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
               <tbody>
                 {isLoading && safeComments.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="py-8 text-center text-gray-500 border border-gray-300">
+                    <td
+                      colSpan={4}
+                      className="py-8 text-center text-gray-500 border border-gray-300"
+                    >
                       Loading comments...
                     </td>
                   </tr>
                 ) : safeComments.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="py-8 text-center text-red-500 font-medium border border-gray-300">
+                    <td
+                      colSpan={4}
+                      className="py-8 text-center text-red-500 font-medium border border-gray-300"
+                    >
                       No comments yet
                     </td>
                   </tr>
                 ) : (
                   safeComments.map((c) => (
-                    <tr key={c._id} className="bg-white hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={c._id}
+                      className="bg-white hover:bg-gray-50 transition-colors"
+                    >
                       <td className="px-4 py-4 text-gray-600 border border-gray-300">
                         {c.text || "No comment text"}
                       </td>
@@ -269,7 +304,10 @@ export default function CommentsSection({ leadId, currentComment, onCommentUpdat
               </div>
             ) : (
               safeComments.map((c) => (
-                <div key={c._id} className="border border-gray-300 bg-white rounded-lg overflow-hidden shadow-sm">
+                <div
+                  key={c._id}
+                  className="border border-gray-300 bg-white rounded-lg overflow-hidden shadow-sm"
+                >
                   <div className="border-b border-gray-200 p-4 text-sm text-gray-600">
                     {c.text || "No comment text"}
                   </div>

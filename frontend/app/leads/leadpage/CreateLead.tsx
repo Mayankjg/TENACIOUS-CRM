@@ -1,4 +1,4 @@
-// frontend/app/leads/CreateLead.jsx - COMPLETE MULTI-SOURCE TAG SELECTOR
+// frontend/app/leads/CreateLead.tsx - COMPLETE MULTI-SOURCE TAG SELECTOR
 
 "use client";
 
@@ -24,13 +24,132 @@ import {
   isSalesperson
 } from "@/utils/api";
 
-export default function CreateLead({ onSave, onCancel, existingData }) {
+/* --------------------------- TYPES --------------------------- */
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
+}
+
+interface User {
+  id: string;
+  role: string;
+  tenantId: string;
+  username?: string;
+}
+
+interface Category {
+  _id: string;
+  name: string;
+}
+
+interface Product {
+  _id: string;
+  name: string;
+}
+
+interface LeadSource {
+  _id: string;
+  name: string;
+}
+
+interface LeadStatus {
+  _id: string;
+  name: string;
+}
+
+interface Salesperson {
+  _id?: string;
+  id?: string;
+  username: string;
+}
+
+interface Tag {
+  _id: string;
+  name: string;
+  color: string;
+  description?: string;
+  source?: string;
+}
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  company: string;
+  email: string;
+  phone: string;
+  mobile: string;
+  fax: string;
+  designation: string;
+  website: string;
+  salesperson: string;
+  category: string;
+  product: string;
+  leadSource: string;
+  leadStatus: string;
+  tags: string[];
+  leadStartDate: string;
+  leadStartTime: string;
+  leadRemindDate: string;
+  leadRemindTime: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  expectedAmount: string;
+  paymentReceived: string;
+  comment: string;
+  facebook: string;
+  skype: string;
+  linkedIn: string;
+  gtalk: string;
+  twitter: string;
+  convertOption: string;
+}
+
+interface ExistingLead extends FormData {
+  _id: string;
+  createdAt?: string;
+}
+
+interface FormErrors {
+  firstName?: string;
+  salesperson?: string;
+  category?: string;
+  product?: string;
+  leadStatus?: string;
+  country?: string;
+}
+
+interface FieldConfig {
+  key: keyof FormData;
+  placeholder: string;
+  isPhone?: boolean;
+}
+
+interface CreateLeadProps {
+  onSave?: (data: any) => void;
+  onCancel?: () => void;
+  existingData?: ExistingLead | null;
+}
+
+interface NewTag {
+  name: string;
+  color: string;
+  description: string;
+}
+
+type TagSource = "crm" | "systemeio" | "whatsapp";
+
+/* --------------------------- COMPONENT --------------------------- */
+export default function CreateLead({ onSave, onCancel, existingData }: CreateLeadProps) {
   const router = useRouter();
-  const activityHistoryRef = useRef(null);
+  const activityHistoryRef = useRef<HTMLDivElement>(null);
   const isEditMode = Boolean(existingData?._id);
 
   /* --------------------------- USER & SESSION --------------------------- */
-  const [loggedUser, setLoggedUser] = useState(null);
+  const [loggedUser, setLoggedUser] = useState<User | null>(null);
 
   useEffect(() => {
     if (!validateSession()) {
@@ -54,7 +173,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   const userIsSalesperson = isSalesperson();
 
   /* --------------------------- COUNTRIES --------------------------- */
-  const [countries, setCountries] = useState([]);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
 
   useEffect(() => {
@@ -65,8 +184,8 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
         );
         const data = await response.json();
 
-        const formattedCountries = data
-          .map((country) => {
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
             const name = country.name?.common || "";
             const root = country.idd?.root || "";
             const suffixes = country.idd?.suffixes || [];
@@ -82,8 +201,8 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
               displayName: callingCode ? `${name} (${callingCode})` : name,
             };
           })
-          .filter((c) => c.name && c.callingCode)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
 
         setCountries(formattedCountries);
         setLoadingCountries(false);
@@ -98,7 +217,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   }, []);
 
   /* --------------------------- DEFAULT FORM --------------------------- */
-  const defaultForm = useCallback(() => {
+  const defaultForm = useCallback((): FormData => {
     const now = new Date();
     return {
       firstName: "",
@@ -137,22 +256,22 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     };
   }, []);
 
-  const [formData, setFormData] = useState(defaultForm);
-  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState<FormData>(defaultForm);
+  const [errors, setErrors] = useState<FormErrors>({});
   const submittedRef = useRef(false);
 
   /* --------------------------- DROPDOWNS --------------------------- */
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [leadSources, setLeadSources] = useState([]);
-  const [leadStatuses, setLeadStatuses] = useState([]);
-  const [salespersons, setSalespersons] = useState([]);
-  const [tags, setTags] = useState([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [leadSources, setLeadSources] = useState<LeadSource[]>([]);
+  const [leadStatuses, setLeadStatuses] = useState<LeadStatus[]>([]);
+  const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   /* 🔥 MULTI-SOURCE TAG SYSTEM 🔥 */
-  const [activeTagSource, setActiveTagSource] = useState("crm");
-  const [systemeioTags, setSystemeioTags] = useState([]);
-  const [whatsappTags, setWhatsappTags] = useState([]);
+  const [activeTagSource, setActiveTagSource] = useState<TagSource>("crm");
+  const [systemeioTags, setSystemeioTags] = useState<Tag[]>([]);
+  const [whatsappTags, setWhatsappTags] = useState<Tag[]>([]);
   const [loadingExternalTags, setLoadingExternalTags] = useState(false);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
 
@@ -174,7 +293,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       }
 
       const data = await response.json();
-      const formattedTags = (data.tags || []).map(tag => ({
+      const formattedTags: Tag[] = (data.tags || []).map((tag: any) => ({
         _id: `systemeio_${tag.id}`,
         name: tag.name,
         color: "#FF6B00",
@@ -191,6 +310,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setLoadingExternalTags(false);
     }
   };
+
   // 🔥 Fetch WhatsApp Tags - FIXED VERSION
   const fetchWhatsAppTags = async () => {
     try {
@@ -212,7 +332,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
 
       console.log("🏷️ Extracted WhatsApp tags:", tagArray);
 
-      const formattedTags = tagArray.map((tag) => ({
+      const formattedTags: Tag[] = tagArray.map((tag: any) => ({
         _id: `whatsapp_${tag.id}`,
         name: tag.tag,
         color: "#25D366",
@@ -228,13 +348,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     }
   };
 
-
-
-
   // 🔥 Load external tags when switching tabs
-  // ✅ FIXED VERSION - Add loggedUser dependency
   useEffect(() => {
-    if (!loggedUser) return; // ✅ Wait for user to load
+    if (!loggedUser) return;
 
     if (activeTagSource === "systemeio" && systemeioTags.length === 0) {
       fetchSystemeioTags();
@@ -242,10 +358,10 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     if (activeTagSource === "whatsapp" && whatsappTags.length === 0) {
       fetchWhatsAppTags();
     }
-  }, [activeTagSource, loggedUser]); // ✅ Added loggedUser dependency
+  }, [activeTagSource, loggedUser]);
 
   // 🔥 Get current tag list based on active source
-  const getCurrentTagList = () => {
+  const getCurrentTagList = (): Tag[] => {
     switch (activeTagSource) {
       case "systemeio":
         return systemeioTags;
@@ -296,7 +412,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   }, [loggedUser, fetchDropdownData]);
 
   /* --------------------------- COUNTRY CALLING CODE LOGIC --------------------------- */
-  const extractPhoneNumber = (phoneValue, callingCode) => {
+  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
     if (!phoneValue) return "";
 
     const trimmed = phoneValue.trim();
@@ -309,7 +425,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     return cleanedPhone;
   };
 
-  const formatPhoneWithCode = (phoneNumber, callingCode) => {
+  const formatPhoneWithCode = (phoneNumber: string, callingCode: string): string => {
     if (!phoneNumber) return callingCode ? `${callingCode} ` : "";
 
     const cleanPhone = phoneNumber.trim();
@@ -318,7 +434,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     return callingCode ? `${callingCode} ${cleanPhone}` : cleanPhone;
   };
 
-  const handleCountryChange = (e) => {
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCountryName = e.target.value;
     const selectedCountry = countries.find((c) => c.name === selectedCountryName);
     const newCallingCode = selectedCountry?.callingCode || "";
@@ -339,10 +455,10 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       mobile: newMobile,
     }));
 
-    setErrors((prev) => ({ ...prev, country: "" }));
+    setErrors((prev) => ({ ...prev, country: undefined }));
   };
 
-  const handlePhoneChange = (e) => {
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
     const currentCountry = countries.find((c) => c.name === formData.country);
@@ -374,7 +490,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       console.log("📝 Edit Mode - Processing tags:", existingData.tags);
 
       const normalizedTags = (existingData.tags || [])
-        .map((t) => {
+        .map((t: any) => {
           if (typeof t === "string") {
             if (t.length === 24 && /^[a-f0-9]{24}$/i.test(t)) {
               const foundTag = tags.find((tag) => tag._id === t);
@@ -395,7 +511,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
 
           return null;
         })
-        .filter(Boolean);
+        .filter(Boolean) as string[];
 
       console.log("✅ Final normalized tags:", normalizedTags);
 
@@ -408,29 +524,39 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     }
   }, [isEditMode, existingData, defaultForm, tags]);
 
+  // useEffect(() => {
+  //   if (!isEditMode && userIsSalesperson && loggedUser?.username) {
+  //     setFormData((p) => ({
+  //       ...p,
+  //       salesperson: loggedUser.username,
+  //     }));
+  //   }
+  // }, [isEditMode, userIsSalesperson, loggedUser]);
+
+
   useEffect(() => {
-    if (!isEditMode && userIsSalesperson && loggedUser?.username) {
-      setFormData((p) => ({
-        ...p,
-        salesperson: loggedUser.username,
-      }));
-    }
-  }, [isEditMode, userIsSalesperson, loggedUser]);
+  if (!isEditMode && userIsSalesperson && loggedUser?.username) {
+    setFormData((p) => ({
+      ...p,
+      salesperson: loggedUser.username || "",
+    }));
+  }
+}, [isEditMode, userIsSalesperson, loggedUser?.username]); // More specific dependency
 
   /* --------------------------- INPUT --------------------------- */
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
     if (userIsSalesperson && name === "salesperson") return;
     if (isEditMode && name === "comment") return;
 
     setFormData((p) => ({ ...p, [name]: value }));
-    setErrors((p) => ({ ...p, [name]: "" }));
+    setErrors((p) => ({ ...p, [name]: undefined }));
   };
 
   /* --------------------------- VALIDATION --------------------------- */
-  const validateForm = () => {
-    const e = {};
+  const validateForm = (): FormErrors => {
+    const e: FormErrors = {};
     if (!formData.firstName) e.firstName = "Required";
     if (!formData.salesperson) e.salesperson = "Required";
     if (!formData.category) e.category = "Required";
@@ -448,7 +574,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     }
   }, [isEditMode, formData.comment]);
 
-  const handleCommentUpdate = (newComment) => {
+  const handleCommentUpdate = (newComment: string) => {
     console.log("📝 Comment Update Triggered:", newComment);
     setLatestComment(newComment);
     setFormData((prev) => ({
@@ -458,7 +584,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   };
 
   /* --------------------------- SUBMIT --------------------------- */
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (submittedRef.current) return;
     submittedRef.current = true;
@@ -482,7 +608,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     try {
       console.log("💾 Submitting lead...", { isEditMode });
 
-      if (isEditMode) {
+      if (isEditMode && existingData) {
         const updatePayload = {
           ...formData,
           comment: latestComment,
@@ -518,7 +644,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
         handleReset();
         onSave?.({ success: true });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Submit Error:", err);
       toast.error(err.message || "Something went wrong");
     } finally {
@@ -554,7 +680,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   const [newProduct, setNewProduct] = useState("");
   const [newLeadName, setNewLeadName] = useState("");
   const [newLeadStatus, setNewLeadStatus] = useState("");
-  const [newTag, setNewTag] = useState({
+  const [newTag, setNewTag] = useState<NewTag>({
     name: "",
     color: "#3B82F6",
     description: "",
@@ -575,7 +701,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setShowCategoryModal(false);
       setNewCategoryName("");
       toast.success("Category added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Category Error:", error);
       toast.error(error.message || "Failed to add category");
     }
@@ -596,7 +722,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setShowProductModal(false);
       setNewProduct("");
       toast.success("Product added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Product Error:", error);
       toast.error(error.message || "Failed to add product");
     }
@@ -617,7 +743,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setShowLeadSourceModal(false);
       setNewLeadName("");
       toast.success("Lead source added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Lead Source Error:", error);
       toast.error(error.message || "Failed to add lead source");
     }
@@ -638,7 +764,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setShowLeadStatusModal(false);
       setNewLeadStatus("");
       toast.success("Lead status added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Lead Status Error:", error);
       toast.error(error.message || "Failed to add lead status");
     }
@@ -657,7 +783,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
         throw new Error(result.error || "Failed to add tag");
       }
 
-      const createdTag = result.data;
+      const createdTag: Tag = result.data;
 
       setTags((p) => [...p, createdTag]);
 
@@ -669,14 +795,14 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setShowTagModal(false);
       setNewTag({ name: "", color: "#3B82F6", description: "" });
       toast.success("Tag added and selected!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Tag Error:", error);
       toast.error(error.message || "Failed to add tag");
     }
   };
 
   /* --------------------------- TAG SELECTION --------------------------- */
-  const handleTagSelect = (tagName) => {
+  const handleTagSelect = (tagName: string) => {
     setFormData((prev) => {
       const exists = prev.tags?.includes(tagName);
       return {
@@ -688,7 +814,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     });
   };
 
-  const removeTag = (tagName) => {
+  const removeTag = (tagName: string) => {
     setFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tagName),
@@ -696,7 +822,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   };
 
   /* --------------------------- FIELD CONFIG --------------------------- */
-  const leftFields = [
+  const leftFields: FieldConfig[] = [
     { key: "lastName", placeholder: "Last Name" },
     { key: "company", placeholder: "Company Name" },
     { key: "email", placeholder: "Email address" },
@@ -734,8 +860,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                   value={formData.firstName}
                   onChange={handleChange}
                   placeholder="First Name *"
-                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.firstName ? "border-red-500" : ""
-                    }`}
+                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${
+                    errors.firstName ? "border-red-500" : ""
+                  }`}
                 />
                 {errors.firstName && (
                   <p className="text-red-500 text-xs mt-1">
@@ -762,15 +889,16 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
           {/* RIGHT (1/3 on desktop, full width on mobile) */}
           <div className="w-full lg:w-[33%] lg:pl-6 flex flex-col gap-3">
             {/* Salesperson (admin only) */}
-            {isAdmin && (
+            {userIsAdmin && (
               <div>
                 <div className="flex gap-2">
                   <select
                     name="salesperson"
                     value={formData.salesperson}
                     onChange={handleChange}
-                    className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.salesperson ? "border-red-500" : ""
-                      }`}
+                    className={`border rounded-sm px-3 h-[40px] w-full text-sm ${
+                      errors.salesperson ? "border-red-500" : ""
+                    }`}
                   >
                     <option value="">Select Sales person *</option>
                     {salespersons.map((sp) => (
@@ -807,8 +935,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.category ? "border-red-500" : ""
-                    }`}
+                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${
+                    errors.category ? "border-red-500" : ""
+                  }`}
                 >
                   <option value="">Select Category *</option>
                   {categories.map((cat) => (
@@ -838,8 +967,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                   name="product"
                   value={formData.product}
                   onChange={handleChange}
-                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.product ? "border-red-500" : ""
-                    }`}
+                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${
+                    errors.product ? "border-red-500" : ""
+                  }`}
                 >
                   <option value="">Select Product *</option>
                   {products.map((p) => (
@@ -894,8 +1024,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                   name="leadStatus"
                   value={formData.leadStatus}
                   onChange={handleChange}
-                  className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${errors.leadStatus ? "border-red-500" : ""
-                    }`}
+                  className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${
+                    errors.leadStatus ? "border-red-500" : ""
+                  }`}
                 >
                   <option value="">Select Lead Status *</option>
                   {leadStatuses.map((s) => (
@@ -938,30 +1069,33 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                 <button
                   type="button"
                   onClick={() => setActiveTagSource("crm")}
-                  className={`px-4 cursor-pointer py-2 text-sm font-medium transition-all ${activeTagSource === "crm"
-                    ? "cursor-pointer border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-600 cursor-pointer  hover:text-gray-800"
-                    }`}
+                  className={`px-4 cursor-pointer py-2 text-sm font-medium transition-all ${
+                    activeTagSource === "crm"
+                      ? "cursor-pointer border-b-2 border-blue-600 text-blue-600"
+                      : "text-gray-600 cursor-pointer  hover:text-gray-800"
+                  }`}
                 >
                   CRM Tags
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTagSource("systemeio")}
-                  className={`px-4 cursor-pointer py-2 text-sm font-medium transition-all ${activeTagSource === "systemeio"
-                    ? " cursor-pointer border-b-2 border-orange-600 text-orange-600"
-                    : "text-gray-600 cursor-pointer  hover:text-gray-800"
-                    }`}
+                  className={`px-4 cursor-pointer py-2 text-sm font-medium transition-all ${
+                    activeTagSource === "systemeio"
+                      ? " cursor-pointer border-b-2 border-orange-600 text-orange-600"
+                      : "text-gray-600 cursor-pointer  hover:text-gray-800"
+                  }`}
                 >
                   Systeme.io
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTagSource("whatsapp")}
-                  className={`px-4 cursor-pointer py-2 text-sm font-medium transition-all ${activeTagSource === "whatsapp"
-                    ? "cursor-pointer border-b-2 border-green-600 text-green-600"
-                    : "text-gray-600 cursor-pointer  hover:text-gray-800"
-                    }`}
+                  className={`px-4 cursor-pointer py-2 text-sm font-medium transition-all ${
+                    activeTagSource === "whatsapp"
+                      ? "cursor-pointer border-b-2 border-green-600 text-green-600"
+                      : "text-gray-600 cursor-pointer  hover:text-gray-800"
+                  }`}
                 >
                   WhatsApp
                 </button>
@@ -1015,8 +1149,8 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                     {loadingExternalTags
                       ? "Loading tags..."
                       : formData.tags?.length > 0
-                        ? `${formData.tags.length} tag(s) selected`
-                        : `Select ${activeTagSource === "crm" ? "CRM" : activeTagSource === "systemeio" ? "Systeme.io" : "WhatsApp"} tags`}
+                      ? `${formData.tags.length} tag(s) selected`
+                      : `Select ${activeTagSource === "crm" ? "CRM" : activeTagSource === "systemeio" ? "Systeme.io" : "WhatsApp"} tags`}
                   </span>
                   <span className="text-gray-400">▼</span>
                 </button>
@@ -1216,8 +1350,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
                 value={isEditMode ? latestComment : formData.comment}
                 onChange={handleChange}
                 disabled={isEditMode}
-                className={`flex-1 border rounded-sm px-3 py-2 text-sm leading-snug ${isEditMode ? "bg-gray-100 cursor-not-allowed" : ""
-                  }`}
+                className={`flex-1 border rounded-sm px-3 py-2 text-sm leading-snug ${
+                  isEditMode ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="Comment"
                 style={{ minHeight: 40 }}
               />
@@ -1378,7 +1513,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       />
 
       {/* -------------------- ACTIVITY HISTORY - ONLY IN EDIT MODE -------------------- */}
-      {isEditMode && (
+      {isEditMode && existingData && (
         <div ref={activityHistoryRef}>
           <br />
           <br />

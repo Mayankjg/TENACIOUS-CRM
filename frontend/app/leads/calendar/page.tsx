@@ -1,39 +1,99 @@
-// frontend/app/calendar/page.jsx - MULTI-TENANT FIXED
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { ArrowBigRight, ArrowBigLeft } from "lucide-react";
 import { toast } from "react-toastify";
 
-//Import tenant-aware utilities
-import { 
-  apiGet, 
-  validateSession 
-} from "@/utils/api";
+// Import tenant-aware utilities
+import { apiGet, validateSession } from "@/utils/api";
 
-const LeadsCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState("month");
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+interface Lead {
+  leadStartDate?: string;
+  leadStartTime?: string;
+  firstName: string;
+  lastName: string;
+  company?: string;
+  phone?: string;
+  email?: string;
+  leadStatus: string;
+  product?: string;
+}
+
+interface DayInfo {
+  day: number;
+  isCurrentMonth: boolean;
+  date: Date;
+}
+
+interface TimeSlot {
+  day: Date;
+  time: string;
+  leads: Lead[];
+}
+
+interface LeadsDataByDate {
+  [key: string]: Lead[];
+}
+
+interface LeadsDataByDateTime {
+  [key: string]: Lead[];
+}
+
+const LeadsCalendar: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"month" | "week">("month");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
+    null
+  );
 
   const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
 
   const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const fullDaysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const timeSlots = [
-    "12am", "1am", "2am", "3am", "4am", "5am", "6am", "7am", "8am", "9am",
-    "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm",
-    "7pm", "8pm", "9pm", "10pm", "11pm",
+    "12am",
+    "1am",
+    "2am",
+    "3am",
+    "4am",
+    "5am",
+    "6am",
+    "7am",
+    "8am",
+    "9am",
+    "10am",
+    "11am",
+    "12pm",
+    "1pm",
+    "2pm",
+    "3pm",
+    "4pm",
+    "5pm",
+    "6pm",
+    "7pm",
+    "8pm",
+    "9pm",
+    "10pm",
+    "11pm",
   ];
 
-  //Validate session on mount
+  // Validate session on mount
   useEffect(() => {
     if (!validateSession()) {
       console.error("❌ Invalid session");
@@ -43,8 +103,8 @@ const LeadsCalendar = () => {
     fetchLeads();
   }, []);
 
-  //Fetch with tenant filtering (done by backend)
-  const fetchLeads = async () => {
+  // Fetch with tenant filtering (done by backend)
+  const fetchLeads = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch - invalid session");
       return;
@@ -60,7 +120,7 @@ const LeadsCalendar = () => {
         throw new Error(result.error || "Failed to fetch leads");
       }
 
-      const items = Array.isArray(result.data)
+      const items: Lead[] = Array.isArray(result.data)
         ? result.data
         : result.data?.data || result.data?.leads || [];
 
@@ -75,8 +135,8 @@ const LeadsCalendar = () => {
   };
 
   // Group leads by date
-  const leadsDataByDate = useMemo(() => {
-    const grouped = {};
+  const leadsDataByDate = useMemo<LeadsDataByDate>(() => {
+    const grouped: LeadsDataByDate = {};
 
     leads.forEach((lead) => {
       if (!lead.leadStartDate) return;
@@ -95,8 +155,8 @@ const LeadsCalendar = () => {
   }, [leads]);
 
   // Group leads by date and time for week view
-  const leadsDataByDateTime = useMemo(() => {
-    const grouped = {};
+  const leadsDataByDateTime = useMemo<LeadsDataByDateTime>(() => {
+    const grouped: LeadsDataByDateTime = {};
 
     leads.forEach((lead) => {
       if (!lead.leadStartDate || !lead.leadStartTime) return;
@@ -105,11 +165,11 @@ const LeadsCalendar = () => {
       const dateKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 
       // Parse time (HH:MM format)
-      const [hours, minutes] = lead.leadStartTime.split(':');
+      const [hours, minutes] = lead.leadStartTime.split(":");
       let hour = parseInt(hours);
       const isPM = hour >= 12;
-      const displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-      const timeSlot = `${displayHour}${isPM ? 'pm' : 'am'}`;
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const timeSlot = `${displayHour}${isPM ? "pm" : "am"}`;
 
       const key = `${dateKey}-${timeSlot}`;
 
@@ -123,7 +183,7 @@ const LeadsCalendar = () => {
     return grouped;
   }, [leads]);
 
-  const getDaysInMonth = (date) => {
+  const getDaysInMonth = (date: Date): DayInfo[] => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -131,7 +191,7 @@ const LeadsCalendar = () => {
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
 
-    const days = [];
+    const days: DayInfo[] = [];
 
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
@@ -162,10 +222,10 @@ const LeadsCalendar = () => {
     return days;
   };
 
-  const getWeekDays = (date) => {
+  const getWeekDays = (date: Date): Date[] => {
     const current = new Date(date);
     const first = current.getDate() - current.getDay();
-    const weekDays = [];
+    const weekDays: Date[] = [];
 
     for (let i = 0; i < 7; i++) {
       const day = new Date(current);
@@ -176,30 +236,30 @@ const LeadsCalendar = () => {
     return weekDays;
   };
 
-  const navigateMonth = (direction) => {
+  const navigateMonth = (direction: number): void => {
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1)
     );
   };
 
-  const navigateWeek = (direction) => {
+  const navigateWeek = (direction: number): void => {
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + direction * 7);
     setCurrentDate(newDate);
   };
 
-  const getLeadsForDate = (date) => {
+  const getLeadsForDate = (date: Date): Lead[] => {
     const dateStr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
     return leadsDataByDate[dateStr] || [];
   };
 
-  const getLeadsForDateTime = (date, timeSlot) => {
+  const getLeadsForDateTime = (date: Date, timeSlot: string): Lead[] => {
     const dateStr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
     const key = `${dateStr}-${timeSlot}`;
     return leadsDataByDateTime[key] || [];
   };
 
-  const isToday = (date) => {
+  const isToday = (date: Date): boolean => {
     const today = new Date();
     return (
       date.getDate() === today.getDate() &&
@@ -208,14 +268,14 @@ const LeadsCalendar = () => {
     );
   };
 
-  const handleTimeSlotClick = (day, time) => {
+  const handleTimeSlotClick = (day: Date, time: string): void => {
     const dateTimeLeads = getLeadsForDateTime(day, time);
     if (dateTimeLeads.length > 0) {
       setSelectedTimeSlot({ day, time, leads: dateTimeLeads });
     }
   };
 
-  const closeModal = () => {
+  const closeModal = (): void => {
     setSelectedTimeSlot(null);
   };
 
@@ -330,7 +390,9 @@ const LeadsCalendar = () => {
                       } ${
                         !dayInfo.isCurrentMonth ? "bg-gray-50" : "bg-white"
                       } hover:bg-gray-50 transition-colors relative cursor-pointer`}
-                      title={leadsCount > 0 ? `${leadsCount} leads scheduled` : ''}
+                      title={
+                        leadsCount > 0 ? `${leadsCount} leads scheduled` : ""
+                      }
                     >
                       <div className="flex flex-col h-full">
                         <div className="text-left">
@@ -364,7 +426,9 @@ const LeadsCalendar = () => {
                                 </div>
                               ))}
                               {leadsCount > 2 && (
-                                <div className="text-gray-500">+{leadsCount - 2} more</div>
+                                <div className="text-gray-500">
+                                  +{leadsCount - 2} more
+                                </div>
                               )}
                             </div>
                           </div>
@@ -441,12 +505,18 @@ const LeadsCalendar = () => {
                             >
                               {timeLeads.length > 0 && (
                                 <div className="bg-[#3b82f6] text-white text-xs rounded p-1 mb-1">
-                                  <div className="font-semibold">{timeLeads.length} lead{timeLeads.length > 1 ? 's' : ''}</div>
+                                  <div className="font-semibold">
+                                    {timeLeads.length} lead
+                                    {timeLeads.length > 1 ? "s" : ""}
+                                  </div>
                                   <div className="truncate">
-                                    {timeLeads[0].firstName} {timeLeads[0].lastName}
+                                    {timeLeads[0].firstName}{" "}
+                                    {timeLeads[0].lastName}
                                   </div>
                                   {timeLeads.length > 1 && (
-                                    <div className="text-[10px]">+{timeLeads.length - 1} more</div>
+                                    <div className="text-[10px]">
+                                      +{timeLeads.length - 1} more
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -497,42 +567,52 @@ const LeadsCalendar = () => {
                   >
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="text-slate-700">
-                        <span className="text-slate-500 font-medium">Name:</span>{" "}
+                        <span className="text-slate-500 font-medium">
+                          Name:
+                        </span>{" "}
                         <span className="font-semibold text-slate-800">
                           {lead.firstName} {lead.lastName}
                         </span>
                       </div>
 
                       <div className="text-slate-700">
-                        <span className="text-slate-500 font-medium">Company:</span>{" "}
+                        <span className="text-slate-500 font-medium">
+                          Company:
+                        </span>{" "}
                         <span className="font-semibold">
                           {lead.company || "N/A"}
                         </span>
                       </div>
 
                       <div className="text-slate-700">
-                        <span className="text-slate-500 font-medium">Phone:</span>{" "}
+                        <span className="text-slate-500 font-medium">
+                          Phone:
+                        </span>{" "}
                         <span className="font-semibold">
                           {lead.phone || "N/A"}
                         </span>
                       </div>
 
                       <div className="text-slate-700">
-                        <span className="text-slate-500 font-medium">Email:</span>{" "}
+                        <span className="text-slate-500 font-medium">
+                          Email:
+                        </span>{" "}
                         <span className="font-semibold text-sky-700">
                           {lead.email || "N/A"}
                         </span>
                       </div>
 
                       <div className="text-slate-700">
-                        <span className="text-slate-500 font-medium">Status:</span>
+                        <span className="text-slate-500 font-medium">
+                          Status:
+                        </span>
                         <span
                           className={`ml-2 px-3 py-1 rounded-full text-white text-xs font-semibold ${
                             lead.leadStatus === "Open"
                               ? "bg-emerald-500"
                               : lead.leadStatus === "Closed"
-                                ? "bg-indigo-600"
-                                : "bg-gray-400"
+                              ? "bg-indigo-600"
+                              : "bg-gray-400"
                           }`}
                         >
                           {lead.leadStatus}
@@ -540,7 +620,9 @@ const LeadsCalendar = () => {
                       </div>
 
                       <div className="text-slate-700">
-                        <span className="text-slate-500 font-medium">Product:</span>{" "}
+                        <span className="text-slate-500 font-medium">
+                          Product:
+                        </span>{" "}
                         <span className="font-semibold text-indigo-700">
                           {lead.product || "N/A"}
                         </span>

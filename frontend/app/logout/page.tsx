@@ -6,9 +6,11 @@ export default function LogoutPage() {
   const router = useRouter();
 
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       router.push("/");
     }, 400);
+
+    return () => clearTimeout(timer);
   }, [router]);
 
   return (
