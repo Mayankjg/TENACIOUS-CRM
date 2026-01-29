@@ -1,44 +1,92 @@
-// frontend/proxy.ts
+// frontend/proxy.ts - COMPLETE MULTI-TENANT FIX
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// MUST export a function named `proxy` OR default export
+// ============================================
+// PUBLIC PATHS (No Auth Required)
+// ============================================
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/_next",
+  "/api",
+  "/public",
+  "/favicon.ico",
+  "/images",
+  "/uploads",
+];
+
+// ============================================
+// PROTECTED PATHS (Auth Required)
+// ============================================
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/leads",
+  "/manage-items",
+  "/manage-salespersons",
+  "/reports",
+  "/newsletter",
+  "/lead-capture-form",
+];
+
+// ============================================
+// MIDDLEWARE FUNCTION
+// ============================================
 export function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
   const token = req.cookies.get("ts-token")?.value;
-  const pathname = req.nextUrl.pathname;
 
-  const publicPaths = ["/login", "/signup", "/_next", "/api", "/public"];
+  console.log("🔒 Proxy Check:", {
+    path: pathname,
+    hasToken: !!token,
+  });
 
-  // Not logged in → block private routes
-  if (!token && !publicPaths.some((p) => pathname.startsWith(p))) {
+  //Allow public paths
+  const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  if (isPublicPath) {
+    console.log(" Public path - allowing");
+    return NextResponse.next();
+  }
+
+  // Check if path requires authentication
+  const isProtectedPath = PROTECTED_PATHS.some((path) => 
+    pathname.startsWith(path)
+  );
+
+  // ============================================
+  // NOT LOGGED IN → BLOCK PROTECTED ROUTES
+  // ============================================
+  if (!token && isProtectedPath) {
+    console.log("❌ No token - redirecting to login");
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Logged in → block login/signup
-  if (
-    token &&
-    (pathname === "/login" ||
-      pathname === "/signup" ||
-      pathname === "/")
-  ) {
+  // ============================================
+  // LOGGED IN → BLOCK LOGIN/SIGNUP
+  // ============================================
+  if (token && (pathname === "/login" || pathname === "/signup" || pathname === "/")) {
+    console.log(" Already logged in - redirecting to dashboard");
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
+  //  Allow all other requests
+  console.log(" Allowing request");
   return NextResponse.next();
 }
 
-// matcher config is STILL REQUIRED
+// ============================================
+// MATCHER CONFIG (REQUIRED)
+// ============================================
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/leads/:path*",
-    "/manage-items/:path*",
-    "/manage-salespersons/:path*",
-    "/reports/:path*",
-    "/newsletter/:path*",
-    "/lead-capture-form/:path*",
-    "/login",
-    "/signup",
-    "/",
+    /*
+     * Match all paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico (favicon)
+     * - public folder
+     */
+    "/((?!_next/static|_next/image|favicon.ico|images|public).*)",
   ],
 };

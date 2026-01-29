@@ -5,7 +5,7 @@ import "./globals.css";
 import ClientLayout from "./ClientLayout";
 import { AuthProvider } from "@/context/AuthContext";
 
-// ✅ Server-only metadata
+// Server-only metadata
 export const metadata: Metadata = {
   title: "Tenacious Sales",
   description: "Created by Next.js",
