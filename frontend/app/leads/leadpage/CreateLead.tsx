@@ -863,8 +863,8 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                 if (isPhone) {
                   return (
                     <div key={key}>
-                      <div className="flex border rounded-sm overflow-hidden h-[40px]">
-                        <div className="w-[15%] bg-gray-200 border-r border-gray-300 flex items-center justify-center text-gray-600 text-sm select-none cursor-not-allowed">
+                      <div className="flex gap-2 h-[40px]">
+                        <div className="w-[20%] border rounded-sm bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-medium select-none">
                           {currentCallingCode || "+91"}
                         </div>
 
@@ -874,10 +874,52 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                           value={extractPhoneNumber((formData[key as keyof FormData] || "") as string, currentCallingCode)}
                           onChange={(e) => handlePhoneInputChange(e, key as 'phone' | 'mobile')}
                           placeholder={placeholder}
-                          className="flex-1 px-3 outline-none text-sm"
+                          className="flex-1 border rounded-sm px-3 outline-none text-sm"
                         />
                       </div>
                     </div>
+                  );
+                }
+
+                // Special handling for website field - add country beside it
+                if (key === "website") {
+                  return (
+                    <>
+                      <div key={key}>
+                        <input
+                          name={key}
+                          value={(formData[key as keyof FormData] || "") as string}
+                          onChange={handleChange}
+                          placeholder={placeholder}
+                          className="border rounded-sm px-3 h-[40px] w-full text-sm"
+                        />
+                      </div>
+                      
+                      {/* Country dropdown beside website */}
+                      <div key="country">
+                        <select
+                          name="country"
+                          value={formData.country}
+                          onChange={handleCountryChange}
+                          disabled={loadingCountries}
+                          className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${
+                            errors.country ? "border-red-500" : ""
+                          }`}
+                        >
+                          <option value="">
+                            {loadingCountries ? "Loading countries..." : "Select Country"}
+                          </option>
+                          {countries.map((country) => (
+                            <option key={country.name} value={country.name}>
+                              {country.displayName}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.country && (
+                          <p className="text-red-500 text-xs mt-1">{errors.country}</p>
+                        )}
+                      </div>
+                    </>
                   );
                 }
 
@@ -895,6 +937,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
               })}
             </div>
           </div>
+          
 
           {/* RIGHT (1/3 on desktop, full width on mobile) */}
           <div className="w-full lg:w-[33%] lg:pl-6 flex flex-col gap-3">
@@ -1446,23 +1489,6 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                 placeholder="State"
                 className="border rounded-sm px-3 h-[40px] w-full text-sm mb-3"
               />
-
-              <select
-                name="country"
-                value={formData.country}
-                onChange={handleCountryChange}
-                disabled={loadingCountries}
-                className="border rounded-sm px-3 h-[40px] w-full text-sm mb-3"
-              >
-                <option value="">
-                  {loadingCountries ? "Loading countries..." : "Select Country"}
-                </option>
-                {countries.map((country) => (
-                  <option key={country.name} value={country.name}>
-                    {country.displayName}
-                  </option>
-                ))}
-              </select>
 
               <input
                 name="postalCode"
