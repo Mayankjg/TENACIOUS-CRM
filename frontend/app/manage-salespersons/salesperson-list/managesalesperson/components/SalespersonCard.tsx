@@ -1,10 +1,10 @@
-// frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/SalespersonCard.jsx
+// frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/SalespersonCard.tsx
 // MULTI-TENANT FIXED
 
 "use client";
 
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Mail, Phone, Briefcase, Trash2, Key } from "lucide-react";
 
 import NewPasswordModal from "./NewPasswordModal";
@@ -20,18 +20,36 @@ import {
   getTenantInfo 
 } from "@/utils/api";
 
+// Type definitions
+interface Salesperson {
+  id: string | number;
+  username: string;
+  email: string;
+  firstname: string;
+  lastname: string;
+  designation: string;
+  contact: string;
+  profileImage?: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 export default function SalespersonCard() {
   const router = useRouter();
 
-  const [salespersons, setSalespersons] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [selectedEmailId, setSelectedEmailId] = useState(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
 
   // ✅ CRITICAL: Validate session and admin role on mount
   useEffect(() => {
@@ -51,10 +69,11 @@ export default function SalespersonCard() {
     console.log("✅ Salesperson List - Tenant Context:", tenantInfo);
 
     fetchList();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ✅ CRITICAL: Fetch salespersons with tenant filtering (done by backend)
-  const fetchList = async () => {
+  const fetchList = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch salespersons - invalid session");
       return;
@@ -65,7 +84,7 @@ export default function SalespersonCard() {
       
       console.log("🔄 Fetching salespersons...");
 
-      const result = await apiGet("/api/salespersons/get-salespersons");
+      const result: ApiResponse<Salesperson[]> = await apiGet("/api/salespersons/get-salespersons");
 
       if (!result.success) {
         throw new Error(result.error || "Failed to fetch salespersons");
@@ -76,14 +95,14 @@ export default function SalespersonCard() {
       setSalespersons(result.data || []);
     } catch (error) {
       console.error("❌ Error fetching salespersons:", error);
-      alert(error.message || "Failed to load salespersons");
+      alert((error as Error).message || "Failed to load salespersons");
     } finally {
       setLoading(false);
     }
   };
 
   // ✅ CRITICAL: Delete salesperson with tenant validation
-  const deleteSP = async (id) => {
+  const deleteSP = async (id: string | number): Promise<void> => {
     if (!confirm("Delete this salesperson?")) return;
 
     if (!validateSession()) {
@@ -94,7 +113,7 @@ export default function SalespersonCard() {
     try {
       console.log("🗑️ Deleting salesperson:", id);
 
-      const result = await apiDelete(`/api/salespersons/delete-salesperson/${id}`);
+      const result: ApiResponse<void> = await apiDelete(`/api/salespersons/delete-salesperson/${id}`);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to delete salesperson");
@@ -106,12 +125,12 @@ export default function SalespersonCard() {
       alert("Salesperson deleted successfully!");
     } catch (error) {
       console.error("❌ Error deleting salesperson:", error);
-      alert(error.message || "Failed to delete salesperson");
+      alert((error as Error).message || "Failed to delete salesperson");
     }
   };
 
   // ✅ CRITICAL: Update password with tenant validation
-  const handlePasswordChange = async (id, newPassword) => {
+  const handlePasswordChange = async (id: string | number, newPassword: string): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot update password - invalid session");
       return;
@@ -120,7 +139,7 @@ export default function SalespersonCard() {
     try {
       console.log("🔑 Updating password for salesperson:", id);
 
-      const result = await apiPut(
+      const result: ApiResponse<void> = await apiPut(
         `/api/salespersons/update-salesperson-password/${id}`,
         { newPassword }
       );
@@ -133,12 +152,12 @@ export default function SalespersonCard() {
       alert("Password Updated!");
     } catch (error) {
       console.error("❌ Error updating password:", error);
-      alert(error.message || "Failed to update password");
+      alert((error as Error).message || "Failed to update password");
     }
   };
 
   // ✅ CRITICAL: Update email with tenant validation
-  const handleEmailChange = async (id, email) => {
+  const handleEmailChange = async (id: string | number, email: string): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot update email - invalid session");
       return;
@@ -147,7 +166,7 @@ export default function SalespersonCard() {
     try {
       console.log("📧 Updating email for salesperson:", id);
 
-      const result = await apiPut(
+      const result: ApiResponse<{ email: string }> = await apiPut(
         `/api/salespersons/update-salesperson-email/${id}`,
         { email }
       );
@@ -160,18 +179,18 @@ export default function SalespersonCard() {
 
       setSalespersons((prev) =>
         prev.map((sp) =>
-          sp.id === id ? { ...sp, email: result.data.email } : sp
+          sp.id === id ? { ...sp, email: result.data!.email } : sp
         )
       );
 
       alert("Email updated successfully!");
     } catch (error) {
       console.error("❌ Error updating email:", error);
-      alert(error.message || "Failed to update email");
+      alert((error as Error).message || "Failed to update email");
     }
   };
 
-  const resolveImageSrc = (profileImage) => {
+  const resolveImageSrc = (profileImage?: string): string => {
     if (!profileImage)
       return "/uploads/default-avatar.png";
 
@@ -184,7 +203,7 @@ export default function SalespersonCard() {
     return profileImage;
   };
 
-  const filtered = searchQuery
+  const filtered: Salesperson[] = searchQuery
     ? salespersons.filter(
         (sp) =>
           (sp.username || "")
@@ -211,7 +230,7 @@ export default function SalespersonCard() {
       {/* PASSWORD MODAL */}
       {isModalOpen && (
         <NewPasswordModal
-          salespersonId={selectedId}
+          salespersonId={selectedId!}
           onClose={() => setIsModalOpen(false)}
           onPasswordChange={handlePasswordChange}
         />
@@ -220,7 +239,7 @@ export default function SalespersonCard() {
       {/* EMAIL MODAL */}
       {isEmailModalOpen && (
         <ChangeEmailModal
-          salespersonId={selectedEmailId}
+          salespersonId={selectedEmailId!}
           onClose={() => setIsEmailModalOpen(false)}
           onEmailChange={handleEmailChange}
         />
@@ -274,7 +293,7 @@ export default function SalespersonCard() {
         ) : (
           <div className="px-6 grid gap-3 pb-6">
             {filtered.map((sp) => {
-              const imageSrc = resolveImageSrc(sp.profileImage);
+              const imageSrc: string = resolveImageSrc(sp.profileImage);
 
               return (
                 <div
