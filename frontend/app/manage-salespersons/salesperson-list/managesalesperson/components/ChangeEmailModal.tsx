@@ -11,7 +11,7 @@ export default function ChangeEmailModal({
   salespersonId,
   onClose,
   onEmailChange,
-}: ChangeEmailModalProps): React.ReactNode {
+}: ChangeEmailModalProps) {
   const [newEmail, setNewEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
 

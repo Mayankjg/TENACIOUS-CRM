@@ -11,7 +11,7 @@ export default function NewPasswordModal({
   salespersonId,
   onClose,
   onPasswordChange,
-}: NewPasswordModalProps): React.ReactNode {
+}: NewPasswordModalProps) {
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
