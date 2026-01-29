@@ -1,13 +1,42 @@
+// TagModal.tsx
 "use client";
 
-export default function TagModal({
+import React, { ChangeEvent } from "react";
+
+interface NewTag {
+  name: string;
+  color: string;
+  description: string;
+}
+
+interface TagModalProps {
+  showModal: boolean;
+  setShowModal: (value: boolean) => void;
+  newTag: NewTag;
+  setNewTag: (tag: NewTag) => void;
+  handleAddTag: () => void;
+}
+
+const TagModal: React.FC<TagModalProps> = ({
   showModal,
   setShowModal,
   newTag,
   setNewTag,
   handleAddTag,
-}) {
+}) => {
   if (!showModal) return null;
+
+  const handleNameChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setNewTag({ ...newTag, name: e.target.value });
+  };
+
+  const handleColorChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setNewTag({ ...newTag, color: e.target.value });
+  };
+
+  const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>): void => {
+    setNewTag({ ...newTag, description: e.target.value });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 text-black">
@@ -29,7 +58,7 @@ export default function TagModal({
           <input
             type="text"
             value={newTag.name}
-            onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
+            onChange={handleNameChange}
             placeholder="e.g. Outbound Marketing"
             className="border border-gray-300 rounded-lg px-3 py-2 w-full text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -47,7 +76,7 @@ export default function TagModal({
             <input
               type="color"
               value={newTag.color}
-              onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
+              onChange={handleColorChange}
               className="h-10 w-14 rounded cursor-pointer border"
             />
             <span className="text-xs text-gray-500">
@@ -63,14 +92,12 @@ export default function TagModal({
           </label>
           <textarea
             value={newTag.description}
-            onChange={(e) =>
-              setNewTag({ ...newTag, description: e.target.value })
-            }
+            onChange={handleDescriptionChange}
             placeholder="Optional short description about this tag"
             className="border border-gray-300 rounded-lg px-3 py-2 w-full text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500
                        focus:border-blue-500 transition resize-none"
-            rows="3"
+            rows={3}
           />
         </div>
 
@@ -96,4 +123,6 @@ export default function TagModal({
       </div>
     </div>
   );
-}
+};
+
+export default TagModal;

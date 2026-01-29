@@ -1,16 +1,39 @@
-// frontend/app/manage-items/products/ProductsTableModal.js
+// frontend/app/manage-items/lead-status/LeadStatusModal.tsx
+
 "use client";
 
 import React from "react";
 
-export default function ProductsTableModal({
-  showPopup,
-  newProduct,
-  setNewProduct,
-  handleSaveProduct,
-  setShowPopup,
-}) {
-  if (!showPopup) return null;
+/* --------------------------- TYPES --------------------------- */
+interface LeadStatusModalProps {
+  showModal: boolean;
+  newLeadStatus: string;
+  setNewLeadStatus: (status: string) => void;
+  handleAddLeadStatus: () => void;
+  setShowModal: (show: boolean) => void;
+}
+
+/* --------------------------- COMPONENT --------------------------- */
+const LeadStatusModal: React.FC<LeadStatusModalProps> = ({
+  showModal,
+  newLeadStatus,
+  setNewLeadStatus,
+  handleAddLeadStatus,
+  setShowModal,
+}) => {
+  if (!showModal) return null;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    setNewLeadStatus(e.target.value);
+  };
+
+  const handleSaveClick = (): void => {
+    handleAddLeadStatus();
+  };
+
+  const handleCloseClick = (): void => {
+    setShowModal(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-3 sm:p-5">
@@ -46,20 +69,20 @@ export default function ProductsTableModal({
         {/* Header */}
         <div className="border-b px-4 sm:px-5 py-3">
           <h3 className="text-center text-gray-800 font-semibold text-base sm:text-lg">
-            Add Product
+            Add Lead Status
           </h3>
         </div>
 
-        {/* Body */}
+        {/* Input Field */}
         <div className="p-4 sm:p-5 bg-[#f0f2f5]">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Product Name
+            Lead Status
           </label>
           <input
             type="text"
-            placeholder="Enter product name"
-            value={newProduct}
-            onChange={(e) => setNewProduct(e.target.value)}
+            placeholder="Lead Status"
+            value={newLeadStatus}
+            onChange={handleInputChange}
             className="
               w-full border border-gray-300 rounded-md 
               px-3 py-2 
@@ -73,7 +96,7 @@ export default function ProductsTableModal({
         {/* Buttons */}
         <div className="flex justify-end gap-3 px-4 sm:px-5 pb-4 mt-3">
           <button
-            onClick={handleSaveProduct}
+            onClick={handleSaveClick}
             className="
               bg-sky-600 cursor-pointer hover:bg-sky-700 
               text-white text-sm sm:text-base 
@@ -84,7 +107,7 @@ export default function ProductsTableModal({
           </button>
 
           <button
-            onClick={() => setShowPopup(false)}
+            onClick={handleCloseClick}
             className="
               border cursor-pointer border-gray-300 hover:bg-gray-100 
               text-gray-700 text-sm sm:text-base 
@@ -97,4 +120,6 @@ export default function ProductsTableModal({
       </div>
     </div>
   );
-}
+};
+
+export default LeadStatusModal;

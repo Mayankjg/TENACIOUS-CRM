@@ -1,8 +1,8 @@
-// frontend/app/manage-items/tags/page.jsx - WITH EXCEL IMPORT FEATURE
+// frontend/app/manage-items/tags/page.tsx - WITH EXCEL IMPORT FEATURE
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, FormEvent, ChangeEvent } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaEdit, FaTrash, FaPlus, FaTimes, FaTags, FaFileImport, FaDownload } from "react-icons/fa";
@@ -17,19 +17,60 @@ import {
   validateSession
 } from "@/utils/api";
 
+// Type Definitions
+interface Tag {
+  _id: string;
+  name: string;
+  color: string;
+  description: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface TagFormData {
+  name: string;
+  color: string;
+  description: string;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface DeleteTagResponse {
+  details?: {
+    tagName: string;
+    totalLeadsUpdated: number;
+  };
+}
+
+interface ExcelRow {
+  name?: string;
+  Name?: string;
+  NAME?: string;
+  color?: string;
+  Color?: string;
+  COLOR?: string;
+  description?: string;
+  Description?: string;
+  DESCRIPTION?: string;
+}
+
 export default function ManageTagsPage() {
-  const [tags, setTags] = useState([]);
-  const [editingTag, setEditingTag] = useState(null);
-  const [formData, setFormData] = useState({
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [formData, setFormData] = useState<TagFormData>({
     name: "",
     color: "#3B82F6",
     description: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [importing, setImporting] = useState<boolean>(false);
 
-  const formRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ CRITICAL: Validate session on mount
   useEffect(() => {
@@ -42,7 +83,7 @@ export default function ManageTagsPage() {
   }, []);
 
   // ✅ CRITICAL: Fetch with tenant filtering (done by backend)
-  const fetchTags = async () => {
+  const fetchTags = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch - invalid session");
       return;
@@ -52,7 +93,7 @@ export default function ManageTagsPage() {
       setLoading(true);
       console.log("🔄 Fetching tags...");
 
-      const result = await apiGet("/api/manage-items/tags/get-tags");
+      const result: ApiResponse<Tag[]> = await apiGet("/api/manage-items/tags/get-tags");
 
       if (!result.success) {
         throw new Error(result.error || "Failed to fetch tags");
@@ -62,14 +103,14 @@ export default function ManageTagsPage() {
       setTags(result.data || []);
     } catch (error) {
       console.error("❌ Fetch tags error:", error);
-      toast.error(error.message || "Failed to fetch tags");
+      toast.error((error as Error).message || "Failed to fetch tags");
     } finally {
       setLoading(false);
     }
   };
 
   // ✅ CRITICAL: Create/Update with tenant validation
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -88,7 +129,7 @@ export default function ManageTagsPage() {
       if (editingTag) {
         console.log("💾 Updating tag:", editingTag._id);
 
-        const result = await apiPut(
+        const result: ApiResponse = await apiPut(
           `/api/manage-items/tags/update-tag/${editingTag._id}`,
           formData
         );
@@ -101,7 +142,7 @@ export default function ManageTagsPage() {
       } else {
         console.log("➕ Creating tag:", formData.name);
 
-        const result = await apiPost(
+        const result: ApiResponse = await apiPost(
           "/api/manage-items/tags/create-tag",
           formData
         );
@@ -118,13 +159,13 @@ export default function ManageTagsPage() {
       fetchTags();
     } catch (error) {
       console.error("❌ Save tag error:", error);
-      toast.error(error.message || "Failed to save tag");
+      toast.error((error as Error).message || "Failed to save tag");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (tag) => {
+  const handleEdit = (tag: Tag): void => {
     setEditingTag(tag);
     setFormData({
       name: tag.name,
@@ -136,7 +177,7 @@ export default function ManageTagsPage() {
   };
 
   // ✅ CRITICAL: Delete with tenant validation
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string): Promise<void> => {
     const tag = tags.find((t) => t._id === id);
 
     if (
@@ -156,7 +197,7 @@ export default function ManageTagsPage() {
       setLoading(true);
       console.log("🗑️ Deleting tag:", id);
 
-      const result = await apiDelete(
+      const result: ApiResponse<DeleteTagResponse> = await apiDelete(
         `/api/manage-items/tags/delete-tag/${id}`
       );
 
@@ -165,7 +206,7 @@ export default function ManageTagsPage() {
       }
 
       const details = result.data?.details;
-      if (details?.totalLeadsUpdated > 0) {
+      if (details && details.totalLeadsUpdated > 0) {
         toast.success(
           `Tag "${details.tagName}" removed from ${details.totalLeadsUpdated} lead(s)`
         );
@@ -176,23 +217,23 @@ export default function ManageTagsPage() {
       fetchTags();
     } catch (error) {
       console.error("❌ Delete tag error:", error);
-      toast.error(error.message || "Failed to delete tag");
+      toast.error((error as Error).message || "Failed to delete tag");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setEditingTag(null);
     setFormData({ name: "", color: "#3B82F6", description: "" });
   };
 
   // 🆕 EXCEL IMPORT FUNCTIONALITY
-  const handleImportClick = () => {
+  const handleImportClick = (): void => {
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -219,7 +260,7 @@ export default function ManageTagsPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
 
       if (!jsonData || jsonData.length === 0) {
         toast.error("Excel file is empty");
@@ -229,8 +270,8 @@ export default function ManageTagsPage() {
       console.log("📄 Excel data:", jsonData);
 
       // Validate and process tags
-      const tagsToImport = [];
-      const errors = [];
+      const tagsToImport: TagFormData[] = [];
+      const errors: string[] = [];
 
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
@@ -273,11 +314,11 @@ export default function ManageTagsPage() {
       // Import tags one by one
       let successCount = 0;
       let failCount = 0;
-      const duplicates = [];
+      const duplicates: string[] = [];
 
       for (const tag of tagsToImport) {
         try {
-          const result = await apiPost(
+          const result: ApiResponse = await apiPost(
             "/api/manage-items/tags/create-tag",
             tag
           );
@@ -331,7 +372,7 @@ export default function ManageTagsPage() {
   };
 
   // 🆕 DOWNLOAD SAMPLE EXCEL TEMPLATE
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = (): void => {
     const template = [
       { name: "VIP Client", color: "#FF0000", description: "High priority clients" },
       { name: "Follow Up", color: "#FFA500", description: "Needs follow up" },

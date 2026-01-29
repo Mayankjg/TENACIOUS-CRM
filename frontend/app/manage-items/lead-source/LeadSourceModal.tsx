@@ -1,16 +1,39 @@
-// frontend/app/manage-items/lead-status/LeadStatusModal.js
+// frontend/app/manage-items/lead-source/LeadSourceModal.tsx
+
 "use client";
 
 import React from "react";
 
-export default function LeadStatusModal({
+/* --------------------------- TYPES --------------------------- */
+interface LeadSourceModalProps {
+  showModal: boolean;
+  newLeadName: string;
+  setNewLeadName: (name: string) => void;
+  handleAddLeadSource: () => void;
+  setShowModal: (show: boolean) => void;
+}
+
+/* --------------------------- COMPONENT --------------------------- */
+const LeadSourceModal: React.FC<LeadSourceModalProps> = ({
   showModal,
-  newLeadStatus,
-  setNewLeadStatus,
-  handleAddLeadStatus,
+  newLeadName,
+  setNewLeadName,
+  handleAddLeadSource,
   setShowModal,
-}) {
+}) => {
   if (!showModal) return null;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    setNewLeadName(e.target.value);
+  };
+
+  const handleSaveClick = (): void => {
+    handleAddLeadSource();
+  };
+
+  const handleCloseClick = (): void => {
+    setShowModal(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-3 sm:p-5">
@@ -46,20 +69,20 @@ export default function LeadStatusModal({
         {/* Header */}
         <div className="border-b px-4 sm:px-5 py-3">
           <h3 className="text-center text-gray-800 font-semibold text-base sm:text-lg">
-            Add Lead Status
+            Add Lead Source
           </h3>
         </div>
 
-        {/* Input Field */}
+        {/* Input */}
         <div className="p-4 sm:p-5 bg-[#f0f2f5]">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Lead Status
+            Lead Source
           </label>
           <input
             type="text"
-            placeholder="Lead Status"
-            value={newLeadStatus}
-            onChange={(e) => setNewLeadStatus(e.target.value)}
+            placeholder="Lead Source"
+            value={newLeadName}
+            onChange={handleInputChange}
             className="
               w-full border border-gray-300 rounded-md 
               px-3 py-2 
@@ -73,7 +96,7 @@ export default function LeadStatusModal({
         {/* Buttons */}
         <div className="flex justify-end gap-3 px-4 sm:px-5 pb-4 mt-3">
           <button
-            onClick={handleAddLeadStatus}
+            onClick={handleSaveClick}
             className="
               bg-sky-600 cursor-pointer hover:bg-sky-700 
               text-white text-sm sm:text-base 
@@ -82,11 +105,10 @@ export default function LeadStatusModal({
           >
             Save
           </button>
-
           <button
-            onClick={() => setShowModal(false)}
+            onClick={handleCloseClick}
             className="
-              border cursor-pointer  border-gray-300 hover:bg-gray-100 
+              border cursor-pointer border-gray-300 hover:bg-gray-100 
               text-gray-700 text-sm sm:text-base 
               font-medium px-4 sm:px-5 py-2 rounded-md
             "
@@ -97,4 +119,6 @@ export default function LeadStatusModal({
       </div>
     </div>
   );
-}
+};
+
+export default LeadSourceModal;

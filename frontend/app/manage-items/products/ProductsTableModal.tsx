@@ -1,15 +1,28 @@
-// frontend/app/manage-items/lead-source/LeadSourceModal.js
+// frontend/app/manage-items/products/ProductsTableModal.tsx
 "use client";
-import React from "react";
 
-export default function LeadSourceModal({
-  showModal,
-  newLeadName,
-  setNewLeadName,
-  handleAddLeadSource,
-  setShowModal,
-}) {
-  if (!showModal) return null;
+import React, { ChangeEvent } from "react";
+
+interface ProductsTableModalProps {
+  showPopup: boolean;
+  newProduct: string;
+  setNewProduct: (value: string) => void;
+  handleSaveProduct: () => void;
+  setShowPopup: (value: boolean) => void;
+}
+
+const ProductsTableModal: React.FC<ProductsTableModalProps> = ({
+  showPopup,
+  newProduct,
+  setNewProduct,
+  handleSaveProduct,
+  setShowPopup,
+}) => {
+  if (!showPopup) return null;
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setNewProduct(e.target.value);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-3 sm:p-5">
@@ -45,20 +58,20 @@ export default function LeadSourceModal({
         {/* Header */}
         <div className="border-b px-4 sm:px-5 py-3">
           <h3 className="text-center text-gray-800 font-semibold text-base sm:text-lg">
-            Add Lead Source
+            Add Product
           </h3>
         </div>
 
-        {/* Input */}
+        {/* Body */}
         <div className="p-4 sm:p-5 bg-[#f0f2f5]">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Lead Source
+            Product Name
           </label>
           <input
             type="text"
-            placeholder="Lead Source"
-            value={newLeadName}
-            onChange={(e) => setNewLeadName(e.target.value)}
+            placeholder="Enter product name"
+            value={newProduct}
+            onChange={handleInputChange}
             className="
               w-full border border-gray-300 rounded-md 
               px-3 py-2 
@@ -72,7 +85,7 @@ export default function LeadSourceModal({
         {/* Buttons */}
         <div className="flex justify-end gap-3 px-4 sm:px-5 pb-4 mt-3">
           <button
-            onClick={handleAddLeadSource}
+            onClick={handleSaveProduct}
             className="
               bg-sky-600 cursor-pointer hover:bg-sky-700 
               text-white text-sm sm:text-base 
@@ -81,8 +94,9 @@ export default function LeadSourceModal({
           >
             Save
           </button>
+
           <button
-            onClick={() => setShowModal(false)}
+            onClick={() => setShowPopup(false)}
             className="
               border cursor-pointer border-gray-300 hover:bg-gray-100 
               text-gray-700 text-sm sm:text-base 
@@ -95,4 +109,6 @@ export default function LeadSourceModal({
       </div>
     </div>
   );
-}
+};
+
+export default ProductsTableModal;
