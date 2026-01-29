@@ -1,21 +1,37 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-// import "./signup.css";
+
+// Type definitions
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
+}
+
+interface SignupForm {
+  username: string;
+  email: string;
+  password: string;
+  country: string;
+  countryCode: string;
+  contactNo: string;
+  promoCode: string;
+  role: string;
+}
 
 export default function Signup() {
   const router = useRouter();
   const { signupUser } = useAuth();
 
-  const COUNTRY_CODES = {
-    India: "+91",
-    USA: "+1",
-    UK: "+44",
-  };
+  // Dynamic countries state
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState<boolean>(true);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<SignupForm>({
     username: "",
     email: "",
     password: "",
@@ -26,37 +42,81 @@ export default function Signup() {
     role: "admin", // forced admin
   });
 
-  const handleChange = (e) => {
+  // Fetch countries dynamically from REST Countries API
+  useEffect(() => {
+    const fetchCountries = async (): Promise<void> => {
+      try {
+        const response = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,idd"
+        );
+        const data = await response.json();
+
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
+            const name = country.name?.common || "";
+            const root = country.idd?.root || "";
+            const suffixes = country.idd?.suffixes || [];
+
+            let callingCode = "";
+            if (root) {
+              callingCode = suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
+            }
+
+            return {
+              name,
+              callingCode,
+              displayName: callingCode ? `${name} (${callingCode})` : name,
+            };
+          })
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
+
+        setCountries(formattedCountries);
+        setLoadingCountries(false);
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+        setLoadingCountries(false);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ): void => {
     const { name, value } = e.target;
 
-    // Auto Code Logic (READ ONLY)
+    // Auto Code Logic - Update country code when country is selected
     if (name === "country") {
-      const code = COUNTRY_CODES[value] || "";
+      const selectedCountry = countries.find((c) => c.name === value);
+      const code = selectedCountry?.callingCode || "";
+      
       setForm((prev) => ({
         ...prev,
         country: value,
-        countryCode: code, 
+        countryCode: code,
       }));
       return;
     }
 
-    // Normal update
+    // Normal update for other fields
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
 
     try {
       // Force role to admin on the backend as well
-      const payload = { ...form, role: "admin" };
+      const payload: SignupForm = { ...form, role: "admin" };
       await signupUser(payload);
       alert("Signup Successful!");
       router.push("/login");
-    } catch (err) {
+    } catch (err: any) {
       alert(err.response?.data?.message || "Signup failed");
     }
   };
@@ -82,8 +142,10 @@ export default function Signup() {
               </label>
               <input
                 name="username"
+                type="text"
                 placeholder="Enter username"
                 required
+                value={form.username}
                 onChange={handleChange}
                 className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -98,6 +160,7 @@ export default function Signup() {
                 type="email"
                 required
                 placeholder="Enter email"
+                value={form.email}
                 onChange={handleChange}
                 className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -115,6 +178,7 @@ export default function Signup() {
                 type="password"
                 required
                 placeholder="Enter password"
+                value={form.password}
                 onChange={handleChange}
                 className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -127,13 +191,19 @@ export default function Signup() {
               <select
                 name="country"
                 required
+                value={form.country}
                 onChange={handleChange}
-                className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loadingCountries}
+                className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                <option value="">Select Country</option>
-                <option>India</option>
-                <option>USA</option>
-                <option>UK</option>
+                <option value="">
+                  {loadingCountries ? "Loading Countries..." : "Select Country"}
+                </option>
+                {countries.map((country) => (
+                  <option key={country.name} value={country.name}>
+                    {country.displayName}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -147,10 +217,12 @@ export default function Signup() {
                 </label>
                 <input
                   name="countryCode"
+                  type="text"
                   value={form.countryCode}
                   placeholder="+91"
                   required
-                  readOnly // 👈 User cannot edit
+                  readOnly
+                  title="Country code is automatically selected based on Country"
                   className="w-full border p-3 rounded-md bg-gray-200 cursor-not-allowed outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -161,8 +233,10 @@ export default function Signup() {
                 </label>
                 <input
                   name="contactNo"
+                  type="tel"
                   required
                   placeholder="Enter contact no"
+                  value={form.contactNo}
                   onChange={handleChange}
                   className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -175,7 +249,9 @@ export default function Signup() {
               </label>
               <input
                 name="promoCode"
+                type="text"
                 placeholder="Enter promo code"
+                value={form.promoCode}
                 onChange={handleChange}
                 className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -186,7 +262,7 @@ export default function Signup() {
           <div className="flex flex-col sm:flex-row justify-start items-center space-y-4 sm:space-y-0 sm:space-x-6 mt-4">
             <button
               type="submit"
-              className="bg-blue-600 text-white px-8 py-2 rounded-md hover:bg-blue-700 transition"
+              className="bg-blue-600 text-white px-8 py-2 rounded-md hover:bg-blue-700 transition w-full sm:w-auto"
             >
               Save
             </button>

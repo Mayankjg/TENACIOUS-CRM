@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Dispatch, SetStateAction, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
@@ -18,14 +18,57 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
-  const [leadOpen, setLeadOpen] = useState(false);
-  const [newsletterOpen, setNewsletterOpen] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
-  const [salesOpen, setSalesOpen] = useState(false);
-  const [leadCaptureOpen, setLeadCaptureOpen] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState(false);
-  const [year, setYear] = useState("");
+// Type definitions
+interface SidebarProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+interface UserType {
+  username?: string;
+  role?: string;
+  avatar?: string;
+}
+
+interface MenuItemProps {
+  icon: ReactNode;
+  title: string;
+  path: string;
+  go: (path: string) => void;
+  isActive: (path: string) => boolean;
+  isSidebarOpen: boolean;
+}
+
+interface DropdownItem {
+  name: string;
+  path: string;
+}
+
+interface DropdownProps {
+  icon: ReactNode;
+  title: string;
+  isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+  isSidebarOpen: boolean;
+  items: DropdownItem[];
+  go: (path: string) => void;
+  isActive: (path: string) => boolean;
+}
+
+interface SimpleMenuItem {
+  name: string;
+  icon: ReactNode;
+  path: string;
+}
+
+export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
+  const [leadOpen, setLeadOpen] = useState<boolean>(false);
+  const [newsletterOpen, setNewsletterOpen] = useState<boolean>(false);
+  const [manageOpen, setManageOpen] = useState<boolean>(false);
+  const [salesOpen, setSalesOpen] = useState<boolean>(false);
+  const [leadCaptureOpen, setLeadCaptureOpen] = useState<boolean>(false);
+  const [reportsOpen, setReportsOpen] = useState<boolean>(false);
+  const [year, setYear] = useState<number | string>("");
 
   const router = useRouter();
   const pathname = usePathname();
@@ -35,8 +78,8 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
     setYear(new Date().getFullYear());
   }, []);
 
-  const go = (path) => router.push(path);
-  const isActive = (path) => pathname === path;
+  const go = (path: string): void => router.push(path);
+  const isActive = (path: string): boolean => pathname === path;
 
   return (
     <>
@@ -103,8 +146,6 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
               { name: "Leads", path: "/leads/leadpage" },
               { name: "Calendar", path: "/leads/calendar" },
               { name: "Leads On Map", path: "/leads/leads-map" },
-              // { name: "Export Leads", path: "/leads/export-leads" },
-              // { name: "Import Leads", path: "/leads/import-leads" },
             ]}
             go={go}
             isActive={isActive}
@@ -123,22 +164,6 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                   name: "Salesperson List",
                   path: "/manage-salespersons/salesperson-list",
                 },
-                // {
-                //   name: "Request For Inactive (0)",
-                //   path: "/manage-salespersons/request-inactive",
-                // },
-                // {
-                //   name: "Push Notification",
-                //   path: "/manage-salespersons/push-notification",
-                // },
-                // {
-                //   name: "Track Your SalesPerson",
-                //   path: "/manage-salespersons/track-salesperson",
-                // },
-                // {
-                //   name: "Account Expiry Report",
-                //   path: "/manage-salespersons/account-expiry-report",
-                // },
               ]}
               go={go}
               isActive={isActive}
@@ -259,7 +284,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                 icon: <MessageCircle size={18} />,
                 path: "/feedback",
               },
-            ].map((item) => (
+            ].map((item: SimpleMenuItem) => (
               <div
                 key={item.name}
                 className={`flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer truncate transition-all hover:bg-gray-700 hover:text-orange-300 ${
@@ -297,7 +322,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
   );
 }
 
-function MenuItem({ icon, title, path, go, isActive, isSidebarOpen }) {
+function MenuItem({ icon, title, path, go, isActive, isSidebarOpen }: MenuItemProps) {
   return (
     <div
       onClick={() => go(path)}
@@ -320,7 +345,7 @@ function Dropdown({
   items,
   go,
   isActive,
-}) {
+}: DropdownProps) {
   return (
     <div>
       <button
@@ -341,7 +366,7 @@ function Dropdown({
 
       {isSidebarOpen && isOpen && (
         <ul className="ml-6 mt-1 text-sm space-y-1">
-          {items.map((item) => (
+          {items.map((item: DropdownItem) => (
             <li
               key={item.name}
               className={`cursor-pointer py-[2px] px-2 rounded-md transition-colors ${

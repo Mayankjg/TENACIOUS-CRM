@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, KeyboardEvent, ChangeEvent, Dispatch, SetStateAction } from "react";
 import {
   Menu,
   User,
@@ -14,22 +14,44 @@ import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Navbar({ isSidebarOpen, setIsSidebarOpen }) {
+// Type definitions
+interface NavbarProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+interface UserType {
+  username?: string;
+  name?: string;
+  avatar?: string;
+}
+
+export default function Navbar({ isSidebarOpen, setIsSidebarOpen }: NavbarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showMobileSearch, setShowMobileSearch] = useState<boolean>(false);
 
-  const handleSearch = () => {
+  const handleSearch = (): void => {
     if (searchQuery.trim()) console.log("Searching for:", searchQuery);
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     logout();
     setDropdownOpen(false);
     router.push("/login");
+  };
+
+  const handleSearchInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   return (
@@ -59,8 +81,8 @@ export default function Navbar({ isSidebarOpen, setIsSidebarOpen }) {
               type="text"
               placeholder="Search"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
               className="bg-gray-100 rounded-md px-3 py-2 text-sm sm:text-base outline-none w-40 sm:w-60 text-black"
             />
             <Search
@@ -145,8 +167,8 @@ export default function Navbar({ isSidebarOpen, setIsSidebarOpen }) {
             type="text"
             placeholder="Search..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onChange={handleSearchInputChange}
+            onKeyDown={handleKeyDown}
             className="flex-1 bg-gray-100 rounded-md px-3 py-2 text-sm outline-none text-black"
           />
           <Search
