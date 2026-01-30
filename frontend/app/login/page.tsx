@@ -6,27 +6,33 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { FaLock, FaUserPlus, FaEnvelopeOpenText } from "react-icons/fa";
 
+interface LoginForm {
+  email: string;
+  password: string;
+  role: "admin" | "salesperson";
+}
+
 export default function Login() {
   const router = useRouter();
   const { loginUser } = useAuth();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<LoginForm>({
     email: "",
     password: "",
     role: "admin",
   });
 
-  const handleChange = (e) =>
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
       await loginUser(form); 
       // alert("Login Successful!");
       router.push("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       alert(err.response?.data?.message || "Login failed");
     }
   };
