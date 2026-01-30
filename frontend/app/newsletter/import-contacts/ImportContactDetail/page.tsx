@@ -3,19 +3,37 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface Product {
+  id: number;
+  name: string;
+}
+
+interface ImportData {
+  fileData: string[][];
+  columnHeaders: string[];
+  fileName: string;
+}
+
+interface NewContact {
+  id: number;
+  name: string;
+  email: string;
+  product: string;
+}
+
 export default function ImportContactDetail() {
   const router = useRouter();
-  const [fileData, setFileData] = useState([]);
-  const [columnHeaders, setColumnHeaders] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [nameColumnIndex, setNameColumnIndex] = useState("");
-  const [emailColumnIndex, setEmailColumnIndex] = useState("");
-  const [products, setProducts] = useState([]);
+  const [fileData, setFileData] = useState<string[][]>([]);
+  const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [nameColumnIndex, setNameColumnIndex] = useState<string>("");
+  const [emailColumnIndex, setEmailColumnIndex] = useState<string>("");
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     const importData = localStorage.getItem('importFileData');
     if (importData) {
-      const data = JSON.parse(importData);
+      const data: ImportData = JSON.parse(importData);
       setFileData(data.fileData || []);
       setColumnHeaders(data.columnHeaders || []);
     }
@@ -38,7 +56,7 @@ export default function ImportContactDetail() {
       return;
     }
 
-    const newContacts = fileData.map((row, index) => {
+    const newContacts: NewContact[] = fileData.map((row, index) => {
       const name = row[parseInt(nameColumnIndex)] || '';
       const email = row[parseInt(emailColumnIndex)] || '';
 

@@ -4,13 +4,19 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 
+interface ImportData {
+  fileData: any[][];
+  columnHeaders: any[];
+  fileName: string;
+}
+
 export default function ImportContacts() {
   const router = useRouter();
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [fileData, setFileData] = useState([]);
-  const [columnHeaders, setColumnHeaders] = useState([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileData, setFileData] = useState<any[][]>([]);
+  const [columnHeaders, setColumnHeaders] = useState<any[]>([]);
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
@@ -18,10 +24,10 @@ export default function ImportContacts() {
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const data = new Uint8Array(event.target.result);
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          const jsonData: any[][] = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
           if (jsonData.length > 0) {
             const headers = jsonData[0];
@@ -62,12 +68,13 @@ export default function ImportContacts() {
       return;
     }
     
-    localStorage.setItem('importFileData', JSON.stringify({
+    const importData: ImportData = {
       fileData: fileData,
       columnHeaders: columnHeaders,
       fileName: selectedFile.name
-    }));
-
+    };
+    
+    localStorage.setItem('importFileData', JSON.stringify(importData));
     router.push('/newsletter/import-contacts/ImportContactDetail');
   };
 
@@ -75,7 +82,7 @@ export default function ImportContacts() {
     setSelectedFile(null);
     setFileData([]);
     setColumnHeaders([]);
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
     router.push('/newsletter/contact-list');
   };
