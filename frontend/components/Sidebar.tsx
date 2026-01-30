@@ -1,6 +1,7 @@
+// Sidebar.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
@@ -18,25 +19,55 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
-  const [leadOpen, setLeadOpen] = useState(false);
-  const [newsletterOpen, setNewsletterOpen] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
-  const [salesOpen, setSalesOpen] = useState(false);
-  const [leadCaptureOpen, setLeadCaptureOpen] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState(false);
-  const [year, setYear] = useState("");
+interface SidebarProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+}
+
+interface MenuItem {
+  name: string;
+  path: string;
+}
+
+interface MenuItemComponentProps {
+  icon: React.ReactNode;
+  title: string;
+  path: string;
+  go: (path: string) => void;
+  isActive: (path: string) => boolean;
+  isSidebarOpen: boolean;
+}
+
+interface DropdownProps {
+  icon: React.ReactNode;
+  title: string;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  isSidebarOpen: boolean;
+  items: MenuItem[];
+  go: (path: string) => void;
+  isActive: (path: string) => boolean;
+}
+
+export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
+  const [leadOpen, setLeadOpen] = useState<boolean>(false);
+  const [newsletterOpen, setNewsletterOpen] = useState<boolean>(false);
+  const [manageOpen, setManageOpen] = useState<boolean>(false);
+  const [salesOpen, setSalesOpen] = useState<boolean>(false);
+  const [leadCaptureOpen, setLeadCaptureOpen] = useState<boolean>(false);
+  const [reportsOpen, setReportsOpen] = useState<boolean>(false);
+  const [year, setYear] = useState<string>("");
 
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
   useEffect(() => {
-    setYear(new Date().getFullYear());
+    setYear(new Date().getFullYear().toString());
   }, []);
 
-  const go = (path) => router.push(path);
-  const isActive = (path) => pathname === path;
+  const go = (path: string) => router.push(path);
+  const isActive = (path: string) => pathname === path;
 
   return (
     <>
@@ -297,7 +328,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
   );
 }
 
-function MenuItem({ icon, title, path, go, isActive, isSidebarOpen }) {
+function MenuItem({ icon, title, path, go, isActive, isSidebarOpen }: MenuItemComponentProps) {
   return (
     <div
       onClick={() => go(path)}
@@ -320,7 +351,7 @@ function Dropdown({
   items,
   go,
   isActive,
-}) {
+}: DropdownProps) {
   return (
     <div>
       <button

@@ -1,5 +1,8 @@
 "use client";
-const TrackSalesperson = () => {
+
+import React from "react";
+
+const TrackSalesperson: React.FC = () => {
   return (
     <div className="min-h-screen flex justify-center items-start mt-4 px-3 sm:px-6 py-4 bg-[#f4f5f7]">
       <h1 className="text-2xl font-bold text-black">TrackSalesperson Page</h1>

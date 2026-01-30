@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Menu,
   User,
@@ -14,13 +14,18 @@ import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Navbar({ isSidebarOpen, setIsSidebarOpen }) {
+interface NavbarProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+}
+
+export default function Navbar({ isSidebarOpen, setIsSidebarOpen }: NavbarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showMobileSearch, setShowMobileSearch] = useState<boolean>(false);
 
   const handleSearch = () => {
     if (searchQuery.trim()) console.log("Searching for:", searchQuery);

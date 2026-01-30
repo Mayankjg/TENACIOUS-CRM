@@ -1,21 +1,37 @@
 "use client";
-import { useState } from "react";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 // import "./signup.css";
 
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  country: string;
+  countryCode: string;
+  contactNo: string;
+  promoCode: string;
+  role: string;
+}
+
+interface CountryCodes {
+  [key: string]: string;
+}
+
 export default function Signup() {
   const router = useRouter();
   const { signupUser } = useAuth();
 
-  const COUNTRY_CODES = {
+  const COUNTRY_CODES: CountryCodes = {
     India: "+91",
     USA: "+1",
     UK: "+44",
   };
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormData>({
     username: "",
     email: "",
     password: "",
@@ -26,7 +42,9 @@ export default function Signup() {
     role: "admin", // forced admin
   });
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
 
     // Auto Code Logic (READ ONLY)
@@ -35,7 +53,7 @@ export default function Signup() {
       setForm((prev) => ({
         ...prev,
         country: value,
-        countryCode: code, 
+        countryCode: code,
       }));
       return;
     }
@@ -47,7 +65,7 @@ export default function Signup() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
@@ -56,7 +74,7 @@ export default function Signup() {
       await signupUser(payload);
       alert("Signup Successful!");
       router.push("/login");
-    } catch (err) {
+    } catch (err: any) {
       alert(err.response?.data?.message || "Signup failed");
     }
   };
