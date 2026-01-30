@@ -1,4 +1,6 @@
-export default function FeedbackPage() {
+"use client";
+
+export default function FeedbackPage(): React.ReactNode {
   return (
     <div>
       <h1 className="text-2xl font-bold">✍️ Give Your Feedback</h1>

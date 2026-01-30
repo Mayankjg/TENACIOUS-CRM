@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/dashboard/page.tsx", "proxy.ts", "app/change-password/page.tsx", "app/dashboard/components/DatePicker.tsx", "app/dashboard/components/SalesSummary.tsx", "app/dashboard/SalesSummary.tsx"  ],
+, "app/dashboard/page.tsx", "proxy.ts", "app/change-password/page.tsx", "app/dashboard/components/DatePicker.tsx", "app/dashboard/components/SalesSummary.tsx", "app/dashboard/SalesSummary.tsx", "app/feedback/page.tsx"  ],
   "exclude": ["node_modules"]
 }
