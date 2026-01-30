@@ -1,7 +1,16 @@
-// frontend/app/manage-items/products/ProductsTableModal.js
+// frontend/app/manage-items/products/ProductsTableModal.tsx
+
 "use client";
 
 import React from "react";
+
+interface ProductsTableModalProps {
+  showPopup: boolean;
+  newProduct: string;
+  setNewProduct: (value: string) => void;
+  handleSaveProduct: () => void;
+  setShowPopup: (value: boolean) => void;
+}
 
 export default function ProductsTableModal({
   showPopup,
@@ -9,7 +18,7 @@ export default function ProductsTableModal({
   setNewProduct,
   handleSaveProduct,
   setShowPopup,
-}) {
+}: ProductsTableModalProps) {
   if (!showPopup) return null;
 
   return (

@@ -1,10 +1,10 @@
-// frontend/app/manage-items/lead-source/page.jsx - FINAL MULTI-TENANT COMPLETE
+// frontend/app/manage-items/products/page.tsx - FINAL MULTI-TENANT COMPLETE
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { FaTrash, FaPen } from "react-icons/fa";
-import LeadSourceModal from "./LeadSourceModal";
+import React, { useState, useEffect } from "react";
+import { FaPen, FaTrash } from "react-icons/fa";
+import ProductsTableModal from "./ProductsTableModal";
 
 //Import tenant-aware utilities
 import {
@@ -15,136 +15,119 @@ import {
   validateSession,
 } from "@/utils/api";
 
-export default function LeadSource() {
-  const [leadSources, setLeadSources] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editedName, setEditedName] = useState("");
-  const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [newLeadName, setNewLeadName] = useState("");
-  const [loading, setLoading] = useState(false);
+interface Product {
+  _id?: string;
+  id?: string;
+  name: string;
+}
+
+const ProductsTable: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [showPopup, setShowPopup] = useState<boolean>(false);
+  const [newProduct, setNewProduct] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   //Validate session on mount
   useEffect(() => {
     if (!validateSession()) {
-      console.error("❌ Invalid session in Lead Source");
+      console.error("❌ Invalid session in Products");
       return;
     }
 
-    fetchSources();
+    fetchProducts();
   }, []);
 
   //Fetch with tenant filtering (done by backend)
-  const fetchSources = async () => {
+  const fetchProducts = async (): Promise<void> => {
     if (!validateSession()) {
-      console.error("❌ Cannot fetch lead sources - invalid session");
+      console.error("❌ Cannot fetch products - invalid session");
       return;
     }
 
     try {
       setLoading(true);
-      console.log("🔄 Fetching lead sources...");
+      console.log("🔄 Fetching products...");
 
-      const result = await apiGet("/api/manage-items/lead-source/get-lead-sources");
+      const result = await apiGet("/api/manage-items/products/get-products");
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to fetch lead sources");
+        throw new Error(result.error || "Failed to fetch products");
       }
 
-      console.log("✅ Fetched lead sources:", result.data?.length || 0);
-      setLeadSources(result.data || []);
+      console.log("✅ Fetched products:", result.data?.length || 0);
+      setProducts(result.data || []);
     } catch (err) {
-      console.error("❌ Fetch lead sources error:", err);
-      alert(err.message || "Failed to load lead sources");
+      console.error("❌ Fetch products error:", err);
+      alert(err instanceof Error ? err.message : "Failed to load products");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectAll = () => {
-    const value = !selectAll;
-    setSelectAll(value);
-    setSelectedIds(value ? leadSources.map((l) => l._id || l.id) : []);
+  const handleSelectAll = (): void => {
+    if (!selectAll) {
+      setSelectedRows(products.map((p) => p._id || p.id || ""));
+    } else {
+      setSelectedRows([]);
+    }
+    setSelectAll(!selectAll);
   };
 
-  const handleCheckboxChange = (id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  const handleRowSelect = (id: string): void => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
+    } else {
+      setSelectedRows([...selectedRows, id]);
+    }
   };
 
-  //Add with automatic tenant isolation
-  const handleAddLeadSource = async () => {
-    if (!newLeadName.trim()) {
-      alert("Please enter a lead source name");
-      return;
-    }
-
-    if (!validateSession()) {
-      console.error("❌ Cannot add lead source - invalid session");
-      return;
-    }
-
-    try {
-      console.log("➕ Adding lead source:", newLeadName);
-
-      const result = await apiPost("/api/manage-items/lead-source/create-lead-source", {
-        name: newLeadName.trim(),
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to add lead source");
-      }
-
-      console.log("✅ Lead source added successfully");
-      setNewLeadName("");
-      setShowModal(false);
-      fetchSources();
-    } catch (err) {
-      console.error("❌ Add lead source error:", err);
-      alert(err.message || "Failed to add lead source");
-    }
+  const handleEdit = (id: string, currentName: string): void => {
+    setEditingId(id);
+    setEditValue(currentName);
   };
 
   //Update with tenant validation
-  const handleUpdate = async (id) => {
+  const handleUpdate = async (id: string): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot update - invalid session");
       return;
     }
 
     try {
-      console.log("💾 Updating lead source:", id);
+      console.log("💾 Updating product:", id);
 
       const result = await apiPut(
-        `/api/manage-items/lead-source/update-lead-source/${id}`,
-        { name: editedName }
+        `/api/manage-items/products/update-product/${id}`,
+        { name: editValue }
       );
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to update lead source");
+        throw new Error(result.error || "Failed to update product");
       }
 
-      console.log("✅ Lead source updated successfully");
+      console.log("✅ Product updated successfully");
       setEditingId(null);
-      setEditedName("");
-      fetchSources();
+      setEditValue("");
+      fetchProducts();
     } catch (err) {
-      console.error("❌ Update lead source error:", err);
-      alert(err.message || "Failed to update lead source");
+      console.error("❌ Update product error:", err);
+      alert(err instanceof Error ? err.message : "Failed to update product");
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setEditingId(null);
-    setEditedName("");
+    setEditValue("");
   };
 
   //Delete with tenant validation
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this lead source?")) return;
+  const handleDelete = async (id: string): Promise<void> => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
 
     if (!validateSession()) {
       console.error("❌ Cannot delete - invalid session");
@@ -152,31 +135,31 @@ export default function LeadSource() {
     }
 
     try {
-      console.log("🗑️ Deleting lead source:", id);
+      console.log("🗑️ Deleting product:", id);
 
       const result = await apiDelete(
-        `/api/manage-items/lead-source/delete-lead-source/${id}`
+        `/api/manage-items/products/delete-product/${id}`
       );
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to delete lead source");
+        throw new Error(result.error || "Failed to delete product");
       }
 
-      console.log("✅ Lead source deleted successfully");
-      fetchSources();
+      console.log("✅ Product deleted successfully");
+      fetchProducts();
     } catch (err) {
-      console.error("❌ Delete lead source error:", err);
-      alert(err.message || "Failed to delete lead source");
+      console.error("❌ Delete product error:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete product");
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedIds.length === 0) {
-      alert("Please select lead sources to delete");
+  const handleDeleteSelected = async (): Promise<void> => {
+    if (selectedRows.length === 0) {
+      alert("Please select products to delete");
       return;
     }
 
-    if (!confirm(`Delete ${selectedIds.length} selected lead source(s)?`)) return;
+    if (!confirm(`Delete ${selectedRows.length} selected product(s)?`)) return;
 
     if (!validateSession()) {
       console.error("❌ Cannot delete - invalid session");
@@ -184,11 +167,11 @@ export default function LeadSource() {
     }
 
     try {
-      console.log("🗑️ Deleting lead sources:", selectedIds);
+      console.log("🗑️ Deleting products:", selectedRows);
 
       const results = await Promise.all(
-        selectedIds.map((id) =>
-          apiDelete(`/api/manage-items/lead-source/delete-lead-source/${id}`)
+        selectedRows.map((id) =>
+          apiDelete(`/api/manage-items/products/delete-product/${id}`)
         )
       );
 
@@ -197,21 +180,54 @@ export default function LeadSource() {
         console.error("❌ Some deletions failed:", failed);
       }
 
-      setSelectedIds([]);
+      setSelectedRows([]);
       setSelectAll(false);
-      fetchSources();
+      fetchProducts();
     } catch (err) {
       console.error("❌ Delete selected error:", err);
-      alert("Failed to delete lead sources");
+      alert("Failed to delete products");
     }
   };
 
-  const handleSearch = () => {
-    console.log("🔍 Searching for:", search);
+  //Add with automatic tenant isolation
+  const handleSaveProduct = async (): Promise<void> => {
+    if (!newProduct.trim()) {
+      alert("Please enter a product name");
+      return;
+    }
+
+    if (!validateSession()) {
+      console.error("❌ Cannot add product - invalid session");
+      return;
+    }
+
+    try {
+      console.log("➕ Adding product:", newProduct);
+
+      const result = await apiPost("/api/manage-items/products/create-product", {
+        name: newProduct,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to add product");
+      }
+
+      console.log("✅ Product added successfully");
+      setNewProduct("");
+      setShowPopup(false);
+      fetchProducts();
+    } catch (err) {
+      console.error("❌ Add product error:", err);
+      alert(err instanceof Error ? err.message : "Failed to add product");
+    }
   };
 
-  const filteredLeadSources = leadSources.filter((l) =>
-    (l.name || "").toLowerCase().includes(search.toLowerCase())
+  const handleSearch = (): void => {
+    console.log("🔍 Searching for:", searchTerm);
+  };
+
+  const filteredProducts = products.filter((p) =>
+    (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -220,13 +236,13 @@ export default function LeadSource() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-300 gap-3">
           <h2 className="text-base sm:text-lg font-semibold text-black">
-            Lead Source
+            Products
           </h2>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setShowPopup(true)}
             className="bg-[#073763] cursor-pointer hover:bg-[#042645] text-white px-4 py-2 rounded-md text-sm sm:text-base w-full sm:w-auto"
           >
-            Add Lead Source
+            Add Product
           </button>
         </div>
 
@@ -234,9 +250,9 @@ export default function LeadSource() {
         <div className="flex flex-col sm:flex-row justify-end items-center p-4 gap-2">
           <input
             type="text"
-            placeholder="Search Lead Source"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search Product"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             onKeyPress={(e) => {
               if (e.key === "Enter") {
                 handleSearch();
@@ -255,7 +271,7 @@ export default function LeadSource() {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-4">
-            <p className="text-gray-500">Loading lead sources...</p>
+            <p className="text-gray-500">Loading products...</p>
           </div>
         )}
 
@@ -281,7 +297,7 @@ export default function LeadSource() {
                     SR. NO.
                   </th>
                   <th className="border-t border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-4 text-left font-semibold">
-                    LEAD SOURCE
+                    PRODUCT NAME
                   </th>
                   <th className="border-t border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-3 text-center font-semibold">
                     EDIT
@@ -296,21 +312,21 @@ export default function LeadSource() {
               </thead>
 
               <tbody className="font-medium text-black">
-                {filteredLeadSources.length > 0 ? (
-                  filteredLeadSources.map((lead, index) => {
-                    const id = lead._id || lead.id;
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((p, index) => {
+                    const id = p._id || p.id || "";
                     return (
                       <tr
                         key={id}
                         className={`hover:bg-gray-50 transition ${
-                          selectedIds.includes(id) ? "bg-blue-50" : ""
+                          selectedRows.includes(id) ? "bg-blue-50" : ""
                         }`}
                       >
                         <td className="py-2 sm:py-3 px-2 sm:px-4 border text-center border-gray-300">
                           <input
                             type="checkbox"
-                            checked={selectedIds.includes(id)}
-                            onChange={() => handleCheckboxChange(id)}
+                            checked={selectedRows.includes(id)}
+                            onChange={() => handleRowSelect(id)}
                           />
                         </td>
 
@@ -322,12 +338,12 @@ export default function LeadSource() {
                           {editingId === id ? (
                             <input
                               type="text"
-                              value={editedName}
-                              onChange={(e) => setEditedName(e.target.value)}
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
                               className="border border-gray-300 rounded-md px-2 py-1 w-full text-black text-xs sm:text-sm"
                             />
                           ) : (
-                            lead.name
+                            p.name
                           )}
                         </td>
 
@@ -350,11 +366,8 @@ export default function LeadSource() {
                             </div>
                           ) : (
                             <button
-                              onClick={() => {
-                                setEditingId(id);
-                                setEditedName(lead.name);
-                              }}
-                              className="text-gray-700 hover:text-blue-600 cursor-pointer"
+                              onClick={() => handleEdit(id, p.name)}
+                              className="text-gray-700 cursor-pointer hover:text-blue-600"
                             >
                               <FaPen size={14} className="sm:w-4 sm:h-4" />
                             </button>
@@ -381,10 +394,10 @@ export default function LeadSource() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan={6}
                       className="text-center py-4 sm:py-6 text-gray-500 border border-gray-300 text-black text-xs sm:text-sm"
                     >
-                      No lead sources found
+                      No products found
                     </td>
                   </tr>
                 )}
@@ -393,15 +406,15 @@ export default function LeadSource() {
               <tfoot>
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan={6}
                     className="px-2 sm:px-3 py-2 sm:py-3 text-left border-t border border-gray-300"
                   >
                     <button
                       onClick={handleDeleteSelected}
-                      disabled={selectedIds.length === 0}
+                      disabled={selectedRows.length === 0}
                       className="bg-red-600 cursor-pointer text-white px-8 sm:px-12 py-1 sm:py-1.5 rounded-md hover:bg-red-700 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Delete Selected ({selectedIds.length})
+                      Delete Selected ({selectedRows.length})
                     </button>
                   </td>
                 </tr>
@@ -411,13 +424,15 @@ export default function LeadSource() {
         )}
       </div>
 
-      <LeadSourceModal
-        showModal={showModal}
-        newLeadName={newLeadName}
-        setNewLeadName={setNewLeadName}
-        handleAddLeadSource={handleAddLeadSource}
-        setShowModal={setShowModal}
+      <ProductsTableModal
+        showPopup={showPopup}
+        newProduct={newProduct}
+        setNewProduct={setNewProduct}
+        handleSaveProduct={handleSaveProduct}
+        setShowPopup={setShowPopup}
       />
     </div>
   );
-}
+};
+
+export default ProductsTable;

@@ -1,4 +1,4 @@
-// frontend/app/manage-items/tags/page.jsx - WITH EXCEL IMPORT FEATURE
+// frontend/app/manage-items/tags/page.tsx - WITH EXCEL IMPORT FEATURE
 
 "use client";
 
@@ -17,19 +17,45 @@ import {
   validateSession
 } from "@/utils/api";
 
+interface Tag {
+  _id: string;
+  name: string;
+  color: string;
+  description?: string;
+  createdAt: string;
+}
+
+interface FormData {
+  name: string;
+  color: string;
+  description: string;
+}
+
+interface ExcelRow {
+  name?: string;
+  Name?: string;
+  NAME?: string;
+  color?: string;
+  Color?: string;
+  COLOR?: string;
+  description?: string;
+  Description?: string;
+  DESCRIPTION?: string;
+}
+
 export default function ManageTagsPage() {
-  const [tags, setTags] = useState([]);
-  const [editingTag, setEditingTag] = useState(null);
-  const [formData, setFormData] = useState({
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     color: "#3B82F6",
     description: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [importing, setImporting] = useState<boolean>(false);
 
-  const formRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   //Validate session on mount
   useEffect(() => {
@@ -42,7 +68,7 @@ export default function ManageTagsPage() {
   }, []);
 
   //Fetch with tenant filtering (done by backend)
-  const fetchTags = async () => {
+  const fetchTags = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch - invalid session");
       return;
@@ -62,14 +88,14 @@ export default function ManageTagsPage() {
       setTags(result.data || []);
     } catch (error) {
       console.error("❌ Fetch tags error:", error);
-      toast.error(error.message || "Failed to fetch tags");
+      toast.error(error instanceof Error ? error.message : "Failed to fetch tags");
     } finally {
       setLoading(false);
     }
   };
 
   //Create/Update with tenant validation
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -118,13 +144,13 @@ export default function ManageTagsPage() {
       fetchTags();
     } catch (error) {
       console.error("❌ Save tag error:", error);
-      toast.error(error.message || "Failed to save tag");
+      toast.error(error instanceof Error ? error.message : "Failed to save tag");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (tag) => {
+  const handleEdit = (tag: Tag): void => {
     setEditingTag(tag);
     setFormData({
       name: tag.name,
@@ -136,7 +162,7 @@ export default function ManageTagsPage() {
   };
 
   //Delete with tenant validation
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string): Promise<void> => {
     const tag = tags.find((t) => t._id === id);
 
     if (
@@ -176,23 +202,23 @@ export default function ManageTagsPage() {
       fetchTags();
     } catch (error) {
       console.error("❌ Delete tag error:", error);
-      toast.error(error.message || "Failed to delete tag");
+      toast.error(error instanceof Error ? error.message : "Failed to delete tag");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setEditingTag(null);
     setFormData({ name: "", color: "#3B82F6", description: "" });
   };
 
   // 🆕 EXCEL IMPORT FUNCTIONALITY
-  const handleImportClick = () => {
+  const handleImportClick = (): void => {
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -219,7 +245,7 @@ export default function ManageTagsPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
 
       if (!jsonData || jsonData.length === 0) {
         toast.error("Excel file is empty");
@@ -229,8 +255,8 @@ export default function ManageTagsPage() {
       console.log("📄 Excel data:", jsonData);
 
       // Validate and process tags
-      const tagsToImport = [];
-      const errors = [];
+      const tagsToImport: FormData[] = [];
+      const errors: string[] = [];
 
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
@@ -273,7 +299,7 @@ export default function ManageTagsPage() {
       // Import tags one by one
       let successCount = 0;
       let failCount = 0;
-      const duplicates = [];
+      const duplicates: string[] = [];
 
       for (const tag of tagsToImport) {
         try {
@@ -331,7 +357,7 @@ export default function ManageTagsPage() {
   };
 
   // 🆕 DOWNLOAD SAMPLE EXCEL TEMPLATE
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = (): void => {
     const template = [
       { name: "VIP Client", color: "#FF0000", description: "High priority clients" },
       { name: "Follow Up", color: "#FFA500", description: "Needs follow up" },

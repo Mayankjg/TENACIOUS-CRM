@@ -1,10 +1,10 @@
-// frontend/app/manage-items/products/page.jsx - FINAL MULTI-TENANT COMPLETE
+// frontend/app/manage-items/lead-status/page.tsx - FINAL MULTI-TENANT COMPLETE
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { FaPen, FaTrash } from "react-icons/fa";
-import ProductsTableModal from "./ProductsTableModal";
+import { useState, useEffect } from "react";
+import { FaTrash, FaPen } from "react-icons/fa";
+import LeadStatusModal from "./LeadStatusModal";
 
 //Import tenant-aware utilities
 import {
@@ -15,113 +15,79 @@ import {
   validateSession,
 } from "@/utils/api";
 
-const ProductsTable = () => {
-  const [products, setProducts] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editValue, setEditValue] = useState("");
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [newProduct, setNewProduct] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+interface LeadStatus {
+  _id?: string;
+  id?: string;
+  name: string;
+}
+
+export default function LeadStatus() {
+  const [leadStatuses, setLeadStatuses] = useState<LeadStatus[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedName, setEditedName] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [newLeadStatus, setNewLeadStatus] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   //Validate session on mount
   useEffect(() => {
     if (!validateSession()) {
-      console.error("❌ Invalid session in Products");
+      console.error("❌ Invalid session in Lead Status");
       return;
     }
 
-    fetchProducts();
+    fetchStatuses();
   }, []);
 
   //Fetch with tenant filtering (done by backend)
-  const fetchProducts = async () => {
+  const fetchStatuses = async (): Promise<void> => {
     if (!validateSession()) {
-      console.error("❌ Cannot fetch products - invalid session");
+      console.error("❌ Cannot fetch lead statuses - invalid session");
       return;
     }
 
     try {
       setLoading(true);
-      console.log("🔄 Fetching products...");
+      console.log("🔄 Fetching lead statuses...");
 
-      const result = await apiGet("/api/manage-items/products/get-products");
+      const result = await apiGet("/api/manage-items/lead-status/get-lead-status");
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to fetch products");
+        throw new Error(result.error || "Failed to fetch lead statuses");
       }
 
-      console.log("✅ Fetched products:", result.data?.length || 0);
-      setProducts(result.data || []);
+      console.log("✅ Fetched lead statuses:", result.data?.length || 0);
+      setLeadStatuses(result.data || []);
     } catch (err) {
-      console.error("❌ Fetch products error:", err);
-      alert(err.message || "Failed to load products");
+      console.error("❌ Fetch lead statuses error:", err);
+      alert(err instanceof Error ? err.message : "Failed to load lead statuses");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectAll = () => {
-    if (!selectAll) {
-      setSelectedRows(products.map((p) => p._id || p.id));
-    } else {
-      setSelectedRows([]);
-    }
-    setSelectAll(!selectAll);
+  const handleCheckboxChange = (id: string): void => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
-  const handleRowSelect = (id) => {
-    if (selectedRows.includes(id)) {
-      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
-    } else {
-      setSelectedRows([...selectedRows, id]);
-    }
+  const handleSelectAll = (): void => {
+    const value = !selectAll;
+    setSelectAll(value);
+    setSelectedIds(value ? leadStatuses.map((lead) => lead._id || lead.id || "") : []);
   };
 
-  const handleEdit = (id, currentName) => {
-    setEditingId(id);
-    setEditValue(currentName);
-  };
-
-  //Update with tenant validation
-  const handleUpdate = async (id) => {
-    if (!validateSession()) {
-      console.error("❌ Cannot update - invalid session");
+  const handleDeleteSelected = async (): Promise<void> => {
+    if (selectedIds.length === 0) {
+      alert("Please select lead statuses to delete");
       return;
     }
 
-    try {
-      console.log("💾 Updating product:", id);
-
-      const result = await apiPut(
-        `/api/manage-items/products/update-product/${id}`,
-        { name: editValue }
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update product");
-      }
-
-      console.log("✅ Product updated successfully");
-      setEditingId(null);
-      setEditValue("");
-      fetchProducts();
-    } catch (err) {
-      console.error("❌ Update product error:", err);
-      alert(err.message || "Failed to update product");
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditValue("");
-  };
-
-  //Delete with tenant validation
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm(`Delete ${selectedIds.length} selected lead status(es)?`)) return;
 
     if (!validateSession()) {
       console.error("❌ Cannot delete - invalid session");
@@ -129,43 +95,11 @@ const ProductsTable = () => {
     }
 
     try {
-      console.log("🗑️ Deleting product:", id);
-
-      const result = await apiDelete(
-        `/api/manage-items/products/delete-product/${id}`
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to delete product");
-      }
-
-      console.log("✅ Product deleted successfully");
-      fetchProducts();
-    } catch (err) {
-      console.error("❌ Delete product error:", err);
-      alert(err.message || "Failed to delete product");
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedRows.length === 0) {
-      alert("Please select products to delete");
-      return;
-    }
-
-    if (!confirm(`Delete ${selectedRows.length} selected product(s)?`)) return;
-
-    if (!validateSession()) {
-      console.error("❌ Cannot delete - invalid session");
-      return;
-    }
-
-    try {
-      console.log("🗑️ Deleting products:", selectedRows);
+      console.log("🗑️ Deleting lead statuses:", selectedIds);
 
       const results = await Promise.all(
-        selectedRows.map((id) =>
-          apiDelete(`/api/manage-items/products/delete-product/${id}`)
+        selectedIds.map((id) =>
+          apiDelete(`/api/manage-items/lead-status/delete-lead-status/${id}`)
         )
       );
 
@@ -174,54 +108,116 @@ const ProductsTable = () => {
         console.error("❌ Some deletions failed:", failed);
       }
 
-      setSelectedRows([]);
+      setSelectedIds([]);
       setSelectAll(false);
-      fetchProducts();
+      fetchStatuses();
     } catch (err) {
-      console.error("❌ Delete selected error:", err);
-      alert("Failed to delete products");
+      console.error("❌ Delete selected lead statuses error:", err);
+      alert("Failed to delete lead statuses");
     }
   };
 
   //Add with automatic tenant isolation
-  const handleSaveProduct = async () => {
-    if (!newProduct.trim()) {
-      alert("Please enter a product name");
+  const handleAddLeadStatus = async (): Promise<void> => {
+    if (!newLeadStatus.trim()) {
+      alert("Please enter a lead status name");
       return;
     }
 
     if (!validateSession()) {
-      console.error("❌ Cannot add product - invalid session");
+      console.error("❌ Cannot add lead status - invalid session");
       return;
     }
 
     try {
-      console.log("➕ Adding product:", newProduct);
+      console.log("➕ Adding lead status:", newLeadStatus);
 
-      const result = await apiPost("/api/manage-items/products/create-product", {
-        name: newProduct,
+      const result = await apiPost("/api/manage-items/lead-status/create-lead-status", {
+        name: newLeadStatus.trim(),
       });
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to add product");
+        throw new Error(result.error || "Failed to add lead status");
       }
 
-      console.log("✅ Product added successfully");
-      setNewProduct("");
-      setShowPopup(false);
-      fetchProducts();
+      console.log("✅ Lead status added successfully");
+      setNewLeadStatus("");
+      setShowModal(false);
+      fetchStatuses();
     } catch (err) {
-      console.error("❌ Add product error:", err);
-      alert(err.message || "Failed to add product");
+      console.error("❌ Add lead status error:", err);
+      alert(err instanceof Error ? err.message : "Failed to add lead status");
     }
   };
 
-  const handleSearch = () => {
-    console.log("🔍 Searching for:", searchTerm);
+  //Update with tenant validation
+  const handleUpdate = async (id: string): Promise<void> => {
+    if (!validateSession()) {
+      console.error("❌ Cannot update - invalid session");
+      return;
+    }
+
+    try {
+      console.log("💾 Updating lead status:", id);
+
+      const result = await apiPut(
+        `/api/manage-items/lead-status/update-lead-status/${id}`,
+        { name: editedName }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update lead status");
+      }
+
+      console.log("✅ Lead status updated successfully");
+      setEditingId(null);
+      setEditedName("");
+      fetchStatuses();
+    } catch (err) {
+      console.error("❌ Update lead status error:", err);
+      alert(err instanceof Error ? err.message : "Failed to update lead status");
+    }
   };
 
-  const filteredProducts = products.filter((p) =>
-    (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+  const handleCancel = (): void => {
+    setEditingId(null);
+    setEditedName("");
+  };
+
+  //Delete with tenant validation
+  const handleDelete = async (id: string): Promise<void> => {
+    if (!confirm("Are you sure you want to delete this lead status?")) return;
+
+    if (!validateSession()) {
+      console.error("❌ Cannot delete - invalid session");
+      return;
+    }
+
+    try {
+      console.log("🗑️ Deleting lead status:", id);
+
+      const result = await apiDelete(
+        `/api/manage-items/lead-status/delete-lead-status/${id}`
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete lead status");
+      }
+
+      console.log("✅ Lead status deleted successfully");
+      fetchStatuses();
+    } catch (err) {
+      console.error("❌ Delete lead status error:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete lead status");
+    }
+  };
+
+  const handleSearch = (): void => {
+    console.log("🔍 Searching for:", search);
+  };
+
+  const filteredLeads = leadStatuses.filter((l) =>
+    (l.name || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -230,13 +226,13 @@ const ProductsTable = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-300 gap-3">
           <h2 className="text-base sm:text-lg font-semibold text-black">
-            Products
+            Lead Status
           </h2>
           <button
-            onClick={() => setShowPopup(true)}
+            onClick={() => setShowModal(true)}
             className="bg-[#073763] cursor-pointer hover:bg-[#042645] text-white px-4 py-2 rounded-md text-sm sm:text-base w-full sm:w-auto"
           >
-            Add Product
+            Add Lead Status
           </button>
         </div>
 
@@ -244,9 +240,9 @@ const ProductsTable = () => {
         <div className="flex flex-col sm:flex-row justify-end items-center p-4 gap-2">
           <input
             type="text"
-            placeholder="Search Product"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search Lead Status"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             onKeyPress={(e) => {
               if (e.key === "Enter") {
                 handleSearch();
@@ -265,7 +261,7 @@ const ProductsTable = () => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-4">
-            <p className="text-gray-500">Loading products...</p>
+            <p className="text-gray-500">Loading lead statuses...</p>
           </div>
         )}
 
@@ -291,7 +287,7 @@ const ProductsTable = () => {
                     SR. NO.
                   </th>
                   <th className="border-t border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-4 text-left font-semibold">
-                    PRODUCT NAME
+                    LEAD STATUS
                   </th>
                   <th className="border-t border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-3 text-center font-semibold">
                     EDIT
@@ -306,21 +302,21 @@ const ProductsTable = () => {
               </thead>
 
               <tbody className="font-medium text-black">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((p, index) => {
-                    const id = p._id || p.id;
+                {filteredLeads.length > 0 ? (
+                  filteredLeads.map((lead, index) => {
+                    const id = lead._id || lead.id || "";
                     return (
                       <tr
                         key={id}
                         className={`hover:bg-gray-50 transition ${
-                          selectedRows.includes(id) ? "bg-blue-50" : ""
+                          selectedIds.includes(id) ? "bg-blue-50" : ""
                         }`}
                       >
                         <td className="py-2 sm:py-3 px-2 sm:px-4 border text-center border-gray-300">
                           <input
                             type="checkbox"
-                            checked={selectedRows.includes(id)}
-                            onChange={() => handleRowSelect(id)}
+                            checked={selectedIds.includes(id)}
+                            onChange={() => handleCheckboxChange(id)}
                           />
                         </td>
 
@@ -332,12 +328,12 @@ const ProductsTable = () => {
                           {editingId === id ? (
                             <input
                               type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
+                              value={editedName}
+                              onChange={(e) => setEditedName(e.target.value)}
                               className="border border-gray-300 rounded-md px-2 py-1 w-full text-black text-xs sm:text-sm"
                             />
                           ) : (
-                            p.name
+                            lead.name
                           )}
                         </td>
 
@@ -360,7 +356,10 @@ const ProductsTable = () => {
                             </div>
                           ) : (
                             <button
-                              onClick={() => handleEdit(id, p.name)}
+                              onClick={() => {
+                                setEditingId(id);
+                                setEditedName(lead.name);
+                              }}
                               className="text-gray-700 cursor-pointer hover:text-blue-600"
                             >
                               <FaPen size={14} className="sm:w-4 sm:h-4" />
@@ -388,10 +387,10 @@ const ProductsTable = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan={6}
                       className="text-center py-4 sm:py-6 text-gray-500 border border-gray-300 text-black text-xs sm:text-sm"
                     >
-                      No products found
+                      No lead statuses found
                     </td>
                   </tr>
                 )}
@@ -400,15 +399,15 @@ const ProductsTable = () => {
               <tfoot>
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan={6}
                     className="px-2 sm:px-3 py-2 sm:py-3 text-left border-t border border-gray-300"
                   >
                     <button
                       onClick={handleDeleteSelected}
-                      disabled={selectedRows.length === 0}
+                      disabled={selectedIds.length === 0}
                       className="bg-red-600 cursor-pointer text-white px-8 sm:px-12 py-1 sm:py-1.5 rounded-md hover:bg-red-700 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Delete Selected ({selectedRows.length})
+                      Delete Selected ({selectedIds.length})
                     </button>
                   </td>
                 </tr>
@@ -418,15 +417,13 @@ const ProductsTable = () => {
         )}
       </div>
 
-      <ProductsTableModal
-        showPopup={showPopup}
-        newProduct={newProduct}
-        setNewProduct={setNewProduct}
-        handleSaveProduct={handleSaveProduct}
-        setShowPopup={setShowPopup}
+      <LeadStatusModal
+        showModal={showModal}
+        newLeadStatus={newLeadStatus}
+        setNewLeadStatus={setNewLeadStatus}
+        handleAddLeadStatus={handleAddLeadStatus}
+        setShowModal={setShowModal}
       />
     </div>
   );
-};
-
-export default ProductsTable;
+}

@@ -1,14 +1,24 @@
-// frontend/app/manage-items/lead-source/LeadSourceModal.js
+// frontend/app/manage-items/lead-status/LeadStatusModal.tsx
+
 "use client";
+
 import React from "react";
 
-export default function LeadSourceModal({
+interface LeadStatusModalProps {
+  showModal: boolean;
+  newLeadStatus: string;
+  setNewLeadStatus: (value: string) => void;
+  handleAddLeadStatus: () => void;
+  setShowModal: (value: boolean) => void;
+}
+
+export default function LeadStatusModal({
   showModal,
-  newLeadName,
-  setNewLeadName,
-  handleAddLeadSource,
+  newLeadStatus,
+  setNewLeadStatus,
+  handleAddLeadStatus,
   setShowModal,
-}) {
+}: LeadStatusModalProps) {
   if (!showModal) return null;
 
   return (
@@ -45,20 +55,20 @@ export default function LeadSourceModal({
         {/* Header */}
         <div className="border-b px-4 sm:px-5 py-3">
           <h3 className="text-center text-gray-800 font-semibold text-base sm:text-lg">
-            Add Lead Source
+            Add Lead Status
           </h3>
         </div>
 
-        {/* Input */}
+        {/* Input Field */}
         <div className="p-4 sm:p-5 bg-[#f0f2f5]">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Lead Source
+            Lead Status
           </label>
           <input
             type="text"
-            placeholder="Lead Source"
-            value={newLeadName}
-            onChange={(e) => setNewLeadName(e.target.value)}
+            placeholder="Lead Status"
+            value={newLeadStatus}
+            onChange={(e) => setNewLeadStatus(e.target.value)}
             className="
               w-full border border-gray-300 rounded-md 
               px-3 py-2 
@@ -72,7 +82,7 @@ export default function LeadSourceModal({
         {/* Buttons */}
         <div className="flex justify-end gap-3 px-4 sm:px-5 pb-4 mt-3">
           <button
-            onClick={handleAddLeadSource}
+            onClick={handleAddLeadStatus}
             className="
               bg-sky-600 cursor-pointer hover:bg-sky-700 
               text-white text-sm sm:text-base 
@@ -81,6 +91,7 @@ export default function LeadSourceModal({
           >
             Save
           </button>
+
           <button
             onClick={() => setShowModal(false)}
             className="

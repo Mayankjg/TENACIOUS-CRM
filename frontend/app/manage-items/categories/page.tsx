@@ -1,4 +1,4 @@
-// frontend/app/manage-items/categories/page.jsx - MULTI-TENANT FIXED
+// frontend/app/manage-items/categories/page.tsx - MULTI-TENANT FIXED
 
 "use client";
 
@@ -15,17 +15,22 @@ import {
   validateSession 
 } from "@/utils/api";
 
-const CategoriesPage = () => {
-  const [selectAll, setSelectAll] = useState(false);
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+interface Category {
+  _id: string;
+  name: string;
+}
 
-  const [showModal, setShowModal] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
+const CategoriesPage: React.FC = () => {
+  const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [newCategoryName, setNewCategoryName] = useState<string>("");
 
   //Validate session on mount
   useEffect(() => {
@@ -38,7 +43,7 @@ const CategoriesPage = () => {
   }, []);
 
   //Fetch with tenant filtering (done by backend)
-  const fetchCategories = async () => {
+  const fetchCategories = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch - invalid session");
       return;
@@ -58,32 +63,32 @@ const CategoriesPage = () => {
       setCategories(result.data || []);
     } catch (err) {
       console.error("❌ Fetch categories error:", err);
-      alert(err.message || "Failed to load categories");
+      alert(err instanceof Error ? err.message : "Failed to load categories");
     } finally {
       setLoading(false);
     }
   };
 
   // ================= SELECT =================
-  const handleSelectAll = () => {
+  const handleSelectAll = (): void => {
     const value = !selectAll;
     setSelectAll(value);
     setSelectedRows(value ? categories.map(c => c._id) : []);
   };
 
-  const handleSelectRow = (id) => {
+  const handleSelectRow = (id: string): void => {
     setSelectedRows(prev =>
       prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
     );
   };
 
   //Edit with tenant validation
-  const handleEdit = (id, name) => {
+  const handleEdit = (id: string, name: string): void => {
     setEditingId(id);
     setEditName(name);
   };
 
-  const handleUpdate = async (id) => {
+  const handleUpdate = async (id: string): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot update - invalid session");
       return;
@@ -107,17 +112,17 @@ const CategoriesPage = () => {
       fetchCategories();
     } catch (err) {
       console.error("❌ Update category error:", err);
-      alert(err.message || "Failed to update category");
+      alert(err instanceof Error ? err.message : "Failed to update category");
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setEditingId(null);
     setEditName("");
   };
 
   //Delete with tenant validation
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string): Promise<void> => {
     if (!confirm("Are you sure you want to delete this category?")) return;
 
     if (!validateSession()) {
@@ -140,11 +145,11 @@ const CategoriesPage = () => {
       fetchCategories();
     } catch (err) {
       console.error("❌ Delete category error:", err);
-      alert(err.message || "Failed to delete category");
+      alert(err instanceof Error ? err.message : "Failed to delete category");
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = async (): Promise<void> => {
     if (selectedRows.length === 0) {
       alert("Please select categories to delete");
       return;
@@ -181,7 +186,7 @@ const CategoriesPage = () => {
   };
 
   //Add with automatic tenant isolation
-  const handleAddCategory = async () => {
+  const handleAddCategory = async (): Promise<void> => {
     if (!newCategoryName.trim()) {
       alert("Enter category name");
       return;
@@ -210,7 +215,7 @@ const CategoriesPage = () => {
       fetchCategories();
     } catch (err) {
       console.error("❌ Add category error:", err);
-      alert(err.message || "Failed to add category");
+      alert(err instanceof Error ? err.message : "Failed to add category");
     }
   };
 
@@ -220,7 +225,7 @@ const CategoriesPage = () => {
   );
 
   // ================= SEARCH =================
-  const handleSearch = () => {
+  const handleSearch = (): void => {
     console.log("🔍 Searching for:", searchTerm);
   };
 
@@ -377,7 +382,7 @@ const CategoriesPage = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan={6}
                       className="text-center py-4 sm:py-6 text-gray-500 border border-gray-300 text-black text-xs sm:text-sm"
                     >
                       No categories found
@@ -389,7 +394,7 @@ const CategoriesPage = () => {
               <tfoot>
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan={6}
                     className="px-2 sm:px-3 py-2 sm:py-3 text-left border-t border border-gray-300"
                   >
                     <button

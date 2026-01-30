@@ -1,8 +1,18 @@
+// frontend/app/manage-items/categories/CategoriesModal.tsx
+
 "use client";
 
 import React from "react";
 
-const CategoriesModal = ({
+interface CategoriesModalProps {
+  showModal: boolean;
+  newCategoryName: string;
+  setNewCategoryName: (value: string) => void;
+  handleAddCategory: () => void;
+  setShowModal: (value: boolean) => void;
+}
+
+const CategoriesModal: React.FC<CategoriesModalProps> = ({
   showModal,
   newCategoryName,
   setNewCategoryName,
