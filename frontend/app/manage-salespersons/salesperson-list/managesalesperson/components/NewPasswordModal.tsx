@@ -1,14 +1,20 @@
 "use client";
 import React, { useState } from "react";
 
+interface NewPasswordModalProps {
+  salespersonId: string | number | null;
+  onClose: () => void;
+  onPasswordChange: (id: string | number, newPassword: string) => void;
+}
+
 export default function NewPasswordModal({
   salespersonId,
   onClose,
   onPasswordChange,
-}) {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+}: NewPasswordModalProps) {
+  const [newPassword, setNewPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   const submit = () => {
     setError("");
@@ -23,7 +29,9 @@ export default function NewPasswordModal({
       return;
     }
 
-    onPasswordChange(salespersonId, newPassword);
+    if (salespersonId !== null) {
+      onPasswordChange(salespersonId, newPassword);
+    }
     onClose();
   };
 

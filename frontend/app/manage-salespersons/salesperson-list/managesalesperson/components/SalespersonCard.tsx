@@ -1,4 +1,4 @@
-// frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/SalespersonCard.jsx
+// frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/SalespersonCard.tsx
 // MULTI-TENANT FIXED
 
 "use client";
@@ -20,18 +20,29 @@ import {
   getTenantInfo 
 } from "@/utils/api";
 
+interface Salesperson {
+  id: string | number;
+  username: string;
+  firstname: string;
+  lastname: string;
+  email: string;
+  designation: string;
+  contact: string;
+  profileImage?: string;
+}
+
 export default function SalespersonCard() {
   const router = useRouter();
 
-  const [salespersons, setSalespersons] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [selectedEmailId, setSelectedEmailId] = useState(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
 
   //Validate session and admin role on mount
   useEffect(() => {
@@ -74,7 +85,7 @@ export default function SalespersonCard() {
       console.log("✅ Fetched salespersons:", result.data?.length || 0);
 
       setSalespersons(result.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error fetching salespersons:", error);
       alert(error.message || "Failed to load salespersons");
     } finally {
@@ -83,7 +94,7 @@ export default function SalespersonCard() {
   };
 
   //Delete salesperson with tenant validation
-  const deleteSP = async (id) => {
+  const deleteSP = async (id: string | number) => {
     if (!confirm("Delete this salesperson?")) return;
 
     if (!validateSession()) {
@@ -104,14 +115,14 @@ export default function SalespersonCard() {
 
       setSalespersons((prev) => prev.filter((sp) => sp.id !== id));
       alert("Salesperson deleted successfully!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error deleting salesperson:", error);
       alert(error.message || "Failed to delete salesperson");
     }
   };
 
   //Update password with tenant validation
-  const handlePasswordChange = async (id, newPassword) => {
+  const handlePasswordChange = async (id: string | number, newPassword: string) => {
     if (!validateSession()) {
       console.error("❌ Cannot update password - invalid session");
       return;
@@ -131,14 +142,14 @@ export default function SalespersonCard() {
 
       console.log("✅ Password updated successfully");
       alert("Password Updated!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error updating password:", error);
       alert(error.message || "Failed to update password");
     }
   };
 
   //Update email with tenant validation
-  const handleEmailChange = async (id, email) => {
+  const handleEmailChange = async (id: string | number, email: string) => {
     if (!validateSession()) {
       console.error("❌ Cannot update email - invalid session");
       return;
@@ -165,13 +176,13 @@ export default function SalespersonCard() {
       );
 
       alert("Email updated successfully!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error updating email:", error);
       alert(error.message || "Failed to update email");
     }
   };
 
-  const resolveImageSrc = (profileImage) => {
+  const resolveImageSrc = (profileImage?: string): string => {
     if (!profileImage)
       return "/uploads/default-avatar.png";
 

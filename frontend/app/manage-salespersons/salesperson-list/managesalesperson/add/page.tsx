@@ -1,4 +1,4 @@
-// frontend/app/manage-salespersons/salesperson-list/managesalesperson/add/page.jsx
+// frontend/app/manage-salespersons/salesperson-list/managesalesperson/add/page.tsx
 // MULTI-TENANT FIXED
 
 "use client";
@@ -6,16 +6,45 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-//Import tenant-aware utilities
+// Import tenant-aware utilities
 import { validateSession, isAdmin } from "@/utils/api";
 import axios from "axios";
+
+interface FormData {
+  userName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  designation: string;
+  country: string;
+  countryCode: string;
+  contactNo: string;
+  profileImage: File | null;
+}
+
+interface FormErrors {
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  designation?: string;
+  country?: string;
+  contactNo?: string;
+}
+
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
+}
 
 export default function AddSalespersonForm() {
   const router = useRouter();
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     userName: "",
     firstName: "",
     lastName: "",
@@ -27,16 +56,16 @@ export default function AddSalespersonForm() {
     profileImage: null,
   });
 
-  const [imagePreview, setImagePreview] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [dragOver, setDragOver] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Dynamic countries state
-  const [countries, setCountries] = useState([]);
-  const [loadingCountries, setLoadingCountries] = useState(true);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [dragOver, setDragOver] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  //Validate session and admin role on mount
+  // Dynamic countries state
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState<boolean>(true);
+
+  // Validate session and admin role on mount
   useEffect(() => {
     if (!validateSession()) {
       console.error("❌ Invalid session");
@@ -61,14 +90,15 @@ export default function AddSalespersonForm() {
         const data = await response.json();
 
         const formattedCountries = data
-          .map((country) => {
+          .map((country: any) => {
             const name = country.name?.common || "";
             const root = country.idd?.root || "";
             const suffixes = country.idd?.suffixes || [];
 
             let callingCode = "";
             if (root) {
-              callingCode = suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
+              callingCode =
+                suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
             }
 
             return {
@@ -77,8 +107,8 @@ export default function AddSalespersonForm() {
               displayName: callingCode ? `${name} (${callingCode})` : name,
             };
           })
-          .filter((c) => c.name && c.callingCode)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
 
         setCountries(formattedCountries);
         setLoadingCountries(false);
@@ -91,9 +121,11 @@ export default function AddSalespersonForm() {
     fetchCountries();
   }, []);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    
+
     // Auto-fill country code when country is selected
     if (name === "country") {
       const selectedCountry = countries.find((c) => c.name === value);
@@ -107,8 +139,8 @@ export default function AddSalespersonForm() {
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    
-    if (errors[name]) {
+
+    if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
@@ -116,35 +148,35 @@ export default function AddSalespersonForm() {
   // -------------------------------
   // HANDLE IMAGE (INPUT + DRAG / DROP)
   // -------------------------------
-  const processImageFile = (file) => {
+  const processImageFile = (file: File | undefined) => {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file');
+    if (!file.type.startsWith("image/")) {
+      alert("Please select a valid image file");
       return;
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB in bytes
     if (file.size > maxSize) {
-      alert('Image size should not exceed 5MB');
+      alert("Image size should not exceed 5MB");
       return;
     }
 
     setFormData((prev) => ({ ...prev, profileImage: file }));
 
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     processImageFile(file);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
 
@@ -152,7 +184,7 @@ export default function AddSalespersonForm() {
     processImageFile(file);
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(true);
   };
@@ -165,8 +197,8 @@ export default function AddSalespersonForm() {
     setImagePreview(null);
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
     if (!formData.userName.trim()) newErrors.userName = "User Name is required";
     if (!formData.firstName.trim())
       newErrors.firstName = "First Name is required";
@@ -185,7 +217,7 @@ export default function AddSalespersonForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  //Save with automatic tenant isolation (JWT token contains tenantId)
+  // Save with automatic tenant isolation (JWT token contains tenantId)
   const handleSave = async () => {
     if (!validateForm()) {
       alert("Please fill in all required fields correctly.");
@@ -221,7 +253,7 @@ export default function AddSalespersonForm() {
 
       // ✅ Get token from localStorage
       const token = localStorage.getItem("ts-token");
-      
+
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -242,16 +274,16 @@ export default function AddSalespersonForm() {
 
       alert("Salesperson Saved Successfully!");
       router.push("/manage-salespersons/salesperson-list/managesalesperson");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error creating salesperson:", error);
-      
+
       if (error.response?.status === 401) {
         alert("Session expired. Please login again.");
         router.push("/login");
       } else {
         alert(
-          error.response?.data?.message || 
-          `Error: ${error.message || "Unknown error occurred"}`
+          error.response?.data?.message ||
+            `Error: ${error.message || "Unknown error occurred"}`
         );
       }
     } finally {

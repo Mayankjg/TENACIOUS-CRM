@@ -1,16 +1,22 @@
 "use client";
 import React, { useState } from "react";
 
+interface ChangeEmailModalProps {
+  salespersonId: string | number | null;
+  onClose: () => void;
+  onEmailChange: (id: string | number, email: string) => void;
+}
+
 export default function ChangeEmailModal({
   salespersonId,
   onClose,
   onEmailChange,
-}) {
-  const [newEmail, setNewEmail] = useState("");
-  const [error, setError] = useState("");
+}: ChangeEmailModalProps) {
+  const [newEmail, setNewEmail] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   // Email Validation
-  const validate = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validate = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const submit = () => {
     setError("");
@@ -21,7 +27,9 @@ export default function ChangeEmailModal({
     }
 
     // Call Parent Handler
-    onEmailChange(salespersonId, newEmail);
+    if (salespersonId !== null) {
+      onEmailChange(salespersonId, newEmail);
+    }
 
     onClose();
   };
