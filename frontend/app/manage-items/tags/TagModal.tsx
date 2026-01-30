@@ -1,12 +1,28 @@
 "use client";
 
+import React from "react";
+
+interface Tag {
+  name: string;
+  color: string;
+  description: string;
+}
+
+interface TagModalProps {
+  showModal: boolean;
+  setShowModal: (show: boolean) => void;
+  newTag: Tag;
+  setNewTag: (tag: Tag) => void;
+  handleAddTag: () => void;
+}
+
 export default function TagModal({
   showModal,
   setShowModal,
   newTag,
   setNewTag,
   handleAddTag,
-}) {
+}: TagModalProps) {
   if (!showModal) return null;
 
   return (
@@ -70,7 +86,7 @@ export default function TagModal({
             className="border border-gray-300 rounded-lg px-3 py-2 w-full text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500
                        focus:border-blue-500 transition resize-none"
-            rows="3"
+            rows={3}
           />
         </div>
 
