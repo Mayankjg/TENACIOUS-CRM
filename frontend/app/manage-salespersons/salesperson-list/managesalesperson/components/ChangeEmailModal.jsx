@@ -1,0 +1,75 @@
+"use client";
+import React, { useState } from "react";
+
+export default function ChangeEmailModal({
+  salespersonId,
+  onClose,
+  onEmailChange,
+}) {
+  const [newEmail, setNewEmail] = useState("");
+  const [error, setError] = useState("");
+
+  // Email Validation
+  const validate = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const submit = () => {
+    setError("");
+
+    if (!validate(newEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Call Parent Handler
+    onEmailChange(salespersonId, newEmail);
+
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 flex justify-center items-center z-[1000] p-5"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white p-8 border border-black rounded-lg w-full max-w-md shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-xl font-semibold bg-[#e5e9ec] mb-4 text-gray-900">
+          Change Email ID
+        </h3>
+
+        {error && <p className="text-red-500 mb-3 text-sm">{error}</p>}
+
+        <hr className="-mx-8 border-t border-gray-300 mb-4" />
+
+        <label className="block mb-2 text-sm font-medium text-gray-700">
+          New Email
+        </label>
+
+        <input
+          type="email"
+          className="w-full p-2.5 mb-4 border border-gray-300 rounded-md pl-5 text-black"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+        />
+
+        <div className="flex justify-end gap-3 mt-4">
+          <button
+            onClick={submit}
+            className="bg-[#133b74] cursor-pointer hover:bg-[#0f2f5a] text-white px-4 py-2.5 rounded-md font-bold"
+          >
+            Update Email
+          </button>
+
+          <button
+            onClick={onClose}
+            className="bg-gray-100 cursor-pointer hover:bg-gray-200 text-gray-800 px-4 py-2.5 rounded-md font-bold"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

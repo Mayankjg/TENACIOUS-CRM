@@ -2,7 +2,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 
@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // CRITICAL: Configure axios baseURL
-  axios.defaults.baseURL = "https://tenacious-techies-crm-01.onrender.com";
+  axios.defaults.baseURL = "https://two9-01-2026.onrender.com";
   axios.defaults.withCredentials = true;
 
   // ============================================
@@ -126,7 +126,7 @@ export function AuthProvider({ children }) {
         username: user.username,
         email: user.email,
         role: user.role,
-        tenantId: user.tenantId, // ✅ MUST HAVE
+        tenantId: user.tenantId, 
         tenantName: user.tenantName || user.username,
         avatar: user.avatar || "/images/profile.png",
       };
@@ -148,7 +148,7 @@ export function AuthProvider({ children }) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setTokenReady(true);
 
-      console.log("✅Login complete - tenant context set");
+      console.log("✅ Login complete - tenant context set");
 
       return res.data;
     } catch (err) {
@@ -176,7 +176,7 @@ export function AuthProvider({ children }) {
     setToken(null);
     setTokenReady(false);
 
-    // IMPORTANT: Redirect to login
+    //Important Redirect to login
     if (typeof window !== "undefined") {
       window.location.href = "/login";
     }

@@ -42,14 +42,14 @@ export function proxy(req: NextRequest) {
     hasToken: !!token,
   });
 
-  //Allow public paths
+  //  Allow public paths
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
   if (isPublicPath) {
     console.log(" Public path - allowing");
     return NextResponse.next();
   }
 
-  // Check if path requires authentication
+  //  Check if path requires authentication
   const isProtectedPath = PROTECTED_PATHS.some((path) => 
     pathname.startsWith(path)
   );
@@ -66,12 +66,12 @@ export function proxy(req: NextRequest) {
   // LOGGED IN → BLOCK LOGIN/SIGNUP
   // ============================================
   if (token && (pathname === "/login" || pathname === "/signup" || pathname === "/")) {
-    console.log(" Already logged in - redirecting to dashboard");
+    console.log("Already logged in - redirecting to dashboard");
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  //  Allow all other requests
-  console.log(" Allowing request");
+  //Allow all other requests
+  console.log("✅ Allowing request");
   return NextResponse.next();
 }
 

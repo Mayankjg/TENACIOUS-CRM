@@ -5,7 +5,7 @@ import axios from "axios";
 // ============================================
 // API CONFIGURATION
 // ============================================
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://tenacious-techies-crm-01.onrender.com";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE;
@@ -39,7 +39,7 @@ export const getUser = () => {
 
     const user = JSON.parse(userStr);
     
-    // ✅ CRITICAL: Validate tenant data
+    //Validate tenant data
     if (!user.tenantId) {
       console.error("❌ User data missing tenantId");
       return null;
@@ -166,7 +166,7 @@ export const validateSession = () => {
     return false;
   }
 
-  console.log("Session valid:", {
+  console.log("✅ Session valid:", {
     userId: user.id,
     role: user.role,
     tenantId: user.tenantId,
