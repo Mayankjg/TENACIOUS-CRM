@@ -5,66 +5,20 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import SalesSummary from "./SalesSummary";
 
-interface User {
-  role: string;
-  [key: string]: any;
-}
-
-interface LeadStats {
-  pending: number;
-  closed: number;
-  open: number;
-  today: number;
-}
-
-interface SalesPerson {
-  id: string | number;
-  name: string;
-  today: number;
-  all: number;
-  missed: number;
-  unscheduled: number;
-  closed: number;
-  void: number;
-}
-
-interface DashboardData {
-  leads: LeadStats;
-  salesPersons: SalesPerson[];
-  contacts: { total: number };
-  configuration: { balanceEmail: number };
-}
-
-interface Lead {
-  leadStatus: string;
-  createdAt: string;
-  salesperson?: string;
-  createdBy?: string;
-  testerSalesman?: string;
-  category?: string;
-  [key: string]: any;
-}
-
-interface SalesPersonRaw {
-  id?: string;
-  _id?: string;
-  username: string;
-  [key: string]: any;
-}
-
 export default function Dashboard() {
-  const { user } = useAuth() as { user: User | null };
+  const { user } = useAuth();
   const router = useRouter();
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
+  const [dashboardData, setDashboardData] = useState({
     leads: { pending: 0, closed: 0, open: 0, today: 0 },
     salesPersons: [],
     contacts: { total: 0 },
     configuration: { balanceEmail: 0 },
   });
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://two9-01-2026.onrender.com";
 
   useEffect(() => {
     if (user) {
@@ -72,15 +26,13 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const fetchDashboardData = async (): Promise<void> => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
 
       // Fetch all leads
-      const leadsRes = await axios.get<Lead[] | { data: Lead[] }>(
-        `${API_BASE}/api/leads/get-leads`
-      );
-      const allLeads: Lead[] = Array.isArray(leadsRes.data)
+      const leadsRes = await axios.get(`${API_BASE}/api/leads/get-leads`);
+      const allLeads = Array.isArray(leadsRes.data)
         ? leadsRes.data
         : leadsRes.data?.data || [];
 
@@ -88,7 +40,7 @@ export default function Dashboard() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const leadStats: LeadStats = {
+      const leadStats = {
         pending: allLeads.filter((l) => l.leadStatus === "Pending").length,
         closed: allLeads.filter((l) => l.leadStatus === "Closed").length,
         open: allLeads.filter((l) => l.leadStatus === "Open").length,
@@ -100,14 +52,12 @@ export default function Dashboard() {
       };
 
       // Fetch salespersons (admin only)
-      let salesPersonsData: SalesPerson[] = [];
-      if (user?.role === "admin") {
-        const spRes = await axios.get<SalesPersonRaw[]>(
+      let salesPersonsData = [];
+      if (user.role === "admin") {
+        const spRes = await axios.get(
           `${API_BASE}/api/salespersons/get-salespersons`
         );
-        const salespersons: SalesPersonRaw[] = Array.isArray(spRes.data)
-          ? spRes.data
-          : [];
+        const salespersons = Array.isArray(spRes.data) ? spRes.data : [];
 
         // Calculate stats for each salesperson
         salesPersonsData = salespersons.map((sp) => {
@@ -125,7 +75,7 @@ export default function Dashboard() {
           });
 
           return {
-            id: sp.id || sp._id || "",
+            id: sp.id || sp._id,
             name: sp.username,
             today: todayLeads.length,
             all: spLeads.length,
@@ -154,7 +104,7 @@ export default function Dashboard() {
   };
 
   // Navigate to LeadsPage with query parameter to open CreateLead form
-  const handleAddLead = (): void => {
+  const handleAddLead = () => {
     router.push("/leads/leadpage?action=addLead");
   };
 
@@ -273,9 +223,7 @@ export default function Dashboard() {
           </div>
 
           <button
-            onClick={() =>
-              router.push("/manage-salespersons/salesperson-list")
-            }
+            onClick={() => router.push("/manage-salespersons/salesperson-list")}
             className="bg-white text-black px-3 py-1 mt-4 rounded text-xs font-semibold hover:bg-gray-200 cursor-pointer"
           >
             VIEW ALL

@@ -3,73 +3,29 @@ import React, { useState, useEffect } from "react";
 import { FaCalendarAlt, FaSync } from "react-icons/fa";
 import axios from "axios";
 
-interface SalesPerson {
-  id: string | number;
-  name: string;
-  today: number;
-  all: number;
-  missed: number;
-  unscheduled: number;
-  closed: number;
-  void: number;
-}
-
-interface SalesSummaryProps {
-  salesPersons: SalesPerson[];
-  onRefresh: () => void;
-}
-
-interface DatePickerProps {
-  label: string;
-  date: Date;
-  showCalendar: boolean;
-  setShowCalendar: React.Dispatch<React.SetStateAction<boolean>>;
-  setDate: React.Dispatch<React.SetStateAction<Date>>;
-}
-
-interface CalendarUIProps {
-  date: Date;
-  setDate: React.Dispatch<React.SetStateAction<Date>>;
-  setShowCalendar: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-interface Lead {
-  createdAt: string;
-  salesperson?: string;
-  createdBy?: string;
-  testerSalesman?: string;
-  leadStatus?: string;
-  category?: string;
-  [key: string]: any;
-}
-
-export default function SalesSummary({
-  salesPersons,
-  onRefresh,
-}: SalesSummaryProps) {
-  const [fromDate, setFromDate] = useState<Date>(new Date());
-  const [toDate, setToDate] = useState<Date>(new Date());
-  const [showFromCalendar, setShowFromCalendar] = useState<boolean>(false);
-  const [showToCalendar, setShowToCalendar] = useState<boolean>(false);
-  const [filteredData, setFilteredData] = useState<SalesPerson[]>(salesPersons);
-  const [loading, setLoading] = useState<boolean>(false);
+export default function SalesSummary({ salesPersons, onRefresh }) {
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
+  const [showFromCalendar, setShowFromCalendar] = useState(false);
+  const [showToCalendar, setShowToCalendar] = useState(false);
+  const [filteredData, setFilteredData] = useState(salesPersons);
+  const [loading, setLoading] = useState(false);
 
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://two9-01-2026.onrender.com";
 
   useEffect(() => {
     setFilteredData(salesPersons);
   }, [salesPersons]);
 
-  const handleSearch = async (): Promise<void> => {
+  const handleSearch = async () => {
     try {
       setLoading(true);
 
       // Fetch all leads
-      const leadsRes = await axios.get<Lead[] | { data: Lead[] }>(
-        `${API_BASE}/api/leads/get-leads`
-      );
-      const allLeads: Lead[] = Array.isArray(leadsRes.data)
+      const leadsRes = await axios.get(`${API_BASE}/api/leads/get-leads`);
+      const allLeads = Array.isArray(leadsRes.data)
         ? leadsRes.data
         : leadsRes.data?.data || [];
 
@@ -88,7 +44,7 @@ export default function SalesSummary({
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const updatedData: SalesPerson[] = salesPersons.map((sp) => {
+      const updatedData = salesPersons.map((sp) => {
         const spLeads = dateFilteredLeads.filter(
           (lead) =>
             lead.salesperson === sp.name ||
@@ -124,7 +80,7 @@ export default function SalesSummary({
     }
   };
 
-  const handleViewLeads = (salesperson: SalesPerson): void => {
+  const handleViewLeads = (salesperson) => {
     // Navigate to leads page with salesperson filter
     window.location.href = `/leads/leadpage?salesperson=${encodeURIComponent(
       salesperson.name
@@ -251,7 +207,7 @@ export default function SalesSummary({
               ) : (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan="9"
                     className="px-4 py-6 text-center text-gray-500"
                   >
                     No salespersons found
@@ -262,7 +218,7 @@ export default function SalesSummary({
             <tfoot className="bg-gray-50">
               <tr>
                 <td
-                  colSpan={2}
+                  colSpan="2"
                   className="px-4 py-3 font-semibold text-left border-t border-gray-300"
                 >
                   TOTAL
@@ -353,13 +309,7 @@ export default function SalesSummary({
 }
 
 /* ------------------ DATE PICKER ------------------ */
-function DatePicker({
-  label,
-  date,
-  showCalendar,
-  setShowCalendar,
-  setDate,
-}: DatePickerProps) {
+function DatePicker({ label, date, showCalendar, setShowCalendar, setDate }) {
   return (
     <div className="flex items-center gap-2 relative w-full md:w-auto">
       <label className="text-gray-700 font-medium text-sm w-20">{label}</label>
@@ -375,7 +325,7 @@ function DatePicker({
 
         <button
           onClick={() => setShowCalendar(!showCalendar)}
-          className="absolute cursor-pointer right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-md"
+          className="absolute  cursor-pointer right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-md"
         >
           <FaCalendarAlt className="text-white text-base" />
         </button>
@@ -395,7 +345,7 @@ function DatePicker({
 }
 
 /* ------------------ CALENDAR UI ------------------ */
-function CalendarUI({ date, setDate, setShowCalendar }: CalendarUIProps) {
+function CalendarUI({ date, setDate, setShowCalendar }) {
   const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 
@@ -445,13 +395,12 @@ function CalendarUI({ date, setDate, setShowCalendar }: CalendarUIProps) {
           return (
             <div
               key={i}
-              className={`py-1.5 rounded-md cursor-pointer ${
-                isValid
+              className={`py-1.5 rounded-md cursor-pointer ${isValid
                   ? isCurrent
                     ? "bg-[#0099E6] text-white font-bold"
                     : "text-gray-700 hover:bg-gray-200"
                   : "text-gray-300"
-              }`}
+                }`}
               onClick={() => {
                 if (isValid) {
                   const newDate = new Date(date);

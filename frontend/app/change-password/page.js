@@ -1,32 +1,26 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent } from "react";
-
-interface FormData {
-  oldPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+import { useState } from "react";
 
 export default function ChangePasswordPage() {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     oldPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Password change data:", formData);
     // Add your password change logic (API call, etc.)
   };
 
-  const handleCancel = (): void => {
+  const handleCancel = () => {
     setFormData({ oldPassword: "", newPassword: "", confirmPassword: "" });
   };
 

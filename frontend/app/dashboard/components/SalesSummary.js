@@ -2,34 +2,11 @@
 import React, { useState } from "react";
 import { FaCalendarAlt } from "react-icons/fa";
 
-interface SalesPerson {
-  id: string | number;
-  name: string;
-  today: number;
-  all: number;
-  missed: number;
-  unscheduled: number;
-  closed: number;
-  void: number;
-}
-
-interface SalesSummaryProps {
-  salesPersons: SalesPerson[];
-}
-
-interface DatePickerProps {
-  label: string;
-  date: Date;
-  showCalendar: boolean;
-  setShowCalendar: React.Dispatch<React.SetStateAction<boolean>>;
-  setDate: React.Dispatch<React.SetStateAction<Date>>;
-}
-
-export default function SalesSummary({ salesPersons }: SalesSummaryProps) {
-  const [fromDate, setFromDate] = useState<Date>(new Date());
-  const [toDate, setToDate] = useState<Date>(new Date());
-  const [showFromCalendar, setShowFromCalendar] = useState<boolean>(false);
-  const [showToCalendar, setShowToCalendar] = useState<boolean>(false);
+export default function SalesSummary({ salesPersons }) {
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
+  const [showFromCalendar, setShowFromCalendar] = useState(false);
+  const [showToCalendar, setShowToCalendar] = useState(false);
 
   return (
     <div className="bg-white rounded-lg shadow border border-gray-200 overflow-out">
@@ -134,13 +111,7 @@ export default function SalesSummary({ salesPersons }: SalesSummaryProps) {
   );
 }
 
-function DatePicker({
-  label,
-  date,
-  showCalendar,
-  setShowCalendar,
-  setDate,
-}: DatePickerProps) {
+function DatePicker({ label, date, showCalendar, setShowCalendar, setDate }) {
   return (
     <div className="flex items-center gap-2 relative">
       <label className="text-gray-700 font-medium text-sm">{label}</label>
