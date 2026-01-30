@@ -1,39 +1,118 @@
+// frontend/app/newsletter/add-template/page.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+
+const API_BASE = "https://tt-crm-pro.onrender.com";
+
+interface Product {
+  _id?: string;
+  id?: string;
+  name: string;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  content: string;
+  product: string;
+  visibility: string;
+  isCustom: boolean;
+  previewImage: string | null;
+  createdAt: string;
+}
+
+declare global {
+  interface Window {
+    Quill: any;
+  }
+}
+
+interface QuillInstance {
+  root: HTMLElement;
+  getText: () => string;
+}
 
 export default function AddTemplatePage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
-  const quillRef = useRef(null);
-  const [templateName, setTemplateName] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [templateFile, setTemplateFile] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [previewImageData, setPreviewImageData] = useState(null);
-  const [htmlContent, setHtmlContent] = useState("");
-  const [headingText, setHeadingText] = useState("");
-  const [visibility, setVisibility] = useState("admin");
+  const [step, setStep] = useState<number>(1);
+  const quillRef = useRef<QuillInstance | null>(null);
+  const [templateName, setTemplateName] = useState<string>("");
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<File | null>(null);
+  const [previewImageData, setPreviewImageData] = useState<string | null>(null);
+  const [htmlContent, setHtmlContent] = useState<string>("");
+  const [headingText, setHeadingText] = useState<string>("");
+  const [visibility, setVisibility] = useState<string>("admin");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  // Fetch products from API
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async (): Promise<void> => {
+    try {
+      setLoadingProducts(true);
+      const res = await fetch(`${API_BASE}/api/manage-items/products/get-products`);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      // Handle different response formats
+      let productsArray: Product[] = [];
+      
+      if (Array.isArray(data)) {
+        // If response is directly an array
+        productsArray = data;
+      } else if (data.products && Array.isArray(data.products)) {
+        // If response has a products property
+        productsArray = data.products;
+      } else if (data.data && Array.isArray(data.data)) {
+        // If response has a data property
+        productsArray = data.data;
+      } else {
+        console.warn("Unexpected API response format:", data);
+        productsArray = [];
+      }
+      
+      console.log("Fetched products:", productsArray);
+      setProducts(productsArray);
+    } catch (err) {
+      console.error("Fetch products error:", err);
+      alert("Error loading products. Please try again.");
+      setProducts([]); // Set empty array on error
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
     setTemplateFile(file);
     if (file && file.type === "text/html") {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target.result;
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        const content = event.target?.result as string;
         setHtmlContent(content);
         
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = content;
         const heading = tempDiv.querySelector('h1, h2, h3, h4, h5, h6');
         if (heading) {
-          setHeadingText(heading.textContent || heading.innerText);
+          setHeadingText(heading.textContent || heading.innerHTML);
           heading.remove();
           setHtmlContent(tempDiv.innerHTML);
         } else {
-          const firstText = tempDiv.textContent.trim().split('\n')[0];
+          const firstText = tempDiv.textContent?.trim().split('\n')[0];
           if (firstText) {
             setHeadingText(firstText);
           }
@@ -43,8 +122,8 @@ export default function AddTemplatePage() {
     }
   };
 
-  const handlePreviewImageChange = (e) => {
-    const file = e.target.files[0];
+  const handlePreviewImageChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -60,13 +139,13 @@ export default function AddTemplatePage() {
     setPreviewImage(file);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setPreviewImageData(event.target.result);
+    reader.onload = (event: ProgressEvent<FileReader>) => {
+      setPreviewImageData(event.target?.result as string);
     };
     reader.readAsDataURL(file);
   };
 
-  const initializeQuill = () => {
+  const initializeQuill = (): void => {
     const editorElement = document.getElementById('editor');
     if (editorElement && quillRef.current) {
       editorElement.innerHTML = '';
@@ -78,12 +157,18 @@ export default function AddTemplatePage() {
           theme: 'snow',
           placeholder: 'Write your template content here...',
           modules: {
-            toolbar: [[{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
-              [{ 'header': [1, 2, 3, 4, 5, 6, false] }], ['bold', 'italic', 'underline', 'strike'],
-              [{ 'color': [] }, { 'background': [] }], [{ 'script': 'sub'}, { 'script': 'super' }],
+            toolbar: [
+              [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+              [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'color': [] }, { 'background': [] }],
+              [{ 'script': 'sub'}, { 'script': 'super' }],
               [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
-              [{ 'direction': 'rtl' }, { 'align': [] }], ['blockquote', 'code-block'],
-              ['link', 'image', 'video', 'formula'], ['clean']]
+              [{ 'direction': 'rtl' }, { 'align': [] }],
+              ['blockquote', 'code-block'],
+              ['link', 'image', 'video', 'formula'],
+              ['clean']
+            ]
           }
         });
 
@@ -123,7 +208,7 @@ export default function AddTemplatePage() {
     }
   }, [step, htmlContent]);
 
-  const handleNext = () => {
+  const handleNext = (): void => {
     if (!templateName || !selectedProduct || !templateFile) {
       alert("Please fill all required fields");
       return;
@@ -131,7 +216,7 @@ export default function AddTemplatePage() {
     setStep(2);
   };
 
-  const handleSave = () => {
+  const handleSave = (): void => {
     const editorContent = quillRef.current ? quillRef.current.root.innerHTML : '';
     const text = quillRef.current ? quillRef.current.getText().trim() : '';
     if (!text) {
@@ -140,7 +225,7 @@ export default function AddTemplatePage() {
     }
     
     try { 
-      const newTemplate = {
+      const newTemplate: Template = {
         id: crypto.randomUUID(),
         name: templateName,
         content: editorContent,
@@ -151,7 +236,7 @@ export default function AddTemplatePage() {
         createdAt: new Date().toISOString()
       };
 
-      const existingTemplates = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
+      const existingTemplates: Template[] = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
       const updatedTemplates = [newTemplate, ...existingTemplates];
       localStorage.setItem("emailTemplates", JSON.stringify(updatedTemplates));
 
@@ -163,7 +248,7 @@ export default function AddTemplatePage() {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     if (step === 2) {
       if (quillRef.current) {
         const editorElement = document.getElementById('editor');
@@ -189,6 +274,7 @@ export default function AddTemplatePage() {
         .ql-editor strong, .ql-editor em, .ql-editor u {
           color: black !important;
         }
+        .ql-editor *{color:black!important}
         .ql-container {
           font-family: inherit;
         }
@@ -196,6 +282,9 @@ export default function AddTemplatePage() {
           left: auto !important;
           right: 0 !important;
           transform: none !important;
+        }
+        .ql-editor table td, .ql-editor table th {
+          color: black !important;
         }
       `}</style>
       
@@ -214,7 +303,9 @@ export default function AddTemplatePage() {
             {step === 1 ? (
               <div className="max-w-3xl">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Template Name <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="text" 
                     placeholder="Template Name" 
@@ -225,20 +316,36 @@ export default function AddTemplatePage() {
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Product</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Product <span className="text-red-500">*</span>
+                  </label>
                   <select 
                     className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 hover:bg-gray-100 focus:border-transparent" 
                     value={selectedProduct} 
                     onChange={(e) => setSelectedProduct(e.target.value)}
+                    disabled={loadingProducts}
                   >
-                    <option value="">Select Products</option>
-                    <option value="product1">Product 1</option>
-                    <option value="product2">Product 2</option>
+                    <option value="">
+                      {loadingProducts ? "Loading products..." : "Select Products"}
+                    </option>
+                    {Array.isArray(products) && products.map((product) => (
+                      <option key={product._id || product.id} value={product.name}>
+                        {product.name}
+                      </option>
+                    ))}
                   </select>
+                  {!loadingProducts && (!Array.isArray(products) || products.length === 0) && (
+                    <p className="text-amber-600 text-sm mt-2">No products available. Please add products first.</p>
+                  )}
+                  {loadingProducts && (
+                    <p className="text-blue-600 text-sm mt-2">Loading products...</p>
+                  )}
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Template File</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Template File <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="file" 
                     className="w-full text-sm text-gray-700 file:mr-4 file:py-0.5 file:px-4 file:rounded file:border border-gray-400 file:text-sm file:font-medium file:bg-gray-100 file:text-black hover:file:hover:bg-gray-300 file:cursor-pointer" 
@@ -277,13 +384,13 @@ export default function AddTemplatePage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button 
                     onClick={handleNext} 
-                    className="w-full sm:w-auto bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-8 py-1.5 rounded-md text-base font-medium transition-colors"
+                    className="w-full sm:w-auto bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-8 py-1.5 rounded-md text-base font-medium transition-colors cursor-pointer"
                   >
                     Next
                   </button>
                   <button 
                     onClick={handleCancel} 
-                    className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-8 py-1.5 rounded-md text-base font-medium transition-colors"
+                    className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-8 py-1.5 rounded-md text-base font-medium transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>

@@ -1,20 +1,39 @@
+// frontend/app/newsletter/send-mail/SendEntireList/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface TemplateData {
+    content: string;
+    subject: string;
+    selectedProduct: string;
+    selectedEmail: string;
+    templateId: string;
+    templateName: string;
+}
+
+interface Contact {
+    id: number;
+    name: string;
+    email: string;
+    product: string;
+    fromEmail?: string;
+}
+
 export default function SendEntireList() {
     const router = useRouter();
-    const [totalRecipients, setTotalRecipients] = useState(0);
-    const [remainingEmails] = useState(0);
-    const [showPreview, setShowPreview] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState(null);
+    const [totalRecipients, setTotalRecipients] = useState<number>(0);
+    const [remainingEmails] = useState<number>(0);
+    const [showPreview, setShowPreview] = useState<boolean>(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
 
     useEffect(() => {
         const templateData = localStorage.getItem('selectedTemplateData');
         if (templateData) {
             try {
-                setSelectedTemplate(JSON.parse(templateData));
+                const parsed: TemplateData = JSON.parse(templateData);
+                setSelectedTemplate(parsed);
             } catch (e) {
                 console.error('Error parsing template:', e);
             }
@@ -23,7 +42,7 @@ export default function SendEntireList() {
         const savedContacts = localStorage.getItem('contacts');
         if (savedContacts) {
             try {
-                const contacts = JSON.parse(savedContacts);
+                const contacts: Contact[] = JSON.parse(savedContacts);
                 setTotalRecipients(contacts.length);
             } catch (e) {
                 console.error('Error parsing contacts:', e);
@@ -31,14 +50,14 @@ export default function SendEntireList() {
         }
     }, []);
 
-    const handleSend = () => {
+    const handleSend = (): void => {
         if (!selectedTemplate?.content) return alert('No template content found. Please go back and select a template.');
         if (totalRecipients === 0) return alert('No recipients found. Please add contacts first.');
         localStorage.setItem('mailSentSuccess', 'true');
-        router.push('/newsletter/SendMail');
+        router.push('/newsletter/send-mail');
     };
 
-    const handlePreview = () => {
+    const handlePreview = (): void => {
         if (!selectedTemplate?.content) return alert('No template selected. Please go back to Custom Message and select a template.');
         setShowPreview(true);
     };
@@ -83,9 +102,9 @@ export default function SendEntireList() {
                     <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                         <div className="px-6 py-4 border-b border-gray-300 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-blue-50">
                             <h2 className="text-xl font-bold text-gray-800">Email Preview</h2>
-                            <button
-                                onClick={() => setShowPreview(false)}
-                                className="text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none hover:bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                            <button 
+                                onClick={() => setShowPreview(false)} 
+                                className="text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none hover:bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center transition-colors" 
                                 title="Close"
                             >
                                 ×
@@ -104,9 +123,9 @@ export default function SendEntireList() {
                             </div>
                         </div>
                         <div className="px-6 py-4 border-t border-gray-300 flex justify-end gap-3 bg-gray-50">
-                            <button
-                                onClick={() => setShowPreview(false)}
-                                className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded focus:outline-none transition-colors"
+                            <button 
+                                onClick={() => setShowPreview(false)} 
+                                className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded focus:outline-none transition-colors cursor-pointer"
                             >
                                 Close
                             </button>
@@ -146,21 +165,21 @@ export default function SendEntireList() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-3 mt-8">
-                                <button
-                                    onClick={handleSend}
-                                    className="w-full sm:w-auto px-8 py-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium text-base rounded shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                <button 
+                                    onClick={handleSend} 
+                                    className="w-full sm:w-auto px-8 py-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium text-base rounded shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
                                 >
                                     Send
                                 </button>
-                                <button
-                                    onClick={handlePreview}
-                                    className="w-full sm:w-auto px-8 py-2 bg-[#ef4444] hover:bg-[#dc2626] text-white font-medium text-base rounded shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                                <button 
+                                    onClick={handlePreview} 
+                                    className="w-full sm:w-auto px-8 py-2 bg-[#ef4444] hover:bg-[#dc2626] text-white font-medium text-base rounded shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 cursor-pointer"
                                 >
                                     Preview
                                 </button>
-                                <button
-                                    onClick={() => router.back()}
-                                    className="w-full sm:w-auto px-8 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium text-base rounded border border-gray-300 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                <button 
+                                    onClick={() => router.back()} 
+                                    className="w-full sm:w-auto px-8 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium text-base rounded border border-gray-300 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 cursor-pointer"
                                 >
                                     Cancel
                                 </button>

@@ -1,68 +1,173 @@
+// frontend/app/newsletter/template/page.tsx - CORRECTED VERSION
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, ChangeEvent, MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, Link, Image, Table, Code, Palette, Type, Undo, Redo, ChevronDown } from 'lucide-react';
 import { FaPen, FaTrash } from 'react-icons/fa';
 
-const TEMPLATES = [
+const API_BASE = "https://tt-crm-pro.onrender.com";
+
+interface TemplateContent {
+  title: string;
+  subtitle: string;
+  description: string;
+  body: string;
+  callToAction: string;
+  footer: string;
+}
+
+interface TemplateType {
+  id: string;
+  name: string;
+  colors: string[];
+  content: TemplateContent;
+}
+
+interface Product {
+  _id?: string;
+  id?: string;
+  name: string;
+}
+
+interface Email {
+  id: number;
+  email: string;
+}
+
+interface State {
+  selectedProduct: string;
+  selectedEmail: string;
+  subject: string;
+  selectedTemplate: TemplateType | null;
+  openMenu: string | null;
+  showSourceCode: boolean;
+  htmlContent: string;
+  showColorPicker: boolean;
+  colorPickerType: 'text' | 'background';
+}
+
+interface MenuItem {
+  label: string;
+  shortcut?: string;
+  onClick: () => void;
+}
+
+interface MenuButtonProps {
+  label: string;
+  items: (MenuItem | 'divider')[];
+}
+
+interface ToolbarButtonProps {
+  onClick: () => void;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  title: string;
+}
+
+const TEMPLATES: TemplateType[] = [
   { id: 'default-01', name: 'Default 01', colors: ['#e8d4c4', '#d4b89c', '#8b4513'], content: { title: 'Tenacious Sales', subtitle: 'Your Lead Manager', description: 'Tenacious is one of the best online digital marketing agency for businesses and startups across the world for Website, Apps, SEO,SMM and SEM.', body: 'Tenacious Group was founded in 2011, and so far we have served more than 175 clients across 15 countries all around the globe. We have delivered more than 253+ successful projects till date.', callToAction: 'Get Started Today', footer: 'Thank you for choosing our services. We look forward to working with you.' } },
   { id: 'default-02', name: 'Default 02', colors: ['#f5c4c4', '#e89c9c', '#c24040'], content: { title: 'Food-Chow', subtitle: 'Online Ordering System', description: 'It includes point-of-sale software to manage billing, orders, and payments in-house.', body: 'FoodChow is a technology platform and software suite for online food ordering, restaurant point-of-sale (POS), and restaurant business management — primarily aimed at helping restaurants, cafés, cloud kitchens, and hospitality businesses go digital and accept orders without relying on third-party aggregators.', callToAction: 'View Our Portfolio', footer: 'Let\'s create something amazing together. Contact us today!' } },
   { id: 'default-03', name: 'Default 03', colors: ['#d4c4b4', '#b4a494', '#6b5444'], content: { title: 'Point of Sale.', subtitle: 'POS as the cash counter + brain of the business.', description: 'It\'s the system where a sale happens—when a customer pays and the business records the transaction.', body: 'POS is the system where customers pay and businesses manage sales.', callToAction: 'Shop Now', footer: 'Enjoy fresh, organic goodness delivered to your door.' } },
 ];
 
-const COLORS = ['#000000', '#e60000', '#ff9900', '#ffff00', '#008a00', '#0066cc', '#9933ff', '#facccc', '#ffebcc', '#ffffcc', '#cce8cc', '#cce0f5', '#ebd6ff', '#bbbbbb', '#f06666', '#ffc266', '#ffff66', '#66b966', '#66a3e0', '#c285ff', '#888888', '#a10000', '#b26b00', '#b2b200', '#006100', '#0047b2', '#6b24b2', '#444444', '#5c0000', '#663d00', '#666600', '#003700', '#002966', '#3d1466', '#ffffff'];
+const COLORS: string[] = ['#000000', '#e60000', '#ff9900', '#ffff00', '#008a00', '#0066cc', '#9933ff', '#facccc', '#ffebcc', '#ffffcc', '#cce8cc', '#cce0f5', '#ebd6ff', '#bbbbbb', '#f06666', '#ffc266', '#ffff66', '#66b966', '#66a3e0', '#c285ff', '#888888', '#a10000', '#b26b00', '#b2b200', '#006100', '#0047b2', '#6b24b2', '#444444', '#5c0000', '#663d00', '#666600', '#003700', '#002966', '#3d1466', '#ffffff'];
 
 export default function Template() {
   const router = useRouter();
-  const iframeRef = useRef(null);
-  const [state, setState] = useState({ selectedProduct: '', selectedEmail: '', subject: '', selectedTemplate: null, openMenu: null, showSourceCode: false, htmlContent: '', showColorPicker: false, colorPickerType: 'text' });
-  const [products, setProducts] = useState([]);
-  const [emails, setEmails] = useState([]);
-  const [showAddEmailForm, setShowAddEmailForm] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [showManageEmails, setShowManageEmails] = useState(false);
-  const [editingEmailId, setEditingEmailId] = useState(null);
-  const [editedEmail, setEditedEmail] = useState('');
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [state, setState] = useState<State>({ 
+    selectedProduct: '', 
+    selectedEmail: '', 
+    subject: '', 
+    selectedTemplate: null, 
+    openMenu: null, 
+    showSourceCode: false, 
+    htmlContent: '', 
+    showColorPicker: false, 
+    colorPickerType: 'text' 
+  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [showAddEmailForm, setShowAddEmailForm] = useState<boolean>(false);
+  const [newEmail, setNewEmail] = useState<string>('');
+  const [showManageEmails, setShowManageEmails] = useState<boolean>(false);
+  const [editingEmailId, setEditingEmailId] = useState<number | null>(null);
+  const [editedEmail, setEditedEmail] = useState<string>('');
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
 
+  // Fetch products from backend API - FIXED
   useEffect(() => {
-    const load = () => setProducts(JSON.parse(localStorage.getItem("products") || "[]"));
-    load();
-    const handler = (e) => e.key === 'products' && load();
-    window.addEventListener('storage', handler);
-    const interval = setInterval(load, 1000);
-    return () => { window.removeEventListener('storage', handler); clearInterval(interval); };
+    const fetchProducts = async (): Promise<void> => {
+      try {
+        setIsLoadingProducts(true);
+        const res = await fetch(`${API_BASE}/api/manage-items/products/get-products`);
+        const data = await res.json();
+        
+        console.log("API Response:", data); // Debug log
+        
+        // Handle different response formats
+        let productsArray: Product[] = [];
+        if (Array.isArray(data)) {
+          productsArray = data;
+        } else if (data.products && Array.isArray(data.products)) {
+          productsArray = data.products;
+        } else if (data.data && Array.isArray(data.data)) {
+          productsArray = data.data;
+        } else {
+          console.warn("Unexpected API response format:", data);
+          productsArray = [];
+        }
+        
+        console.log("Products Array:", productsArray); // Debug log
+        setProducts(productsArray);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setProducts([]);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
   }, []);
 
-  useEffect(() => setEmails(JSON.parse(localStorage.getItem("fromEmails") || "[]")), []);
+  useEffect(() => {
+    const stored = localStorage.getItem("fromEmails");
+    setEmails(stored ? JSON.parse(stored) : []);
+  }, []);
 
-  const saveEmails = (list) => { setEmails(list); localStorage.setItem("fromEmails", JSON.stringify(list)); };
+  const saveEmails = (list: Email[]): void => {
+    setEmails(list);
+    localStorage.setItem("fromEmails", JSON.stringify(list));
+  };
 
-  const handleAddEmail = () => {
+  const handleAddEmail = (): void => {
     if (!newEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) return alert('Please enter a valid email address');
     if (emails.some(e => e.email === newEmail.trim())) return alert('This email already exists');
-    const newItem = { id: Date.now(), email: newEmail.trim() };
+    const newItem: Email = { id: Date.now(), email: newEmail.trim() };
     saveEmails([...emails, newItem]);
     setNewEmail(''); 
     setShowAddEmailForm(false);
     setState(prev => ({ ...prev, selectedEmail: newItem.email }));
   };
 
-  const handleUpdateEmail = (id) => {
+  const handleUpdateEmail = (id: number): void => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedEmail.trim())) return alert('Please enter a valid email address');
     saveEmails(emails.map((e) => e.id === id ? { ...e, email: editedEmail.trim() } : e));
     setEditingEmailId(null); 
     setEditedEmail('');
   };
 
-  const handleDeleteSingleEmail = (id) => {
+  const handleDeleteSingleEmail = (id: number): void => {
     if (confirm('Are you sure you want to delete this email?')) {
       saveEmails(emails.filter((e) => e.id !== id));
-      if (state.selectedEmail === emails.find(e => e.id === id)?.email) setState(prev => ({ ...prev, selectedEmail: '' }));
+      if (state.selectedEmail === emails.find(e => e.id === id)?.email) {
+        setState(prev => ({ ...prev, selectedEmail: '' }));
+      }
     }
   };
 
-  const generateHtmlContent = (template) => `<!DOCTYPE html>
+  const generateHtmlContent = (template: TemplateType): string => `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>body{margin:0;padding:20px;font-family:Arial,sans-serif;background:#f1f1f1ff}*{box-sizing:border-box}::selection{background-color:#3b82f6;color:white}[contenteditable]{cursor:text}[contenteditable]:focus{outline:2px solid #3b82f6;outline-offset:2px}a[contenteditable="false"]{pointer-events:auto;cursor:pointer}</style></head><body contenteditable="true">
 <div style="background:linear-gradient(135deg,${template.colors[0]} 0%,${template.colors[1]} 50%,${template.colors[2]} 100%);padding:40px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#000000;font-size:32px;font-weight:bold;margin:0 0 10px 0">${template.content.title}</h1><h2 style="color:#000000;font-size:20px;font-weight:600;margin:0 0 15px 0">${template.content.subtitle}</h2><p style="color:#000000;font-size:16px;line-height:1.6;margin:0">${template.content.description}</p></div>
 <div style="background:#fff;padding:40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb"><h3 style="color:#000000;font-size:22px;font-weight:bold;margin:0 0 20px 0">Welcome!</h3><p style="color:#000000;font-size:16px;line-height:1.8;margin:0 0 20px 0">${template.content.body}</p><p style="color:#000000;font-size:16px;line-height:1.8;margin:0 0 30px 0">We're excited to help you get started and look forward to supporting you every step of the way.</p>
@@ -79,69 +184,103 @@ export default function Template() {
     setState(prev => ({ ...prev, htmlContent: html }));
     if (iframeRef.current) {
       const doc = iframeRef.current.contentDocument;
-      doc.open(); doc.write(html); doc.close();
-      doc.addEventListener('keydown', (e) => {
-        const shortcuts = { b: 'bold', i: 'italic', u: 'underline', z: 'undo', y: 'redo' };
-        if (e.ctrlKey && shortcuts[e.key]) { e.preventDefault(); doc.execCommand(shortcuts[e.key]); }
-      });
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+        doc.addEventListener('keydown', (e: KeyboardEvent) => {
+          const shortcuts: Record<string, string> = { b: 'bold', i: 'italic', u: 'underline', z: 'undo', y: 'redo' };
+          if (e.ctrlKey && shortcuts[e.key]) {
+            e.preventDefault();
+            doc.execCommand(shortcuts[e.key]);
+          }
+        });
+      }
     }
   }, [state.selectedTemplate]);
 
-  const execCommand = (command, value = null) => {
+  const execCommand = (command: string, value: string | null = null): void => {
     if (!iframeRef.current) return;
-    iframeRef.current.contentDocument.execCommand(command, false, value);
-    iframeRef.current.contentWindow.focus();
+    const doc = iframeRef.current.contentDocument;
+    if (doc) {
+      doc.execCommand(command, false, value || undefined);
+      iframeRef.current.contentWindow?.focus();
+    }
   };
 
-  const handleAction = (type, action) => {
+  const handleAction = (type: string, action: string): void => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc && type !== 'file') return;
-    const actions = {
+
+    const actions: Record<string, Record<string, () => void>> = {
       file: {
         new: () => window.confirm('Create new document? Unsaved changes will be lost.') && setState(prev => ({ ...prev, selectedTemplate: null, htmlContent: '' })),
-        print: () => iframeRef.current?.contentWindow.print()
+        print: () => iframeRef.current?.contentWindow?.print()
       },
       edit: {
-        undo: () => doc.execCommand('undo'),
-        redo: () => doc.execCommand('redo'),
-        cut: () => doc.execCommand('cut'),
-        copy: () => doc.execCommand('copy'),
-        paste: () => doc.execCommand('paste'),
-        selectAll: () => { const sel = doc.getSelection(); const range = doc.createRange(); range.selectNodeContents(doc.body); sel.removeAllRanges(); sel.addRange(range); }
+        undo: () => doc?.execCommand('undo'),
+        redo: () => doc?.execCommand('redo'),
+        cut: () => doc?.execCommand('cut'),
+        copy: () => doc?.execCommand('copy'),
+        paste: () => doc?.execCommand('paste'),
+        selectAll: () => {
+          if (!doc) return;
+          const sel = doc.getSelection();
+          const range = doc.createRange();
+          range.selectNodeContents(doc.body);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
       },
       insert: {
-        image: () => { const url = window.prompt('Enter image URL:'); url && doc.execCommand('insertImage', false, url); },
-        link: () => { const url = window.prompt('Enter URL:'); url && doc.execCommand('createLink', false, url); },
+        image: () => {
+          const url = window.prompt('Enter image URL:');
+          if (url) doc?.execCommand('insertImage', false, url);
+        },
+        link: () => {
+          const url = window.prompt('Enter URL:');
+          if (url) doc?.execCommand('createLink', false, url);
+        },
         table: () => {
-          const r = window.prompt('Rows:', '3'); const c = window.prompt('Columns:', '3'); 
-          if (r && c) {
+          const r = window.prompt('Rows:', '3');
+          const c = window.prompt('Columns:', '3');
+          if (r && c && doc) {
             let tbl = '<table border="1" style="border-collapse:collapse;width:100%;margin:10px 0">';
-            for (let i = 0; i < parseInt(r); i++) { tbl += '<tr>'; for (let j = 0; j < parseInt(c); j++) tbl += '<td style="border:1px solid #ddd;padding:8px" contenteditable="true">Cell</td>'; tbl += '</tr>'; }
+            for (let i = 0; i < parseInt(r); i++) {
+              tbl += '<tr>';
+              for (let j = 0; j < parseInt(c); j++) tbl += '<td style="border:1px solid #ddd;padding:8px" contenteditable="true">Cell</td>';
+              tbl += '</tr>';
+            }
             tbl += '</table>';
             doc.execCommand('insertHTML', false, tbl);
           }
         },
-        hr: () => doc.execCommand('insertHorizontalRule')
+        hr: () => doc?.execCommand('insertHorizontalRule')
       },
       view: {
         sourceCode: () => {
           if (!state.showSourceCode && iframeRef.current) {
-            setState(prev => ({ ...prev, htmlContent: iframeRef.current.contentDocument.documentElement.outerHTML, showSourceCode: true }));
+            setState(prev => ({
+              ...prev,
+              htmlContent: iframeRef.current?.contentDocument?.documentElement.outerHTML || '',
+              showSourceCode: true
+            }));
           } else {
             setState(prev => ({ ...prev, showSourceCode: false }));
           }
         },
         fullscreen: () => {
           const container = document.querySelector('.editor-container');
-          if (!document.fullscreenElement) container?.requestFullscreen().catch(e => console.log(e));
-          else document.exitFullscreen();
+          if (!document.fullscreenElement) {
+            (container as HTMLElement)?.requestFullscreen().catch(e => console.log(e));
+          } else document.exitFullscreen();
         }
       },
       format: {
-        bold: () => doc.execCommand('bold'),
-        italic: () => doc.execCommand('italic'),
-        underline: () => doc.execCommand('underline'),
-        strike: () => doc.execCommand('strikeThrough')
+        bold: () => doc?.execCommand('bold'),
+        italic: () => doc?.execCommand('italic'),
+        underline: () => doc?.execCommand('underline'),
+        strike: () => doc?.execCommand('strikeThrough')
       },
       tools: {
         wordCount: () => {
@@ -151,28 +290,31 @@ export default function Template() {
         }
       }
     };
+
     actions[type]?.[action]?.();
     setState(prev => ({ ...prev, openMenu: null }));
   };
 
-  const handleApplySourceCode = () => {
+  const handleApplySourceCode = (): void => {
     if (iframeRef.current && state.htmlContent) {
       const doc = iframeRef.current.contentDocument;
-      doc.open();
-      doc.write(state.htmlContent);
-      doc.close();
+      if (doc) {
+        doc.open();
+        doc.write(state.htmlContent);
+        doc.close();
+      }
     }
     setState(prev => ({ ...prev, showSourceCode: false }));
   };
 
-  const MenuButton = ({ label, items }) => (
+  const MenuButton = ({ label, items }: MenuButtonProps) => (
     <div className="relative inline-block">
       <button 
-        onClick={(e) => {
+        onClick={(e: MouseEvent<HTMLButtonElement>) => {
           e.stopPropagation();
           setState(prev => ({ ...prev, openMenu: prev.openMenu === label.toLowerCase() ? null : label.toLowerCase() }));
         }} 
-        className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+        className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
       >
         {label} <ChevronDown className="inline" size={12} />
       </button>
@@ -181,13 +323,13 @@ export default function Template() {
           {items.map((item, i) => item === 'divider' ? <div key={i} className="border-t border-gray-200 my-1"></div> : 
             <button 
               key={i} 
-              onClick={(e) => {
+              onClick={(e: MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
-                item.onClick();
+                (item as MenuItem).onClick();
               }} 
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between cursor-pointer"
             >
-              <span>{item.label}</span>{item.shortcut && <span className="text-xs text-gray-400 ml-4">{item.shortcut}</span>}
+              <span>{(item as MenuItem).label}</span>{(item as MenuItem).shortcut && <span className="text-xs text-gray-400 ml-4">{(item as MenuItem).shortcut}</span>}
             </button>
           )}
         </div>
@@ -195,20 +337,23 @@ export default function Template() {
     </div>
   );
 
-  const ToolbarButton = ({ onClick, icon: Icon, title }) => (
-    <button onClick={onClick} title={title} className="p-2 hover:bg-gray-200 rounded transition-colors"><Icon size={18} className="text-gray-700" /></button>
+  const ToolbarButton = ({ onClick, icon: Icon, title }: ToolbarButtonProps) => (
+    <button onClick={onClick} title={title} className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer">
+      <Icon size={18} className="text-gray-700" />
+    </button>
   );
 
-  const validateAndNavigate = (path) => {
+  const validateAndNavigate = (path: string): void => {
     if (!state.selectedProduct) return alert('Please select a product');
     if (!state.selectedEmail) return alert('Please select an email');
     if (!state.selectedTemplate) return alert('Please select a template');
     if (!state.subject.trim()) return alert('Please enter a subject');
-    const currentContent = state.showSourceCode ? state.htmlContent : iframeRef.current?.contentDocument.documentElement.outerHTML;
-    if (!currentContent.replace(/<[^>]*>/g, '').trim()) return alert('Please write a message');
+    const currentContent = state.showSourceCode ? state.htmlContent : iframeRef.current?.contentDocument?.documentElement.outerHTML;
+    if (!currentContent?.replace(/<[^>]*>/g, '').trim()) return alert('Please write a message');
     
-    const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-    const updatedContacts = contacts.map(contact => ({
+    const contactsStr = localStorage.getItem('contacts');
+    const contacts = contactsStr ? JSON.parse(contactsStr) : [];
+    const updatedContacts = contacts.map((contact: any) => ({
       ...contact,
       fromEmail: state.selectedEmail
     }));
@@ -240,9 +385,20 @@ export default function Template() {
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <label className="text-sm font-semibold text-gray-700 whitespace-nowrap sm:min-w-[120px]">Select Product</label>
         <div className="relative w-full sm:max-w-md sm:flex-1">
-          <select value={state.selectedProduct} onChange={(e) => setState(prev => ({ ...prev, selectedProduct: e.target.value }))} className="block appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-1 hover:bg-gray-100 text-sm text-gray-700">
-            <option value="">Select Products</option>
-            {products.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+          <select 
+            value={state.selectedProduct} 
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => setState(prev => ({ ...prev, selectedProduct: e.target.value }))} 
+            disabled={isLoadingProducts}
+            className="block appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-1 hover:bg-gray-100 text-sm text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <option value="">
+              {isLoadingProducts ? 'Loading products...' : 'Select Products'}
+            </option>
+            {Array.isArray(products) && products.map((p) => (
+              <option key={p._id || p.id} value={p.name}>
+                {p.name}
+              </option>
+            ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
             <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.646 7.354a.75.75 0 011.06 1.06l-6.177 6.177a.75.75 0 01-1.06 0L3.354 8.414a.75.75 0 011.06-1.06l4.878 4.879z" /></svg>
@@ -254,7 +410,7 @@ export default function Template() {
         <label className="text-sm font-semibold text-gray-700 whitespace-nowrap sm:min-w-[120px]">From Email</label>
         <div className="flex items-center gap-2 flex-1 w-full">
           <div className="relative w-full sm:max-w-md">
-            <select value={state.selectedEmail} onChange={(e) => setState(prev => ({ ...prev, selectedEmail: e.target.value }))} className="block appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-1 hover:bg-gray-100 text-sm text-gray-700">
+            <select value={state.selectedEmail} onChange={(e: ChangeEvent<HTMLSelectElement>) => setState(prev => ({ ...prev, selectedEmail: e.target.value }))} className="block appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-1 hover:bg-gray-100 text-sm text-gray-700 cursor-pointer">
               <option value="">Select Email</option>
               {emails.map((e) => <option key={e.id} value={e.email}>{e.email}</option>)}
             </select>
@@ -262,8 +418,8 @@ export default function Template() {
               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.646 7.354a.75.75 0 011.06 1.06l-6.177 6.177a.75.75 0 01-1.06 0L3.354 8.414a.75.75 0 011.06-1.06l4.878 4.879z" /></svg>
             </div>
           </div>
-          <button onClick={() => setShowAddEmailForm(true)} className="text-gray-600 bg-gray-300 hover:bg-gray-400 border border-gray-300 rounded w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors flex-shrink-0" title="Add new email"><span className="text-xl font-light">+</span></button>
-          <button onClick={() => setShowManageEmails(true)} className="text-gray-600 bg-gray-300 hover:bg-gray-400 border border-gray-300 rounded w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors flex-shrink-0" title="Manage emails"><span className="text-xl font-light">−</span></button>
+          <button onClick={() => setShowAddEmailForm(true)} className="text-gray-600 bg-gray-300 hover:bg-gray-400 border border-gray-300 rounded w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors flex-shrink-0 cursor-pointer" title="Add new email"><span className="text-xl font-light">+</span></button>
+          <button onClick={() => setShowManageEmails(true)} className="text-gray-600 bg-gray-300 hover:bg-gray-400 border border-gray-300 rounded w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors flex-shrink-0 cursor-pointer" title="Manage emails"><span className="text-xl font-light">−</span></button>
         </div>
       </div>
 
@@ -273,11 +429,11 @@ export default function Template() {
             <div className="border-b px-6 py-3"><h2 className="text-xl font-semibold text-gray-800">Add New Email</h2></div>
             <div className="px-6 py-4">
               <label className="block mb-2 text-sm text-gray-700">Email Address</label>
-              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="w-full border border-gray-300 px-3 py-2 rounded text-black" placeholder="Enter email address" />
+              <input type="email" value={newEmail} onChange={(e: ChangeEvent<HTMLInputElement>) => setNewEmail(e.target.value)} className="w-full border border-gray-300 px-3 py-2 rounded text-black" placeholder="Enter email address" />
             </div>
             <div className="px-6 py-4 flex justify-end gap-3 border-t">
-              <button onClick={handleAddEmail} className="px-5 py-2 rounded bg-sky-600 hover:bg-sky-700 text-white">Save</button>
-              <button onClick={() => { setShowAddEmailForm(false); setNewEmail(''); }} className="px-5 py-2 text-black rounded bg-gray-300 hover:bg-gray-400">Cancel</button>
+              <button onClick={handleAddEmail} className="px-5 py-2 rounded bg-sky-600 hover:bg-sky-700 text-white cursor-pointer">Save</button>
+              <button onClick={() => { setShowAddEmailForm(false); setNewEmail(''); }} className="px-5 py-2 text-black rounded bg-gray-300 hover:bg-gray-400 cursor-pointer">Cancel</button>
             </div>
           </div>
         </div>
@@ -288,7 +444,7 @@ export default function Template() {
           <div className="bg-white w-full max-w-2xl rounded-sm shadow-[0_0_25px_rgba(0,0,0,0.3)] max-h-[80vh] overflow-hidden flex flex-col">
             <div className="border-b px-6 py-3 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-800">Manage Emails</h2>
-              <button onClick={() => setShowManageEmails(false)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+              <button onClick={() => setShowManageEmails(false)} className="text-gray-500 hover:text-gray-700 text-2xl cursor-pointer">×</button>
             </div>
             <div className="flex-1 overflow-auto p-6">
               <div className="overflow-x-auto border border-gray-600">
@@ -297,18 +453,18 @@ export default function Template() {
                     <tr><th className="border p-2">SR. NO.</th><th className="border p-2">EMAIL ADDRESS</th><th className="border p-2 text-center">EDIT</th><th className="border p-2 text-center">DELETE</th></tr>
                   </thead>
                   <tbody>
-                    {emails.length === 0 ? <tr><td colSpan="4" className="border p-4 text-center text-gray-500">No emails found.</td></tr> : 
+                    {emails.length === 0 ? <tr><td colSpan={4} className="border p-4 text-center text-gray-500">No emails found.</td></tr> : 
                       emails.map((e, i) => (
                         <tr key={e.id} className="hover:bg-gray-50 text-gray-700">
                           <td className="border p-2">{i + 1}</td>
-                          <td className="border p-2">{editingEmailId === e.id ? <input type="email" className="border px-2 py-1 w-full rounded" value={editedEmail} onChange={(ev) => setEditedEmail(ev.target.value)} /> : e.email}</td>
+                          <td className="border p-2">{editingEmailId === e.id ? <input type="email" className="border px-2 py-1 w-full rounded" value={editedEmail} onChange={(ev: ChangeEvent<HTMLInputElement>) => setEditedEmail(ev.target.value)} /> : e.email}</td>
                           <td className="border p-2 text-center">
                             {editingEmailId === e.id ? (
-                              <><button className="text-blue-600 font-semibold mr-2" onClick={() => handleUpdateEmail(e.id)}>Update</button>
-                                <button className="text-red-600 font-semibold" onClick={() => { setEditingEmailId(null); setEditedEmail(''); }}>Cancel</button></>
-                            ) : <button className="text-gray-600 hover:text-blue-600" onClick={() => { setEditingEmailId(e.id); setEditedEmail(e.email); }}><FaPen /></button>}
+                              <><button className="text-blue-600 font-semibold mr-2 cursor-pointer" onClick={() => handleUpdateEmail(e.id)}>Update</button>
+                                <button className="text-red-600 font-semibold cursor-pointer" onClick={() => { setEditingEmailId(null); setEditedEmail(''); }}>Cancel</button></>
+                            ) : <button className="text-gray-600 hover:text-blue-600 cursor-pointer" onClick={() => { setEditingEmailId(e.id); setEditedEmail(e.email); }}><FaPen /></button>}
                           </td>
-                          <td className="border p-2 text-center"><button onClick={() => handleDeleteSingleEmail(e.id)} className="text-red-600 hover:text-red-700"><FaTrash /></button></td>
+                          <td className="border p-2 text-center"><button onClick={() => handleDeleteSingleEmail(e.id)} className="text-red-600 hover:text-red-700 cursor-pointer"><FaTrash /></button></td>
                         </tr>
                       ))
                     }
@@ -316,14 +472,14 @@ export default function Template() {
                 </table>
               </div>
             </div>
-            <div className="px-6 py-4 border-t flex justify-end"><button onClick={() => setShowManageEmails(false)} className="px-5 py-2 text-black rounded bg-gray-200 hover:bg-gray-300">Close</button></div>
+            <div className="px-6 py-4 border-t flex justify-end"><button onClick={() => setShowManageEmails(false)} className="px-5 py-2 text-black rounded bg-gray-200 hover:bg-gray-300 cursor-pointer">Close</button></div>
           </div>
         </div>
       )}
 
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <label className="text-sm font-semibold text-gray-700 whitespace-nowrap sm:min-w-[120px]">Subject</label>
-        <input type="text" value={state.subject} onChange={(e) => setState(prev => ({ ...prev, subject: e.target.value }))} placeholder="Enter email subject" className="shadow appearance-none border border-gray-300 rounded w-full sm:max-w-md sm:flex-1 py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-1 hover:bg-gray-50 text-sm" />
+        <input type="text" value={state.subject} onChange={(e: ChangeEvent<HTMLInputElement>) => setState(prev => ({ ...prev, subject: e.target.value }))} placeholder="Enter email subject" className="shadow appearance-none border border-gray-300 rounded w-full sm:max-w-md sm:flex-1 py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-1 hover:bg-gray-50 text-sm" />
       </div>
 
       {state.selectedProduct && (
@@ -360,9 +516,9 @@ export default function Template() {
                 <div>
                   <div className="mb-2 text-sm text-orange-600 bg-orange-50 p-2 rounded flex items-center justify-between">
                     <span>🔧 Source Code Mode</span>
-                    <button onClick={handleApplySourceCode} className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded text-xs">Apply Changes</button>
+                    <button onClick={handleApplySourceCode} className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded text-xs cursor-pointer">Apply Changes</button>
                   </div>
-                  <textarea value={state.htmlContent} onChange={(e) => setState(prev => ({ ...prev, htmlContent: e.target.value }))} className="w-full border-2 border-gray-300 rounded-lg p-4 font-mono text-sm min-h-[400px] bg-gray-50 resize-y" placeholder="HTML source code..." />
+                  <textarea value={state.htmlContent} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setState(prev => ({ ...prev, htmlContent: e.target.value }))} className="w-full border-2 border-gray-300 rounded-lg p-4 font-mono text-sm min-h-[400px] bg-gray-50 resize-y" placeholder="HTML source code..." />
                 </div>
               ) : (
                 <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
@@ -378,8 +534,8 @@ export default function Template() {
 
                   <div className="bg-white border-b border-gray-300 p-2">
                     <div className="flex flex-wrap items-center gap-1">
-                      <select onChange={(e) => execCommand('formatBlock', e.target.value)} className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white hover:bg-gray-50"><option value="">Normal</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="p">Paragraph</option></select>
-                      <select onChange={(e) => execCommand('fontSize', e.target.value)} className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white hover:bg-gray-50"><option value="">Size</option><option value="1">Small</option><option value="3">Normal</option><option value="5">Large</option><option value="7">Huge</option></select>
+                      <select onChange={(e: ChangeEvent<HTMLSelectElement>) => execCommand('formatBlock', e.target.value)} className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white hover:bg-gray-50 cursor-pointer"><option value="">Normal</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="p">Paragraph</option></select>
+                      <select onChange={(e: ChangeEvent<HTMLSelectElement>) => execCommand('fontSize', e.target.value)} className="text-xs border border-gray-300 rounded px-2 py-1.5 bg-white hover:bg-gray-50 cursor-pointer"><option value="">Size</option><option value="1">Small</option><option value="3">Normal</option><option value="5">Large</option><option value="7">Huge</option></select>
                       <div className="w-px h-6 bg-gray-300 mx-1"></div>
                       <ToolbarButton onClick={() => execCommand('undo')} icon={Undo} title="Undo (Ctrl+Z)" />
                       <ToolbarButton onClick={() => execCommand('redo')} icon={Redo} title="Redo (Ctrl+Y)" />
@@ -390,18 +546,18 @@ export default function Template() {
                       <ToolbarButton onClick={() => execCommand('strikeThrough')} icon={Strikethrough} title="Strikethrough" />
                       <div className="w-px h-6 bg-gray-300 mx-1"></div>
                       <div className="relative">
-                        <button onClick={() => setState(prev => ({ ...prev, colorPickerType: 'text', showColorPicker: !prev.showColorPicker }))} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Text Color"><Type size={18} className="text-gray-700" /></button>
+                        <button onClick={() => setState(prev => ({ ...prev, colorPickerType: 'text', showColorPicker: !prev.showColorPicker }))} className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer" title="Text Color"><Type size={18} className="text-gray-700" /></button>
                         {state.showColorPicker && state.colorPickerType === 'text' && (
                           <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 shadow-lg z-50 p-2 rounded" style={{ width: '168px' }}>
-                            <div className="grid grid-cols-8 gap-1">{COLORS.map(color => <button key={color} onClick={() => { execCommand('foreColor', color); setState(prev => ({ ...prev, showColorPicker: false })); }} className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform" style={{ backgroundColor: color }} />)}</div>
+                            <div className="grid grid-cols-8 gap-1">{COLORS.map(color => <button key={color} onClick={() => { execCommand('foreColor', color); setState(prev => ({ ...prev, showColorPicker: false })); }} className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform cursor-pointer" style={{ backgroundColor: color }} />)}</div>
                           </div>
                         )}
                       </div>
                       <div className="relative">
-                        <button onClick={() => setState(prev => ({ ...prev, colorPickerType: 'background', showColorPicker: !prev.showColorPicker }))} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Background Color"><Palette size={18} className="text-gray-700" /></button>
+                        <button onClick={() => setState(prev => ({ ...prev, colorPickerType: 'background', showColorPicker: !prev.showColorPicker }))} className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer" title="Background Color"><Palette size={18} className="text-gray-700" /></button>
                         {state.showColorPicker && state.colorPickerType === 'background' && (
                           <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 shadow-lg z-50 p-2 rounded" style={{ width: '168px' }}>
-                            <div className="grid grid-cols-8 gap-1">{COLORS.map(color => <button key={color} onClick={() => { execCommand('backColor', color); setState(prev => ({ ...prev, showColorPicker: false })); }} className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform" style={{ backgroundColor: color }} />)}</div>
+                            <div className="grid grid-cols-8 gap-1">{COLORS.map(color => <button key={color} onClick={() => { execCommand('backColor', color); setState(prev => ({ ...prev, showColorPicker: false })); }} className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform cursor-pointer" style={{ backgroundColor: color }} />)}</div>
                           </div>
                         )}
                       </div>
@@ -433,9 +589,9 @@ export default function Template() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <div className="sm:min-w-[120px]"></div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:flex-1">
-          <button onClick={() => validateAndNavigate('/newsletter/send-mail/SendSingleMail')} className="bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-3 px-6 rounded-lg text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 transition-colors w-full sm:w-auto flex-shrink-0">Send Single Mail</button>
-          <button onClick={() => validateAndNavigate('/newsletter/send-mail/SendEntireList')} className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-3 px-6 rounded-lg text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-75 transition-colors w-full sm:w-auto flex-shrink-0">Send Entire List</button>
-          <button onClick={() => validateAndNavigate('/newsletter/send-mail/SendGroupContact')} className="bg-teal-500 hover:bg-teal-600 text-white font-medium py-3 px-6 rounded-lg text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-opacity-75 transition-colors w-full sm:w-auto flex-shrink-0">Send Group Contact</button>
+          <button onClick={() => validateAndNavigate('/newsletter/send-mail/SendSingleMail')} className="bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-3 px-6 rounded-lg text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 transition-colors w-full sm:w-auto flex-shrink-0 cursor-pointer">Send Single Mail</button>
+          <button onClick={() => validateAndNavigate('/newsletter/send-mail/SendEntireList')} className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-3 px-6 rounded-lg text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-75 transition-colors w-full sm:w-auto flex-shrink-0 cursor-pointer">Send Entire List</button>
+          <button onClick={() => validateAndNavigate('/newsletter/send-mail/SendGroupContact')} className="bg-teal-500 hover:bg-teal-600 text-white font-medium py-3 px-6 rounded-lg text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-opacity-75 transition-colors w-full sm:w-auto flex-shrink-0 cursor-pointer">Send Group Contact</button>
         </div>
       </div>
     </div>

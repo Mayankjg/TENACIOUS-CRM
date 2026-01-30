@@ -1,21 +1,37 @@
+// frontend/app/newsletter/send-mail/SendGroupContact/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import * as XLSX from 'xlsx';
 
+interface TemplateData {
+    content: string;
+    subject: string;
+    selectedProduct: string;
+    selectedEmail: string;
+    templateId: string;
+    templateName: string;
+}
+
+interface Recipient {
+    name: string;
+    email: string;
+    fromEmail: string;
+}
+
 export default function SendGroupContact() {
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [totalRecipients, setTotalRecipients] = useState(0);
-    const [remainingEmails] = useState(0);
-    const [fileData, setFileData] = useState([]);
-    const [columnHeaders, setColumnHeaders] = useState([]);
-    const [selectedEmail, setSelectedEmail] = useState('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [totalRecipients, setTotalRecipients] = useState<number>(0);
+    const [remainingEmails] = useState<number>(0);
+    const [fileData, setFileData] = useState<unknown[][]>([]);
+    const [columnHeaders, setColumnHeaders] = useState<unknown[]>([]);
+    const [selectedEmail, setSelectedEmail] = useState<string>('');
 
     useEffect(() => {
         const templateData = localStorage.getItem('selectedTemplateData');
         if (templateData) {
             try {
-                const parsed = JSON.parse(templateData);
+                const parsed: TemplateData = JSON.parse(templateData);
                 setSelectedEmail(parsed.selectedEmail || '');
             } catch (e) {
                 console.error('Error parsing template:', e);
@@ -23,18 +39,20 @@ export default function SendGroupContact() {
         }
     }, []);
 
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
+    const handleFileChange = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
+        const file = e.target.files?.[0];
         if (file) {
             setSelectedFile(file);
 
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = (event: ProgressEvent<FileReader>) => {
                 try {
-                    const data = new Uint8Array(event.target.result);
+                    if (!event.target?.result) return;
+
+                    const data = new Uint8Array(event.target.result as ArrayBuffer);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
                     if (jsonData.length > 0) {
                         const headers = jsonData[0];
@@ -42,7 +60,7 @@ export default function SendGroupContact() {
 
                         setColumnHeaders(headers);
                         setFileData(rows);
-
+                        
                         const nameIndex = headers.findIndex(h =>
                             h && h.toString().toLowerCase().includes('name')
                         );
@@ -65,7 +83,7 @@ export default function SendGroupContact() {
         }
     };
 
-    const handleUpload = () => {
+    const handleUpload = (): void => {
         if (!selectedFile) {
             alert('Please select an Excel file first');
             return;
@@ -83,11 +101,11 @@ export default function SendGroupContact() {
             h && h.toString().toLowerCase().includes('email')
         );
 
-        const validRecipients = fileData.filter(row => {
+        const validRecipients: Recipient[] = fileData.filter(row => {
             return row[nameIndex] && row[emailIndex];
         }).map(row => ({
-            name: row[nameIndex],
-            email: row[emailIndex],
+            name: row[nameIndex] as string,
+            email: row[emailIndex] as string,
             fromEmail: selectedEmail
         }));
 
@@ -96,11 +114,11 @@ export default function SendGroupContact() {
         localStorage.setItem('contacts', JSON.stringify(validRecipients));
 
         alert(`File uploaded successfully! Found ${validRecipients.length} valid recipients.`);
-
+        
         window.location.href = '/newsletter/send-mail/SendGroupContact/Buttons';
     };
 
-    const handleDownloadSample = () => {
+    const handleDownloadSample = (): void => {
         const csvContent = "Name,Email\nMayank Jaglaganeshwala,mayank.jwala@gmail.com\nLalu Jaglaganeshwala,lalu.jwala@gmail.com";
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -161,7 +179,7 @@ export default function SendGroupContact() {
 
                             <button
                                 onClick={handleUpload}
-                                className="bg-sky-400 hover:bg-sky-500 text-white font-medium px-7 py-1.5 rounded text-base transition-colors focus:outline-none"
+                                className="bg-sky-400 hover:bg-sky-500 text-white font-medium px-7 py-1.5 rounded text-base transition-colors focus:outline-none cursor-pointer"
                             >
                                 Upload
                             </button>
@@ -178,7 +196,7 @@ export default function SendGroupContact() {
                             </p>
                             <button
                                 onClick={handleDownloadSample}
-                                className="bg-teal-500 hover:bg-teal-600 text-white font-medium px-6 py-2 rounded text-sm transition-colors"
+                                className="bg-teal-500 hover:bg-teal-600 text-white font-medium px-6 py-2 rounded text-sm transition-colors cursor-pointer"
                             >
                                 Download sample
                             </button>

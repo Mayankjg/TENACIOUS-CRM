@@ -1,4 +1,5 @@
-// invalid-emails/page.js
+// frontend/app/invalid-emails/page.tsx
+"use client";
 
 export default function InvalidEmailsPage() {
   return (

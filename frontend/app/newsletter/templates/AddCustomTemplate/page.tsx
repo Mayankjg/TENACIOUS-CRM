@@ -1,19 +1,67 @@
+// frontend/app/newsletter/add-custom-template/page.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 
+interface Template {
+  id: string;
+  name: string;
+  content: string;
+  visibility: string;
+  createdAt?: string;
+  updatedAt?: string;
+  isCustom?: boolean;
+}
+
+interface MenuItem {
+  label: string;
+  shortcut?: string;
+  onClick: () => void;
+}
+
+interface MenuButtonProps {
+  label: string;
+  items: (MenuItem | 'divider')[];
+}
+
+declare global {
+  interface Window {
+    Quill: any;
+  }
+}
+
+interface QuillInstance {
+  root: HTMLElement;
+  getSelection: () => { index: number; length: number } | null;
+  getLength: () => number;
+  insertEmbed: (index: number, type: string, value: string) => void;
+  formatText: (index: number, length: number, format: string, value?: any) => void;
+  insertText: (index: number, text: string, format?: string, value?: string) => void;
+  clipboard: {
+    dangerouslyPasteHTML: (index: number, html: string) => void;
+  };
+  setContents: (delta: any[]) => void;
+  setSelection: (index: number, length: number) => void;
+  getText: () => string;
+  getFormat: (range: { index: number; length: number }) => any;
+  history: {
+    undo: () => void;
+    redo: () => void;
+  };
+}
+
 export default function AddCustomTemplatePage() {
-  const [templateName, setTemplateName] = useState("");
-  const [visibility, setVisibility] = useState("admin");
-  const [openMenu, setOpenMenu] = useState(null);
-  const [showSourceCode, setShowSourceCode] = useState(false);
-  const [sourceCode, setSourceCode] = useState("");
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingTemplateId, setEditingTemplateId] = useState(null);
-  const quillRef = useRef(null);
-  const editorContainerRef = useRef(null);
+  const [templateName, setTemplateName] = useState<string>("");
+  const [visibility, setVisibility] = useState<string>("admin");
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [showSourceCode, setShowSourceCode] = useState<boolean>(false);
+  const [sourceCode, setSourceCode] = useState<string>("");
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const quillRef = useRef<QuillInstance | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,10 +79,18 @@ export default function AddCustomTemplatePage() {
           theme: 'snow',
           placeholder: 'Write your template content here...',
           modules: {
-            toolbar: [[{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }], [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            ['bold', 'italic', 'underline', 'strike'], [{ 'color': [] }, { 'background': [] }], [{ 'script': 'sub' }, { 'script': 'super' }],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }], [{ 'direction': 'rtl' }, { 'align': [] }],
-            ['blockquote', 'code-block'], ['link', 'image', 'video', 'formula'], ['clean']]
+            toolbar: [
+              [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+              [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'color': [] }, { 'background': [] }],
+              [{ 'script': 'sub' }, { 'script': 'super' }],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
+              [{ 'direction': 'rtl' }, { 'align': [] }],
+              ['blockquote', 'code-block'],
+              ['link', 'image', 'video', 'formula'],
+              ['clean']
+            ]
           }
         });
         loadEditData();
@@ -47,15 +103,15 @@ export default function AddCustomTemplatePage() {
     };
   }, []);
 
-  const loadEditData = () => {
+  const loadEditData = (): void => {
     const editId = searchParams.get("edit");
     if (!editId) return;
 
     setIsEditMode(true);
     setEditingTemplateId(editId);
 
-    const editingTemplate = JSON.parse(localStorage.getItem("editingTemplate") || "{}");
-    const allTemplates = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
+    const editingTemplate: Partial<Template> = JSON.parse(localStorage.getItem("editingTemplate") || "{}");
+    const allTemplates: Template[] = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
     const template = editingTemplate.id === editId ? editingTemplate : allTemplates.find(t => t.id === editId);
 
     if (template) {
@@ -65,11 +121,15 @@ export default function AddCustomTemplatePage() {
     }
   };
 
-  useEffect(() => { if (quillRef.current) loadEditData(); }, [searchParams]);
+  useEffect(() => {
+    if (quillRef.current) loadEditData();
+  }, [searchParams]);
 
-  const handleMenuClick = (menu) => setOpenMenu(openMenu === menu ? null : menu);
+  const handleMenuClick = (menu: string): void => {
+    setOpenMenu(openMenu === menu ? null : menu);
+  };
 
-  const handleFileAction = (action) => {
+  const handleFileAction = (action: string): void => {
     if (action === 'new') {
       if (confirm('Create new document? Unsaved changes will be lost.')) {
         setTemplateName('');
@@ -78,76 +138,78 @@ export default function AddCustomTemplatePage() {
     } else if (action === 'print') {
       const content = quillRef.current?.root.innerHTML || '';
       const w = window.open('', '_blank');
-      w.document.write(`<html><head><title>Print Template</title><style>body{font-family:Arial,sans-serif;padding:20px}</style></head><body><h1>${templateName || 'Untitled Template'}</h1>${content}</body></html>`);
-      w.document.close();
-      w.print();
+      if (w) {
+        w.document.write(`<html><head><title>Print Template</title><style>body{font-family:Arial,sans-serif;padding:20px}</style></head><body><h1>${templateName || 'Untitled Template'}</h1>${content}</body></html>`);
+        w.document.close();
+        w.print();
+      }
     }
     setOpenMenu(null);
   };
 
-  const handleEditAction = (action) => {
+  const handleEditAction = (action: string): void => {
     const editor = quillRef.current;
     if (!editor) return;
-    const actions = {
-      undo: () => editor.history.undo(), 
-      redo: () => editor.history.redo(), 
+    const actions: Record<string, () => void> = {
+      undo: () => editor.history.undo(),
+      redo: () => editor.history.redo(),
       cut: () => document.execCommand('cut'),
-      copy: () => document.execCommand('copy'), 
-      paste: () => { }, 
+      copy: () => document.execCommand('copy'),
+      paste: () => { },
       selectAll: () => editor.setSelection(0, editor.getLength())
     };
     actions[action]?.();
     setOpenMenu(null);
   };
 
-  const handleInsertAction = (action) => {
+  const handleInsertAction = (action: string): void => {
     const editor = quillRef.current;
     if (!editor) return;
     const range = editor.getSelection();
     const index = range ? range.index : editor.getLength();
 
     switch (action) {
-      case 'image': 
-        const img = prompt('Enter image URL:'); 
-        if (img) editor.insertEmbed(index, 'image', img); 
+      case 'image':
+        const img = prompt('Enter image URL:');
+        if (img) editor.insertEmbed(index, 'image', img);
         break;
-      case 'link': 
+      case 'link':
         const url = prompt('Enter URL:');
         if (url) {
           if (range && range.length > 0) editor.formatText(range.index, range.length, 'link', url);
-          else { 
-            const text = prompt('Enter link text:'); 
-            if (text) editor.insertText(index, text, 'link', url); 
+          else {
+            const text = prompt('Enter link text:');
+            if (text) editor.insertText(index, text, 'link', url);
           }
-        } 
+        }
         break;
-      case 'video': 
-        const vid = prompt('Enter video URL (YouTube, Vimeo):'); 
-        if (vid) editor.insertEmbed(index, 'video', vid); 
+      case 'video':
+        const vid = prompt('Enter video URL (YouTube, Vimeo):');
+        if (vid) editor.insertEmbed(index, 'video', vid);
         break;
-      case 'table': 
-        const rows = prompt('Enter number of rows:', '3'); 
+      case 'table':
+        const rows = prompt('Enter number of rows:', '3');
         const cols = prompt('Enter number of columns:', '3');
         if (rows && cols) {
           let tbl = '<table border="1" style="border-collapse:collapse;width:100%">';
-          for (let i = 0; i < parseInt(rows); i++) { 
-            tbl += '<tr>'; 
-            for (let j = 0; j < parseInt(cols); j++) 
-              tbl += '<td style="border:1px solid #ddd;padding:8px">&nbsp;</td>'; 
-            tbl += '</tr>'; 
+          for (let i = 0; i < parseInt(rows); i++) {
+            tbl += '<tr>';
+            for (let j = 0; j < parseInt(cols); j++)
+              tbl += '<td style="border:1px solid #ddd;padding:8px">&nbsp;</td>';
+            tbl += '</tr>';
           }
           tbl += '</table>';
           editor.clipboard.dangerouslyPasteHTML(index, tbl);
-        } 
+        }
         break;
-      case 'hr': 
-        editor.insertText(index, '\n---\n'); 
+      case 'hr':
+        editor.insertText(index, '\n---\n');
         break;
     }
     setOpenMenu(null);
   };
 
-  const handleViewAction = (action) => {
+  const handleViewAction = (action: string): void => {
     if (action === 'sourceCode') {
       if (!showSourceCode) setSourceCode(quillRef.current?.root.innerHTML || '');
       else if (quillRef.current) quillRef.current.root.innerHTML = sourceCode;
@@ -159,27 +221,27 @@ export default function AddCustomTemplatePage() {
     setOpenMenu(null);
   };
 
-  const handleFormatAction = (format, value) => {
+  const handleFormatAction = (format: string, value?: any): void => {
     const editor = quillRef.current;
     if (!editor) return;
     const range = editor.getSelection();
     if (range && range.length > 0) {
       if (value) editor.formatText(range.index, range.length, format, value);
-      else { 
-        const current = editor.getFormat(range); 
-        editor.formatText(range.index, range.length, format, !current[format]); 
+      else {
+        const current = editor.getFormat(range);
+        editor.formatText(range.index, range.length, format, !current[format]);
       }
     }
     setOpenMenu(null);
   };
 
-  const handleSaveCustomTemplate = () => {
+  const handleSaveCustomTemplate = (): void => {
     if (!templateName.trim()) return alert('Please enter template name');
     const editorContent = quillRef.current ? quillRef.current.root.innerHTML : '';
     const text = quillRef.current ? quillRef.current.getText().trim() : '';
     if (!text) return alert('Please create template content');
 
-    const existingTemplates = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
+    const existingTemplates: Template[] = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
 
     if (isEditMode && editingTemplateId) {
       const updated = existingTemplates.map(t => t.id === editingTemplateId ?
@@ -187,12 +249,12 @@ export default function AddCustomTemplatePage() {
       localStorage.setItem("emailTemplates", JSON.stringify(updated));
       alert('Template updated successfully!');
     } else {
-      const template = {
-        id: crypto.randomUUID(), 
-        name: templateName.trim(), 
-        content: editorContent, 
+      const template: Template = {
+        id: crypto.randomUUID(),
+        name: templateName.trim(),
+        content: editorContent,
         visibility,
-        createdAt: new Date().toISOString(), 
+        createdAt: new Date().toISOString(),
         isCustom: true
       };
       localStorage.setItem("emailTemplates", JSON.stringify([template, ...existingTemplates]));
@@ -202,23 +264,23 @@ export default function AddCustomTemplatePage() {
     router.push("/newsletter/templates");
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     localStorage.removeItem("editingTemplate");
     router.push("/newsletter/templates");
   };
 
-  const MenuButton = ({ label, items }) => (
+  const MenuButton = ({ label, items }: MenuButtonProps) => (
     <div className="relative inline-block">
       <button onClick={() => handleMenuClick(label.toLowerCase())} className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors">
         {label} <ChevronDown className="inline" size={12} />
       </button>
       {openMenu === label.toLowerCase() && items && (
         <div className="absolute top-full left-0 mt-0 bg-white border border-gray-300 shadow-lg z-50 min-w-[180px]">
-          {items.map((item, idx) => item === 'divider' ? 
+          {items.map((item, idx) => item === 'divider' ?
             <div key={idx} className="border-t border-gray-200 my-1"></div> :
-            <button key={idx} onClick={item.onClick} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between">
-              <span>{item.label}</span>
-              {item.shortcut && <span className="text-xs text-gray-400 ml-4">{item.shortcut}</span>}
+            <button key={idx} onClick={(item as MenuItem).onClick} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between">
+              <span>{(item as MenuItem).label}</span>
+              {(item as MenuItem).shortcut && <span className="text-xs text-gray-400 ml-4">{(item as MenuItem).shortcut}</span>}
             </button>
           )}
         </div>
@@ -247,11 +309,12 @@ export default function AddCustomTemplatePage() {
         .ql-editor span, .ql-editor div, .ql-editor li, .ql-editor ol, .ql-editor ul,
         .ql-editor strong, .ql-editor em, .ql-editor u { color: black !important;
         }
+        .ql-editor *{color:black!important}
         .ql-tooltip { left: auto !important; right: 0 !important; transform: none !important;
         }
         .ql-editor table { border-collapse: collapse; width: 100%; margin: 10px 0;
         }
-        .ql-editor table td, .ql-editor table th { border: 1px solid #ddd; padding: 8px;
+        .ql-editor table td, .ql-editor table th { border: 1px solid #ddd; padding: 8px; color:black!important;
         }
         .resizable-editor { overflow: hidden !important;
         }
@@ -440,13 +503,13 @@ export default function AddCustomTemplatePage() {
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
               <button 
                 onClick={handleSaveCustomTemplate} 
-                className="w-full sm:w-auto bg-cyan-500 text-white px-6 sm:px-8 py-2.5 rounded-md text-sm sm:text-base hover:bg-cyan-600 active:bg-cyan-700 font-medium transition-colors"
+                className="w-full sm:w-auto bg-cyan-500 text-white px-6 sm:px-8 py-2.5 rounded-md text-sm sm:text-base hover:bg-cyan-600 active:bg-cyan-700 font-medium transition-colors cursor-pointer"
               >
                 {isEditMode ? 'Update Template' : 'Save Template'}
               </button>
               <button 
                 onClick={handleCancel} 
-                className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 sm:px-8 py-2.5 rounded-md text-sm sm:text-base font-medium transition-colors"
+                className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 sm:px-8 py-2.5 rounded-md text-sm sm:text-base font-medium transition-colors cursor-pointer"
               >
                 Cancel
               </button>

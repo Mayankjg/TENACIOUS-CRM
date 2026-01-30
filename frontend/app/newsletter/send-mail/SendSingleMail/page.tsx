@@ -1,20 +1,41 @@
+// frontend/app/newsletter/send-mail/SendSingleMail/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent, KeyboardEvent } from 'react';
 import { Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+interface TemplateData {
+  content: string;
+  subject: string;
+  selectedProduct: string;
+  selectedEmail: string;
+  templateId: string;
+  templateName: string;
+}
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  selected: boolean;
+  fromEmail: string;
+}
 
 export default function SendSingleMail() {
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactList, setContactList] = useState([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const router = useRouter();
+  const [contactName, setContactName] = useState<string>('');
+  const [contactEmail, setContactEmail] = useState<string>('');
+  const [contactList, setContactList] = useState<Contact[]>([]);
+  const [showPreview, setShowPreview] = useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
 
   useEffect(() => {
     const templateData = localStorage.getItem('selectedTemplateData');
     if (templateData) {
       try {
-        setSelectedTemplate(JSON.parse(templateData));
+        const parsed: TemplateData = JSON.parse(templateData);
+        setSelectedTemplate(parsed);
       } catch (e) {
         console.error('Error parsing template:', e);
       }
@@ -23,7 +44,8 @@ export default function SendSingleMail() {
     const savedContacts = localStorage.getItem('singleMailContacts');
     if (savedContacts) {
       try {
-        setContactList(JSON.parse(savedContacts));
+        const contacts: Contact[] = JSON.parse(savedContacts);
+        setContactList(contacts);
       } catch (e) {
         console.error('Error parsing contacts:', e);
       }
@@ -36,11 +58,11 @@ export default function SendSingleMail() {
     }
   }, [contactList]);
 
-  const handleAddContact = () => {
+  const handleAddContact = (): void => {
     if (!contactName.trim() || !contactEmail.trim()) return alert('Please enter both contact name and email');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return alert('Please enter a valid email address');
 
-    const newContact = {
+    const newContact: Contact = {
       id: crypto.randomUUID(),
       name: contactName.trim(),
       email: contactEmail.trim(),
@@ -53,15 +75,15 @@ export default function SendSingleMail() {
     setContactEmail('');
   };
 
-  const handleToggleContact = (id) => {
+  const handleToggleContact = (id: string): void => {
     setContactList(contactList.map(c => c.id === id ? { ...c, selected: !c.selected } : c));
   };
 
-  const handleToggleAllContacts = (e) => {
+  const handleToggleAllContacts = (e: ChangeEvent<HTMLInputElement>): void => {
     setContactList(contactList.map(c => ({ ...c, selected: e.target.checked })));
   };
 
-  const handleDeleteContact = (id) => {
+  const handleDeleteContact = (id: string): void => {
     if (window.confirm('Are you sure you want to delete this contact?')) {
       const updatedList = contactList.filter(c => c.id !== id);
       setContactList(updatedList);
@@ -71,7 +93,7 @@ export default function SendSingleMail() {
     }
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = (): void => {
     const selectedCount = contactList.filter(c => c.selected).length;
     if (selectedCount === 0) return alert('Please select at least one contact to delete');
 
@@ -84,21 +106,22 @@ export default function SendSingleMail() {
     }
   };
 
-  const handleSendMail = () => {
+  const handleSendMail = (): void => {
     const selected = contactList.filter(c => c.selected);
     if (selected.length === 0) return alert('Please select at least one contact');
     if (!selectedTemplate?.content) return alert('No template content found. Please go back and select a template.');
 
     localStorage.setItem('selectedSingleMailContacts', JSON.stringify(selected));
-    alert(`Sending mail to ${selected.length} contact(s)`);
+
+    router.push('/newsletter/send-mail');
   };
 
-  const handlePreview = () => {
+  const handlePreview = (): void => {
     if (!selectedTemplate?.content) return alert('No template selected. Please go back to Custom Message and select a template.');
     setShowPreview(true);
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     if (window.confirm('Are you sure you want to cancel? All contacts will be cleared.')) {
       setContactList([]);
       localStorage.removeItem('singleMailContacts');
@@ -117,31 +140,59 @@ export default function SendSingleMail() {
       .preview-content table th{border:1px solid #ddd;padding:8px}`}</style>
 
       {showPreview && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-300 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-blue-50">
-              <h2 className="text-xl font-bold text-gray-800">Email Preview</h2>
-              <button onClick={() => setShowPreview(false)} className="text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none hover:bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center transition-colors" title="Close">
-                ×</button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-              <div className="bg-white rounded-lg shadow-sm p-6 preview-content">
-                {selectedTemplate?.content ? (
-                  <div dangerouslySetInnerHTML={{ __html: selectedTemplate.content }} />
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-400 text-lg">⚠️ No template content available</p>
-                    <p className="text-gray-500 text-sm mt-2">Please go back and select a template</p>
+        <>
+          {/* Backdrop - Click to close */}
+          <div
+            className="fixed inset-0 bg-black/30 z-50 backdrop-blur-tx"
+            onClick={() => setShowPreview(false)}
+          />
+
+          {/* Modal Container - Properly Centered */}
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div
+                className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-gray-300 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-blue-50">
+                  <h2 className="text-xl font-bold text-gray-800">Email Preview</h2>
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none hover:bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                    title="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Scrollable Body */}
+                <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                  <div className="bg-white rounded-lg shadow-sm p-6 preview-content">
+                    {selectedTemplate?.content ? (
+                      <div dangerouslySetInnerHTML={{ __html: selectedTemplate.content }} />
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-gray-400 text-lg">⚠️ No template content available</p>
+                        <p className="text-gray-500 text-sm mt-2">Please go back and select a template</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-300 flex justify-end gap-3 bg-gray-50">
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded focus:outline-none transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-300 flex justify-end gap-3 bg-gray-50">
-              <button onClick={() => setShowPreview(false)} className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded focus:outline-none transition-colors">
-                Close</button>
-            </div>
           </div>
-        </div>
+        </>
       )}
 
       <div className="bg-[#e5e7eb] p-0 sm:p-5 min-h-screen flex justify-center items-start font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
@@ -160,19 +211,19 @@ export default function SendSingleMail() {
           <div className="w-full px-4 sm:px-6 py-6 pb-8">
             <div className="mb-4">
               <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">Contact Name</label>
-              <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Contact Name"
-                onKeyPress={(e) => e.key === 'Enter' && document.getElementById('contactEmail').focus()}
+              <input type="text" value={contactName} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactName(e.target.value)} placeholder="Contact Name"
+                onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && document.getElementById('contactEmail')?.focus()}
                 className="w-full max-w-xl border border-gray-300 rounded px-3 py-2 text-sm sm:text-base text-gray-700 focus:outline-none hover:bg-gray-100 hover:border-gray-400 transition-colors" />
             </div>
 
             <div className="mb-6">
               <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">Contact Email</label>
-              <input type="email" id="contactEmail" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="Contact Email"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddContact()}
+              <input type="email" id="contactEmail" value={contactEmail} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactEmail(e.target.value)} placeholder="Contact Email"
+                onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleAddContact()}
                 className="w-full max-w-xl border border-gray-300 rounded px-3 py-2 text-sm sm:text-base text-gray-700 focus:outline-none hover:bg-gray-100 hover:border-gray-400 transition-colors" />
             </div>
 
-            <button onClick={handleAddContact} className="w-full sm:w-auto bg-cyan-400 hover:bg-cyan-500 text-white font-medium py-2 px-4 rounded mb-8 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-colors text-sm sm:text-base">
+            <button onClick={handleAddContact} className="w-full sm:w-auto bg-cyan-400 hover:bg-cyan-500 text-white font-medium py-2 px-4 rounded mb-8 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-colors text-sm sm:text-base cursor-pointer">
               Add Contact</button>
 
             <div>
@@ -267,7 +318,7 @@ export default function SendSingleMail() {
               <div className="flex flex-col sm:flex-row sm:justify-between gap-3 mt-6">
                 <div>
                   {contactList.some(c => c.selected) && (
-                    <button onClick={handleDeleteSelected} className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-red-400 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base">
+                    <button onClick={handleDeleteSelected} className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-red-400 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
@@ -276,11 +327,11 @@ export default function SendSingleMail() {
                   )}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button onClick={handleSendMail} className="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-colors text-sm sm:text-base">
+                  <button onClick={handleSendMail} className="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-colors text-sm sm:text-base cursor-pointer">
                     Send Mail</button>
-                  <button onClick={handlePreview} className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors text-sm sm:text-base">
+                  <button onClick={handlePreview} className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors text-sm sm:text-base cursor-pointer">
                     Preview</button>
-                  <button onClick={handleCancel} className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-red-400 transition-colors text-sm sm:text-base">
+                  <button onClick={handleCancel} className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-6 rounded focus:outline-none focus:ring-2 focus:ring-red-400 transition-colors text-sm sm:text-base cursor-pointer">
                     Cancel</button>
                 </div>
               </div>
