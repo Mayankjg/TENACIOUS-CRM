@@ -1,18 +1,49 @@
-// frontend/app/leads/TodaysLeadsTable.jsx - MULTI-TENANT COMPLETE
+// frontend/app/leads/TodaysLeadsTable.tsx - MULTI-TENANT COMPLETE (TypeScript)
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { FaEdit, FaClipboard } from "react-icons/fa";
-// Import tenant-aware API utilities
 import { apiGet } from "@/utils/api";
 
-export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [sortOrder, setSortOrder] = useState("Ascending");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLeads, setSelectedLeads] = useState([]);
-  const [tags, setTags] = useState([]);
+interface Lead {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  leadStatus?: string;
+  product?: string;
+  tags?: string[];
+  createdAt?: string;
+  comment?: string;
+  [key: string]: any;
+}
+
+interface Tag {
+  _id: string;
+  name: string;
+  color: string;
+}
+
+interface TodaysLeadsTableProps {
+  leads?: Lead[];
+  onDelete?: (ids: string[]) => void;
+  onEdit?: (lead: Lead) => void;
+}
+
+export default function TodaysLeadsTable({ 
+  leads = [], 
+  onDelete, 
+  onEdit 
+}: TodaysLeadsTableProps) {
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"Ascending" | "Descending">("Ascending");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   // Fetch tags using tenant-aware API
   useEffect(() => {
@@ -77,14 +108,14 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
 
     filtered = filtered.sort((a, b) =>
       sortOrder === "Ascending"
-        ? a.firstName?.localeCompare(b.firstName)
-        : b.firstName?.localeCompare(a.firstName)
+        ? (a.firstName || "").localeCompare(b.firstName || "")
+        : (b.firstName || "").localeCompare(a.firstName || "")
     );
 
     return filtered;
   }, [leads, selectedProduct, selectedStatus, searchTerm, sortOrder]);
 
-  const handleSelectAll = (e) => {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedLeads(filteredLeads.map((lead) => lead._id));
     } else {
@@ -92,7 +123,7 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
     }
   };
 
-  const handleSelectOne = (id) => {
+  const handleSelectOne = (id: string) => {
     setSelectedLeads((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
@@ -159,7 +190,7 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleCellClick = (lead) => {
+  const handleCellClick = (lead: Lead) => {
     onEdit?.(lead);
   };
 
@@ -224,7 +255,7 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
 
           <select
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
+            onChange={(e) => setSortOrder(e.target.value as "Ascending" | "Descending")}
             className="border cursor-pointer border-gray-300 rounded px-2 py-2 text-gray-700 text-sm"
           >
             <option value="Ascending">Ascending</option>
@@ -439,7 +470,7 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }) {
               ))
             ) : (
               <tr>
-                <td colSpan="11" className="text-center py-4 text-gray-500 text-sm">
+                <td colSpan={11} className="text-center py-4 text-gray-500 text-sm">
                   No leads found.
                 </td>
               </tr>

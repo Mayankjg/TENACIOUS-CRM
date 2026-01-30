@@ -1,4 +1,4 @@
-// frontend/app/calendar/page.jsx - MULTI-TENANT FIXED
+// frontend/app/calendar/page.tsx - MULTI-TENANT FIXED
 
 "use client";
 
@@ -12,22 +12,55 @@ import {
   validateSession 
 } from "@/utils/api";
 
-const LeadsCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState("month");
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+// Type definitions
+interface Lead {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  leadStartDate: string;
+  leadStartTime?: string;
+  leadStatus: string;
+  product?: string;
+}
 
-  const monthNames = [
+interface DayInfo {
+  day: number;
+  isCurrentMonth: boolean;
+  date: Date;
+}
+
+interface TimeSlot {
+  day: Date;
+  time: string;
+  leads: Lead[];
+}
+
+interface LeadsDataByDate {
+  [key: string]: Lead[];
+}
+
+interface LeadsDataByDateTime {
+  [key: string]: Lead[];
+}
+
+const LeadsCalendar: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"month" | "week">("month");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+
+  const monthNames: string[] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
 
-  const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const fullDaysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const daysOfWeek: string[] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const fullDaysOfWeek: string[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const timeSlots = [
+  const timeSlots: string[] = [
     "12am", "1am", "2am", "3am", "4am", "5am", "6am", "7am", "8am", "9am",
     "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm",
     "7pm", "8pm", "9pm", "10pm", "11pm",
@@ -44,7 +77,7 @@ const LeadsCalendar = () => {
   }, []);
 
   // ✅ CRITICAL: Fetch with tenant filtering (done by backend)
-  const fetchLeads = async () => {
+  const fetchLeads = async (): Promise<void> => {
     if (!validateSession()) {
       console.error("❌ Cannot fetch - invalid session");
       return;
@@ -60,7 +93,7 @@ const LeadsCalendar = () => {
         throw new Error(result.error || "Failed to fetch leads");
       }
 
-      const items = Array.isArray(result.data)
+      const items: Lead[] = Array.isArray(result.data)
         ? result.data
         : result.data?.data || result.data?.leads || [];
 
@@ -75,8 +108,8 @@ const LeadsCalendar = () => {
   };
 
   // Group leads by date
-  const leadsDataByDate = useMemo(() => {
-    const grouped = {};
+  const leadsDataByDate = useMemo<LeadsDataByDate>(() => {
+    const grouped: LeadsDataByDate = {};
 
     leads.forEach((lead) => {
       if (!lead.leadStartDate) return;
@@ -95,8 +128,8 @@ const LeadsCalendar = () => {
   }, [leads]);
 
   // Group leads by date and time for week view
-  const leadsDataByDateTime = useMemo(() => {
-    const grouped = {};
+  const leadsDataByDateTime = useMemo<LeadsDataByDateTime>(() => {
+    const grouped: LeadsDataByDateTime = {};
 
     leads.forEach((lead) => {
       if (!lead.leadStartDate || !lead.leadStartTime) return;
@@ -123,7 +156,7 @@ const LeadsCalendar = () => {
     return grouped;
   }, [leads]);
 
-  const getDaysInMonth = (date) => {
+  const getDaysInMonth = (date: Date): DayInfo[] => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -131,7 +164,7 @@ const LeadsCalendar = () => {
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
 
-    const days = [];
+    const days: DayInfo[] = [];
 
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
@@ -162,10 +195,10 @@ const LeadsCalendar = () => {
     return days;
   };
 
-  const getWeekDays = (date) => {
+  const getWeekDays = (date: Date): Date[] => {
     const current = new Date(date);
     const first = current.getDate() - current.getDay();
-    const weekDays = [];
+    const weekDays: Date[] = [];
 
     for (let i = 0; i < 7; i++) {
       const day = new Date(current);
@@ -176,30 +209,30 @@ const LeadsCalendar = () => {
     return weekDays;
   };
 
-  const navigateMonth = (direction) => {
+  const navigateMonth = (direction: number): void => {
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1)
     );
   };
 
-  const navigateWeek = (direction) => {
+  const navigateWeek = (direction: number): void => {
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + direction * 7);
     setCurrentDate(newDate);
   };
 
-  const getLeadsForDate = (date) => {
+  const getLeadsForDate = (date: Date): Lead[] => {
     const dateStr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
     return leadsDataByDate[dateStr] || [];
   };
 
-  const getLeadsForDateTime = (date, timeSlot) => {
+  const getLeadsForDateTime = (date: Date, timeSlot: string): Lead[] => {
     const dateStr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
     const key = `${dateStr}-${timeSlot}`;
     return leadsDataByDateTime[key] || [];
   };
 
-  const isToday = (date) => {
+  const isToday = (date: Date): boolean => {
     const today = new Date();
     return (
       date.getDate() === today.getDate() &&
@@ -208,14 +241,14 @@ const LeadsCalendar = () => {
     );
   };
 
-  const handleTimeSlotClick = (day, time) => {
+  const handleTimeSlotClick = (day: Date, time: string): void => {
     const dateTimeLeads = getLeadsForDateTime(day, time);
     if (dateTimeLeads.length > 0) {
       setSelectedTimeSlot({ day, time, leads: dateTimeLeads });
     }
   };
 
-  const closeModal = () => {
+  const closeModal = (): void => {
     setSelectedTimeSlot(null);
   };
 

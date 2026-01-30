@@ -1,4 +1,4 @@
-// frontend/app/leads/CreateLead.jsx - COMPLETE MULTI-SOURCE TAG SELECTOR
+// frontend/app/leads/CreateLead.tsx - COMPLETE MULTI-SOURCE TAG SELECTOR (TypeScript)
 
 "use client";
 
@@ -24,13 +24,102 @@ import {
   isSalesperson
 } from "@/utils/api";
 
-export default function CreateLead({ onSave, onCancel, existingData }) {
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
+}
+
+interface User {
+  id: string;
+  role: string;
+  tenantId: string;
+  tenantName?: string;
+  username: string;
+}
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  company: string;
+  email: string;
+  phone: string;
+  mobile: string;
+  fax: string;
+  designation: string;
+  website: string;
+  salesperson: string;
+  category: string;
+  product: string;
+  leadSource: string;
+  leadStatus: string;
+  tags: string[];
+  leadStartDate: string;
+  leadStartTime: string;
+  leadRemindDate: string;
+  leadRemindTime: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  expectedAmount: string;
+  paymentReceived: string;
+  comment: string;
+  facebook: string;
+  skype: string;
+  linkedIn: string;
+  gtalk: string;
+  twitter: string;
+  convertOption: string;
+}
+
+interface DropdownItem {
+  _id: string;
+  name: string;
+  username?: string;
+}
+
+interface Tag {
+  _id: string;
+  name: string;
+  color: string;
+  description?: string;
+  source?: string;
+}
+
+interface NewTag {
+  name: string;
+  color: string;
+  description: string;
+}
+
+interface Salesperson {
+  _id?: string;
+  id?: string;
+  username: string;
+}
+
+interface ExistingData {
+  _id: string;
+  [key: string]: any;
+}
+
+interface CreateLeadProps {
+  onSave?: (data?: any) => void;
+  onCancel?: () => void;
+  existingData?: ExistingData | null;
+}
+
+type TagSource = "crm" | "systemeio" | "whatsapp";
+
+export default function CreateLead({ onSave, onCancel, existingData }: CreateLeadProps) {
   const router = useRouter();
-  const activityHistoryRef = useRef(null);
+  const activityHistoryRef = useRef<HTMLDivElement>(null);
   const isEditMode = Boolean(existingData?._id);
 
   /* --------------------------- USER & SESSION --------------------------- */
-  const [loggedUser, setLoggedUser] = useState(null);
+  const [loggedUser, setLoggedUser] = useState<User | null>(null);
 
   useEffect(() => {
     if (!validateSession()) {
@@ -41,7 +130,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
 
     const user = getUser();
     if (user) {
-      setLoggedUser(user);
+      setLoggedUser(user as User);
       console.log("✅ User loaded:", {
         id: user.id,
         role: user.role,
@@ -50,12 +139,17 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     }
   }, [router]);
 
-  const userIsAdmin = isAdmin();
-  const userIsSalesperson = isSalesperson();
+  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(false);
+  const [userIsSalesperson, setUserIsSalesperson] = useState<boolean>(false);
+
+  useEffect(() => {
+    setUserIsAdmin(isAdmin());
+    setUserIsSalesperson(isSalesperson());
+  }, []);
 
   /* --------------------------- COUNTRIES --------------------------- */
-  const [countries, setCountries] = useState([]);
-  const [loadingCountries, setLoadingCountries] = useState(true);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -65,8 +159,8 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
         );
         const data = await response.json();
 
-        const formattedCountries = data
-          .map((country) => {
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
             const name = country.name?.common || "";
             const root = country.idd?.root || "";
             const suffixes = country.idd?.suffixes || [];
@@ -82,8 +176,8 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
               displayName: callingCode ? `${name} (${callingCode})` : name,
             };
           })
-          .filter((c) => c.name && c.callingCode)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
 
         setCountries(formattedCountries);
         setLoadingCountries(false);
@@ -98,7 +192,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   }, []);
 
   /* --------------------------- DEFAULT FORM --------------------------- */
-  const defaultForm = useCallback(() => {
+  const defaultForm = useCallback((): FormData => {
     const now = new Date();
     return {
       firstName: "",
@@ -137,24 +231,24 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     };
   }, []);
 
-  const [formData, setFormData] = useState(defaultForm);
-  const [errors, setErrors] = useState({});
-  const submittedRef = useRef(false);
+  const [formData, setFormData] = useState<FormData>(defaultForm);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const submittedRef = useRef<boolean>(false);
 
   /* --------------------------- DROPDOWNS --------------------------- */
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [leadSources, setLeadSources] = useState([]);
-  const [leadStatuses, setLeadStatuses] = useState([]);
-  const [salespersons, setSalespersons] = useState([]);
-  const [tags, setTags] = useState([]);
+  const [categories, setCategories] = useState<DropdownItem[]>([]);
+  const [products, setProducts] = useState<DropdownItem[]>([]);
+  const [leadSources, setLeadSources] = useState<DropdownItem[]>([]);
+  const [leadStatuses, setLeadStatuses] = useState<DropdownItem[]>([]);
+  const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   /* 🔥 MULTI-SOURCE TAG SYSTEM 🔥 */
-  const [activeTagSource, setActiveTagSource] = useState("crm");
-  const [systemeioTags, setSystemeioTags] = useState([]);
-  const [whatsappTags, setWhatsappTags] = useState([]);
-  const [loadingExternalTags, setLoadingExternalTags] = useState(false);
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [activeTagSource, setActiveTagSource] = useState<TagSource>("crm");
+  const [systemeioTags, setSystemeioTags] = useState<Tag[]>([]);
+  const [whatsappTags, setWhatsappTags] = useState<Tag[]>([]);
+  const [loadingExternalTags, setLoadingExternalTags] = useState<boolean>(false);
+  const [showTagDropdown, setShowTagDropdown] = useState<boolean>(false);
 
   // 🔥 Fetch Systeme.io Tags
   const fetchSystemeioTags = async () => {
@@ -174,7 +268,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       }
 
       const data = await response.json();
-      const formattedTags = (data.tags || []).map(tag => ({
+      const formattedTags: Tag[] = (data.tags || []).map((tag: any) => ({
         _id: `systemeio_${tag.id}`,
         name: tag.name,
         color: "#FF6B00",
@@ -191,13 +285,14 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       setLoadingExternalTags(false);
     }
   };
+
   // 🔥 Fetch WhatsApp Tags - FIXED VERSION
   const fetchWhatsAppTags = async () => {
     try {
       setLoadingExternalTags(true);
       console.log("🔄 Fetching WhatsApp tags via CRM backend...");
 
-      const customerId = "1"; // working WhatsApp customerId
+      const customerId = "1";
       const result = await apiGet(`/api/external-tags/whatsapp/${customerId}`);
 
       console.log("📦 Full API result:", result);
@@ -212,7 +307,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
 
       console.log("🏷️ Extracted WhatsApp tags:", tagArray);
 
-      const formattedTags = tagArray.map((tag) => ({
+      const formattedTags: Tag[] = tagArray.map((tag: any) => ({
         _id: `whatsapp_${tag.id}`,
         name: tag.tag,
         color: "#25D366",
@@ -228,13 +323,9 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     }
   };
 
-
-
-
   // 🔥 Load external tags when switching tabs
-  //FIXED VERSION - Add loggedUser dependency
   useEffect(() => {
-    if (!loggedUser) return; //Wait for user to load
+    if (!loggedUser) return;
 
     if (activeTagSource === "systemeio" && systemeioTags.length === 0) {
       fetchSystemeioTags();
@@ -242,10 +333,10 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     if (activeTagSource === "whatsapp" && whatsappTags.length === 0) {
       fetchWhatsAppTags();
     }
-  }, [activeTagSource, loggedUser]); //Added loggedUser dependency
+  }, [activeTagSource, loggedUser]);
 
   // 🔥 Get current tag list based on active source
-  const getCurrentTagList = () => {
+  const getCurrentTagList = (): Tag[] => {
     switch (activeTagSource) {
       case "systemeio":
         return systemeioTags;
@@ -296,7 +387,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   }, [loggedUser, fetchDropdownData]);
 
   /* --------------------------- COUNTRY CALLING CODE LOGIC --------------------------- */
-  const extractPhoneNumber = (phoneValue, callingCode) => {
+  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
     if (!phoneValue) return "";
 
     const trimmed = phoneValue.trim();
@@ -309,7 +400,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     return cleanedPhone;
   };
 
-  const formatPhoneWithCode = (phoneNumber, callingCode) => {
+  const formatPhoneWithCode = (phoneNumber: string, callingCode: string): string => {
     if (!phoneNumber) return callingCode ? `${callingCode} ` : "";
 
     const cleanPhone = phoneNumber.trim();
@@ -318,7 +409,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     return callingCode ? `${callingCode} ${cleanPhone}` : cleanPhone;
   };
 
-  const handleCountryChange = (e) => {
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCountryName = e.target.value;
     const selectedCountry = countries.find((c) => c.name === selectedCountryName);
     const newCallingCode = selectedCountry?.callingCode || "";
@@ -342,7 +433,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     setErrors((prev) => ({ ...prev, country: "" }));
   };
 
-  const handlePhoneChange = (e) => {
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
     const currentCountry = countries.find((c) => c.name === formData.country);
@@ -374,7 +465,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
       console.log("📝 Edit Mode - Processing tags:", existingData.tags);
 
       const normalizedTags = (existingData.tags || [])
-        .map((t) => {
+        .map((t: any) => {
           if (typeof t === "string") {
             if (t.length === 24 && /^[a-f0-9]{24}$/i.test(t)) {
               const foundTag = tags.find((tag) => tag._id === t);
@@ -418,7 +509,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   }, [isEditMode, userIsSalesperson, loggedUser]);
 
   /* --------------------------- INPUT --------------------------- */
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     if (userIsSalesperson && name === "salesperson") return;
@@ -429,8 +520,8 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   };
 
   /* --------------------------- VALIDATION --------------------------- */
-  const validateForm = () => {
-    const e = {};
+  const validateForm = (): Partial<Record<keyof FormData, string>> => {
+    const e: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) e.firstName = "Required";
     if (!formData.salesperson) e.salesperson = "Required";
     if (!formData.category) e.category = "Required";
@@ -440,7 +531,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   };
 
   /* --------------------------- ACTIVITY HISTORY --------------------------- */
-  const [latestComment, setLatestComment] = useState("");
+  const [latestComment, setLatestComment] = useState<string>("");
 
   useEffect(() => {
     if (isEditMode && formData.comment) {
@@ -448,7 +539,7 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
     }
   }, [isEditMode, formData.comment]);
 
-  const handleCommentUpdate = (newComment) => {
+  const handleCommentUpdate = (newComment: string) => {
     console.log("📝 Comment Update Triggered:", newComment);
     setLatestComment(newComment);
     setFormData((prev) => ({
@@ -458,88 +549,85 @@ export default function CreateLead({ onSave, onCancel, existingData }) {
   };
 
   /* --------------------------- SUBMIT --------------------------- */
- // frontend/app/leads/CreateLead.jsx - FIXED LINE 454-460
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (submittedRef.current) return;
+    submittedRef.current = true;
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (submittedRef.current) return;
-  submittedRef.current = true;
-
-  if (!validateSession()) {
-    console.error("❌ Session invalid - cannot submit");
-    toast.error("Session expired. Please login again.");
-    router.push("/login");
-    return;
-  }
-
-  const errs = validateForm();
-  setErrors(errs);
-
-  if (Object.keys(errs).length) {
-    toast.error("Please fill required fields");
-    submittedRef.current = false;
-    return;
-  }
-
-  try {
-    console.log("💾 Submitting lead...", { isEditMode });
-
-    // Get user data to include tenantId
-    const user = getUser();
-    
-    if (!user || !user.tenantId) {
-      throw new Error("Missing tenant information");
+    if (!validateSession()) {
+      console.error("❌ Session invalid - cannot submit");
+      toast.error("Session expired. Please login again.");
+      router.push("/login");
+      return;
     }
 
-    if (isEditMode) {
-      const updatePayload = {
-        ...formData,
-        comment: latestComment,
-        tags: formData.tags || [],
-        tenantId: user.tenantId, 
-      };
+    const errs = validateForm();
+    setErrors(errs);
 
-      console.log("📤 Update Payload:", updatePayload); 
-
-      const result = await apiPut(
-        `/api/leads/update-lead/${existingData._id}`,
-        updatePayload
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update lead");
-      }
-
-      console.log("✅ Lead updated successfully");
-      toast.success(result.data?.message || "Lead updated successfully");
-      onSave?.(result.data);
-    } else {
-      const createPayload = {
-        ...formData,
-        tags: formData.tags || [],
-        tenantId: user.tenantId, //This will show in Network tab
-      };
-
-      console.log("📤 Create Payload:", createPayload); // Debug log
-
-      const result = await apiPost("/api/leads/create-lead", createPayload);
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to create lead");
-      }
-
-      console.log("✅ Lead created successfully");
-      toast.success(result.data?.message || "Lead created successfully");
-      handleReset();
-      onSave?.({ success: true });
+    if (Object.keys(errs).length) {
+      toast.error("Please fill required fields");
+      submittedRef.current = false;
+      return;
     }
-  } catch (err) {
-    console.error("❌ Submit Error:", err);
-    toast.error(err.message || "Something went wrong");
-  } finally {
-    submittedRef.current = false;
-  }
-};
+
+    try {
+      console.log("💾 Submitting lead...", { isEditMode });
+
+      const user = getUser();
+      
+      if (!user || !user.tenantId) {
+        throw new Error("Missing tenant information");
+      }
+
+      if (isEditMode) {
+        const updatePayload = {
+          ...formData,
+          comment: latestComment,
+          tags: formData.tags || [],
+          tenantId: user.tenantId, 
+        };
+
+        console.log("📤 Update Payload:", updatePayload); 
+
+        const result = await apiPut(
+          `/api/leads/update-lead/${existingData!._id}`,
+          updatePayload
+        );
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to update lead");
+        }
+
+        console.log("✅ Lead updated successfully");
+        toast.success(result.data?.message || "Lead updated successfully");
+        onSave?.(result.data);
+      } else {
+        const createPayload = {
+          ...formData,
+          tags: formData.tags || [],
+          tenantId: user.tenantId,
+        };
+
+        console.log("📤 Create Payload:", createPayload);
+
+        const result = await apiPost("/api/leads/create-lead", createPayload);
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to create lead");
+        }
+
+        console.log("✅ Lead created successfully");
+        toast.success(result.data?.message || "Lead created successfully");
+        handleReset();
+        onSave?.({ success: true });
+      }
+    } catch (err: any) {
+      console.error("❌ Submit Error:", err);
+      toast.error(err.message || "Something went wrong");
+    } finally {
+      submittedRef.current = false;
+    }
+  };
 
   /* --------------------------- RESET / CANCEL --------------------------- */
   const handleReset = () => {
@@ -559,17 +647,17 @@ const handleSubmit = async (e) => {
   };
 
   /* --------------------------- MODALS --------------------------- */
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [showLeadSourceModal, setShowLeadSourceModal] = useState(false);
-  const [showLeadStatusModal, setShowLeadStatusModal] = useState(false);
-  const [showTagModal, setShowTagModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState<boolean>(false);
+  const [showProductModal, setShowProductModal] = useState<boolean>(false);
+  const [showLeadSourceModal, setShowLeadSourceModal] = useState<boolean>(false);
+  const [showLeadStatusModal, setShowLeadStatusModal] = useState<boolean>(false);
+  const [showTagModal, setShowTagModal] = useState<boolean>(false);
 
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newProduct, setNewProduct] = useState("");
-  const [newLeadName, setNewLeadName] = useState("");
-  const [newLeadStatus, setNewLeadStatus] = useState("");
-  const [newTag, setNewTag] = useState({
+  const [newCategoryName, setNewCategoryName] = useState<string>("");
+  const [newProduct, setNewProduct] = useState<string>("");
+  const [newLeadName, setNewLeadName] = useState<string>("");
+  const [newLeadStatus, setNewLeadStatus] = useState<string>("");
+  const [newTag, setNewTag] = useState<NewTag>({
     name: "",
     color: "#3B82F6",
     description: "",
@@ -590,7 +678,7 @@ const handleSubmit = async (e) => {
       setShowCategoryModal(false);
       setNewCategoryName("");
       toast.success("Category added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Category Error:", error);
       toast.error(error.message || "Failed to add category");
     }
@@ -611,7 +699,7 @@ const handleSubmit = async (e) => {
       setShowProductModal(false);
       setNewProduct("");
       toast.success("Product added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Product Error:", error);
       toast.error(error.message || "Failed to add product");
     }
@@ -632,7 +720,7 @@ const handleSubmit = async (e) => {
       setShowLeadSourceModal(false);
       setNewLeadName("");
       toast.success("Lead source added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Lead Source Error:", error);
       toast.error(error.message || "Failed to add lead source");
     }
@@ -653,7 +741,7 @@ const handleSubmit = async (e) => {
       setShowLeadStatusModal(false);
       setNewLeadStatus("");
       toast.success("Lead status added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Lead Status Error:", error);
       toast.error(error.message || "Failed to add lead status");
     }
@@ -684,14 +772,14 @@ const handleSubmit = async (e) => {
       setShowTagModal(false);
       setNewTag({ name: "", color: "#3B82F6", description: "" });
       toast.success("Tag added and selected!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Add Tag Error:", error);
       toast.error(error.message || "Failed to add tag");
     }
   };
 
   /* --------------------------- TAG SELECTION --------------------------- */
-  const handleTagSelect = (tagName) => {
+  const handleTagSelect = (tagName: string) => {
     setFormData((prev) => {
       const exists = prev.tags?.includes(tagName);
       return {
@@ -703,7 +791,7 @@ const handleSubmit = async (e) => {
     });
   };
 
-  const removeTag = (tagName) => {
+  const removeTag = (tagName: string) => {
     setFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tagName),
@@ -764,7 +852,7 @@ const handleSubmit = async (e) => {
                 <div key={key}>
                   <input
                     name={key}
-                    value={formData[key] || ""}
+                    value={(formData as any)[key] || ""}
                     onChange={isPhone ? handlePhoneChange : handleChange}
                     placeholder={placeholder}
                     className="border rounded-sm px-3 h-[40px] w-full text-sm"
@@ -777,7 +865,7 @@ const handleSubmit = async (e) => {
           {/* RIGHT (1/3 on desktop, full width on mobile) */}
           <div className="w-full lg:w-[33%] lg:pl-6 flex flex-col gap-3">
             {/* Salesperson (admin only) */}
-            {isAdmin && (
+            {userIsAdmin && (
               <div>
                 <div className="flex gap-2">
                   <select
@@ -986,7 +1074,6 @@ const handleSubmit = async (e) => {
               <div className="flex flex-wrap cursor-pointer gap-2 mb-2 min-h-[36px] p-2 border rounded-sm bg-gray-50">
                 {formData.tags && formData.tags.length > 0 ? (
                   formData.tags.map((tagName) => {
-                    // Find tag from any source
                     let tagColor = "#3B82F6";
                     const crmTag = tags.find((t) => t.name === tagName);
                     const systemeioTag = systemeioTags.find((t) => t.name === tagName);
@@ -1398,7 +1485,7 @@ const handleSubmit = async (e) => {
           <br />
           <br />
           <ActivityHistory
-            leadId={existingData._id}
+            leadId={existingData!._id}
             currentComment={latestComment}
             onCommentUpdate={handleCommentUpdate}
           />

@@ -1,4 +1,4 @@
-// frontend/app/leadpage/ActivityHistoryPage/ActivityHistory.js
+// frontend/app/leadpage/ActivityHistoryPage/ActivityHistory.tsx
 
 "use client";
 
@@ -6,8 +6,20 @@ import { useState } from "react";
 import CommentsSection from "./comments/CommentsSection";
 import EmailSection from "./email/EmailSection";
 
-export default function ActivityHistory({ leadId, leadEmail, currentComment, onCommentUpdate }) {
-  const [activeTab, setActiveTab] = useState("comments");
+interface ActivityHistoryProps {
+  leadId: string;
+  leadEmail?: string;
+  currentComment?: string;
+  onCommentUpdate?: (comment: string) => void;
+}
+
+export default function ActivityHistory({ 
+  leadId, 
+  leadEmail, 
+  currentComment, 
+  onCommentUpdate 
+}: ActivityHistoryProps): React.JSX.Element {
+  const [activeTab, setActiveTab] = useState<"comments" | "email">("comments");
 
   return (
     <div className="bg-white w-full text-black p-4 sm:p-6 md:p-8 lg:p-10 xl:p-6">

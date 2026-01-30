@@ -1,4 +1,4 @@
-// frontend/app/leads/page.jsx - COMPLETE MULTI-TENANT FIX
+// frontend/app/leads/page.tsx - COMPLETE MULTI-TENANT FIX (TypeScript)
 
 "use client";
 
@@ -12,15 +12,31 @@ import TodaysLeadsTable from "./TodaysLeadsTable";
 import { useAuth } from "@/context/AuthContext";
 import { apiGet, apiDelete, validateSession, getTenantInfo } from "@/utils/api";
 
+interface Lead {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  leadStatus?: string;
+  category?: string;
+  createdAt?: string;
+  [key: string]: any;
+}
+
+type FilterType = "" | "all" | "today" | "unscheduled" | "Pending" | "Miss" | "Closed" | "Deals" | "Void" | "Customer";
+
 export default function LeadsPage() {
   const { user, token, tokenReady } = useAuth();
   const searchParams = useSearchParams();
 
-  const [leads, setLeads] = useState([]);
-  const [isAddingLead, setIsAddingLead] = useState(false);
-  const [editingLead, setEditingLead] = useState(null);
-  const [filter, setFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isAddingLead, setIsAddingLead] = useState<boolean>(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [filter, setFilter] = useState<FilterType>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
   /* -------------------- CHECK URL PARAMETER -------------------- */
   useEffect(() => {
@@ -65,7 +81,6 @@ export default function LeadsPage() {
       
       console.log("🔄 Fetching leads for tenant:", user?.tenantId);
 
-      // Backend automatically filters by tenant based on JWT token
       const result = await apiGet("/api/leads/get-leads");
 
       if (!result.success) {
@@ -80,7 +95,7 @@ export default function LeadsPage() {
       });
 
       setLeads(items);
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Fetch Leads Error:", err);
       toast.error(err.message || "Failed to load leads");
     } finally {
@@ -89,13 +104,12 @@ export default function LeadsPage() {
   };
 
   /* -------------------- DELETE LEAD -------------------- */
-  const handleDelete = async (ids) => {
+  const handleDelete = async (ids: string[]) => {
     if (!confirm("Are you sure you want to delete selected lead(s)?")) return;
 
     try {
       console.log("🗑️ Deleting leads:", ids);
 
-      //Backend validates tenant ownership before deleting
       const deletePromises = ids.map((id) => 
         apiDelete(`/api/leads/delete-lead/${id}`)
       );
@@ -108,31 +122,27 @@ export default function LeadsPage() {
         toast.error(`Failed to delete ${failedDeletes.length} lead(s)`);
       }
 
-      // Remove deleted leads from state
       setLeads((prev) => prev.filter((lead) => !ids.includes(lead._id)));
 
       toast.success(`🗑️ ${ids.length - failedDeletes.length} lead(s) deleted successfully!`);
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Delete Error:", err);
       toast.error("Failed to delete lead(s)");
     }
   };
 
   /* -------------------- SAVE HANDLER -------------------- */
-  const handleSave = (data) => {
+  const handleSave = (data?: any) => {
     console.log("💾 Save handler triggered:", { isEdit: !!editingLead });
 
-    // ALWAYS REFETCH LEADS AFTER CREATE/UPDATE
     fetchLeads();
 
-    // Show appropriate success message
     if (editingLead) {
       toast.success("✅ Lead Updated Successfully!");
     } else {
       toast.success("✅ Lead Created Successfully!");
     }
 
-    // Reset states
     setIsAddingLead(false);
     setEditingLead(null);
   };
@@ -142,14 +152,14 @@ export default function LeadsPage() {
     setEditingLead(null);
   };
 
-  const handleEdit = (lead) => {
+  const handleEdit = (lead: Lead) => {
     console.log("✏️ Editing lead:", lead._id);
     setEditingLead(lead);
     setIsAddingLead(true);
   };
 
   /* -------------------- CHECK IF DATE IS TODAY -------------------- */
-  const isToday = (dateString) => {
+  const isToday = (dateString?: string): boolean => {
     if (!dateString) return false;
 
     const today = new Date();
@@ -163,12 +173,12 @@ export default function LeadsPage() {
   };
 
   /* -------------------- GET TODAY'S LEADS COUNT -------------------- */
-  const getTodayLeadsCount = () => {
+  const getTodayLeadsCount = (): number => {
     return leads.filter((lead) => isToday(lead.createdAt)).length;
   };
 
   /* -------------------- GET UNSCHEDULED COUNT -------------------- */
-  const getUnscheduledCount = () => {
+  const getUnscheduledCount = (): number => {
     return leads.filter((l) =>
       l.leadStatus === "Unscheduled" ||
       l.category === "Unscheduled"
@@ -191,11 +201,11 @@ export default function LeadsPage() {
   });
 
   /* -------------------- GET STATUS COUNT -------------------- */
-  const getCount = (status) =>
+  const getCount = (status: string): number =>
     leads.filter((l) => l.leadStatus === status).length;
 
   /* -------------------- HANDLE FILTER BUTTON CLICK -------------------- */
-  const handleFilterClick = (filterValue) => {
+  const handleFilterClick = (filterValue: FilterType) => {
     console.log("🔍 Filter clicked:", filterValue);
 
     setIsAddingLead(false);

@@ -1,47 +1,83 @@
-// frontend/app/leadpage/ActivityHistoryPage/email/EmailSection.js
+// frontend/app/leadpage/ActivityHistoryPage/email/EmailSection.tsx
 
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ChangeEvent, MouseEvent } from "react";
 import { Trash2, ChevronDown, X, Paperclip } from "lucide-react";
 import axios from "axios";
 
 const API_URL = "https://two9-01-2026.onrender.com/api";
 
-const defaultTemplate = {
+interface EmailLog {
+  id: string;
+  from: string;
+  to: string;
+  subject: string;
+  message: string;
+  status: "Sent" | "Pending" | "Failed";
+  attachmentCount: number;
+  date: string;
+}
+
+interface EmailTemplate {
+  id: string;
+  name: string;
+  content: string;
+  isCustom: boolean;
+  visibility?: "admin" | "all";
+  createdAt?: string;
+}
+
+interface MenuItem {
+  label: string;
+  shortcut?: string;
+  onClick: () => void;
+}
+
+interface MenuButtonProps {
+  label: string;
+  items: (MenuItem | "divider")[];
+}
+
+interface EmailSectionProps {
+  leadId: string;
+  leadEmail?: string;
+}
+
+const defaultTemplate: EmailTemplate = {
   id: "default-1",
   name: "Choose Template",
   content: "<p>Hello, this is a follow-up email.</p>",
   isCustom: false
 };
 
-export default function EmailSection({ leadId, leadEmail }) {
-  const quillRef = useRef(null);
-  const editorContainerRef = useRef(null);
-  const fileInputRef = useRef(null);
+export default function EmailSection({ leadId, leadEmail }: EmailSectionProps): React.JSX.Element {
+  const quillRef = useRef<any>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [emailLogs, setEmailLogs] = useState([]);
-  const [templates, setTemplates] = useState([defaultTemplate]);
-  const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [subject, setSubject] = useState("");
-  const [from, setFrom] = useState("");
-  const [fromEmails, setFromEmails] = useState(["sujit@gmail.com", "magan@gmail.com"]);
-  const [showFromDropdown, setShowFromDropdown] = useState(false);
-  const [toEmail, setToEmail] = useState(leadEmail || "");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showTemplateForm, setShowTemplateForm] = useState(false);
-  const [newEmailField, setNewEmailField] = useState("");
-  const [newDisplayName, setNewDisplayName] = useState("");
-  const [templateName, setTemplateName] = useState("");
-  const [templateVisibility, setTemplateVisibility] = useState("admin");
-  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
-  const [openMenu, setOpenMenu] = useState(null);
-  const [showSourceCode, setShowSourceCode] = useState(false);
-  const [sourceCode, setSourceCode] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([defaultTemplate]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [subject, setSubject] = useState<string>("");
+  const [from, setFrom] = useState<string>("");
+  const [fromEmails, setFromEmails] = useState<string[]>(["sujit@gmail.com", "magan@gmail.com"]);
+  const [showFromDropdown, setShowFromDropdown] = useState<boolean>(false);
+  const [toEmail, setToEmail] = useState<string>(leadEmail || "");
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [showTemplateForm, setShowTemplateForm] = useState<boolean>(false);
+  const [newEmailField, setNewEmailField] = useState<string>("");
+  const [newDisplayName, setNewDisplayName] = useState<string>("");
+  const [templateName, setTemplateName] = useState<string>("");
+  const [templateVisibility, setTemplateVisibility] = useState<"admin" | "all">("admin");
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState<boolean>(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [showSourceCode, setShowSourceCode] = useState<boolean>(false);
+  const [sourceCode, setSourceCode] = useState<string>("");
+  const [isSending, setIsSending] = useState<boolean>(false);
 
-  // NEW: Attachment state
-  const [attachments, setAttachments] = useState([]);
-  const [uploadError, setUploadError] = useState("");
+  // Attachment state
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string>("");
 
   // Update toEmail when leadEmail changes
   useEffect(() => {
@@ -70,7 +106,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     }
   }, [leadId]);
 
-  const fetchEmails = async () => {
+  const fetchEmails = async (): Promise<void> => {
     try {
       const token = localStorage.getItem("ts-token");
 
@@ -92,7 +128,7 @@ export default function EmailSection({ leadId, leadEmail }) {
       );
 
       if (response.data.success) {
-        const formattedEmails = response.data.data.map(email => ({
+        const formattedEmails: EmailLog[] = response.data.data.map((email: any) => ({
           id: email._id,
           from: email.from,
           to: email.to,
@@ -115,7 +151,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     } catch (error) {
       console.error("❌ Error fetching emails:", error);
 
-      if (error.response?.status === 401) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         alert("Session expired. Please login again.");
       }
     }
@@ -131,8 +167,8 @@ export default function EmailSection({ leadId, leadEmail }) {
     const script = document.createElement('script');
     script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
     script.onload = () => {
-      if (window.Quill && !quillRef.current) {
-        quillRef.current = new window.Quill('#editor', {
+      if ((window as any).Quill && !quillRef.current) {
+        quillRef.current = new (window as any).Quill('#editor', {
           theme: 'snow',
           placeholder: 'Write your message here...',
           modules: {
@@ -162,10 +198,10 @@ export default function EmailSection({ leadId, leadEmail }) {
 
   // Load templates
   useEffect(() => {
-    const loadData = () => {
+    const loadData = (): void => {
       try {
         const savedTemplates = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
-        setTemplates([defaultTemplate, ...savedTemplates.filter(t => t?.id && t?.name)]);
+        setTemplates([defaultTemplate, ...savedTemplates.filter((t: any) => t?.id && t?.name)]);
 
         const savedEmails = JSON.parse(localStorage.getItem("fromEmails") || "[]");
         if (savedEmails.length > 0) {
@@ -193,8 +229,8 @@ export default function EmailSection({ leadId, leadEmail }) {
     return () => clearInterval(interval);
   }, [leadId, emailLogs]);
 
-  // NEW: Handle file selection
-  const handleFileChange = (e) => {
+  // Handle file selection
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(e.target.files || []);
     setUploadError("");
 
@@ -234,21 +270,21 @@ export default function EmailSection({ leadId, leadEmail }) {
     e.target.value = ""; // Reset input
   };
 
-  // NEW: Remove attachment
-  const removeAttachment = (index) => {
+  // Remove attachment
+  const removeAttachment = (index: number): void => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  // NEW: Format file size
-  const formatFileSize = (bytes) => {
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const handleMenuClick = (menu) => setOpenMenu(openMenu === menu ? null : menu);
+  const handleMenuClick = (menu: string): void => setOpenMenu(openMenu === menu ? null : menu);
 
-  const handleFileAction = (action) => {
+  const handleFileAction = (action: string): void => {
     if (action === 'new' && window.confirm('Create new message? Unsaved changes will be lost.') && quillRef.current) {
       quillRef.current.setContents([]);
       setAttachments([]);
@@ -264,7 +300,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     setOpenMenu(null);
   };
 
-  const handleEditAction = (action) => {
+  const handleEditAction = (action: string): void => {
     const editor = quillRef.current;
     if (!editor) return;
     if (action === 'undo') editor.history.undo();
@@ -275,7 +311,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     setOpenMenu(null);
   };
 
-  const handleInsertAction = (action) => {
+  const handleInsertAction = (action: string): void => {
     const editor = quillRef.current;
     if (!editor) return;
     const range = editor.getSelection();
@@ -318,7 +354,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     setOpenMenu(null);
   };
 
-  const handleViewAction = (action) => {
+  const handleViewAction = (action: string): void => {
     if (action === 'sourceCode') {
       if (!showSourceCode) {
         setSourceCode(quillRef.current?.root.innerHTML || '');
@@ -338,7 +374,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     setOpenMenu(null);
   };
 
-  const handleFormatAction = (format, value) => {
+  const handleFormatAction = (format: string, value?: any): void => {
     const editor = quillRef.current;
     if (!editor) return;
     const range = editor.getSelection();
@@ -353,7 +389,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     setOpenMenu(null);
   };
 
-  const MenuButton = ({ label, items }) => (
+  const MenuButton: React.FC<MenuButtonProps> = ({ label, items }) => (
     <div className="relative inline-block">
       <button
         onClick={() => handleMenuClick(label.toLowerCase())}
@@ -369,11 +405,11 @@ export default function EmailSection({ leadId, leadEmail }) {
             ) : (
               <button
                 key={idx}
-                onClick={item.onClick}
+                onClick={(item as MenuItem).onClick}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
               >
-                <span>{item.label}</span>
-                {item.shortcut && <span className="text-xs text-gray-400 ml-4">{item.shortcut}</span>}
+                <span>{(item as MenuItem).label}</span>
+                {(item as MenuItem).shortcut && <span className="text-xs text-gray-400 ml-4">{(item as MenuItem).shortcut}</span>}
               </button>
             )
           )}
@@ -382,7 +418,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     </div>
   );
 
-  const resetForm = () => {
+  const resetForm = (): void => {
     setFrom("");
     setSubject("");
     setToEmail(leadEmail || "");
@@ -392,7 +428,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     if (quillRef.current) quillRef.current.setContents([]);
   };
 
-  const openTemplateModal = () => {
+  const openTemplateModal = (): void => {
     if (!quillRef.current) return;
     const html = quillRef.current.root.innerHTML.trim();
     if (!html || html === "<p><br></p>") {
@@ -402,14 +438,14 @@ export default function EmailSection({ leadId, leadEmail }) {
     setShowTemplateForm(true);
   };
 
-  const saveTemplate = () => {
+  const saveTemplate = (): void => {
     if (!templateName.trim()) {
       alert("Please enter a template name!");
       return;
     }
     if (!quillRef.current) return;
 
-    const newTemplate = {
+    const newTemplate: EmailTemplate = {
       id: crypto.randomUUID(),
       name: templateName.trim(),
       content: quillRef.current.root.innerHTML.trim(),
@@ -420,7 +456,7 @@ export default function EmailSection({ leadId, leadEmail }) {
 
     try {
       const existing = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
-      const updated = [newTemplate, ...existing.filter(t => t?.id)];
+      const updated = [newTemplate, ...existing.filter((t: any) => t?.id)];
       localStorage.setItem("emailTemplates", JSON.stringify(updated));
       setTemplates([defaultTemplate, ...updated]);
       setTemplateName("");
@@ -433,12 +469,12 @@ export default function EmailSection({ leadId, leadEmail }) {
     }
   };
 
-  const deleteTemplate = (id, e) => {
+  const deleteTemplate = (id: string, e: MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     if (window.confirm("Delete this template?")) {
       try {
         const existing = JSON.parse(localStorage.getItem("emailTemplates") || "[]");
-        const updated = existing.filter(t => t.id !== id);
+        const updated = existing.filter((t: any) => t.id !== id);
         localStorage.setItem("emailTemplates", JSON.stringify(updated));
         setTemplates([defaultTemplate, ...updated]);
         if (selectedTemplate === id) setSelectedTemplate("");
@@ -448,7 +484,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     }
   };
 
-  const applyTemplate = (id) => {
+  const applyTemplate = (id: string): void => {
     if (!id) {
       setSelectedTemplate("");
       return;
@@ -461,12 +497,12 @@ export default function EmailSection({ leadId, leadEmail }) {
     setShowTemplateDropdown(false);
   };
 
-  const selectFromEmail = (email) => {
+  const selectFromEmail = (email: string): void => {
     setFrom(email);
     setShowFromDropdown(false);
   };
 
-  const addNewEmail = () => {
+  const addNewEmail = (): void => {
     if (!newEmailField.trim()) {
       alert("Please enter an email address");
       return;
@@ -493,7 +529,7 @@ export default function EmailSection({ leadId, leadEmail }) {
     }
   };
 
-  const deleteFromEmail = (email, e) => {
+  const deleteFromEmail = (email: string, e: MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     if (window.confirm(`Delete ${email} from list?`)) {
       const updatedEmails = fromEmails.filter(e => e !== email);
@@ -505,8 +541,8 @@ export default function EmailSection({ leadId, leadEmail }) {
     }
   };
 
-  // UPDATED: Send email with attachments
-  const sendEmail = async () => {
+  // Send email with attachments
+  const sendEmail = async (): Promise<void> => {
     if (!quillRef.current) return;
 
     const messageText = quillRef.current.getText().trim();
@@ -586,17 +622,17 @@ export default function EmailSection({ leadId, leadEmail }) {
     } catch (error) {
       console.error("❌ Error sending email:", error);
 
-      if (error.response?.status === 401) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         alert("Session expired. Please login again.");
       } else {
-        alert(error.response?.data?.message || "Failed to send email. Please try again.");
+        alert(axios.isAxiosError(error) ? error.response?.data?.message || "Failed to send email. Please try again." : "Failed to send email. Please try again.");
       }
     } finally {
       setIsSending(false);
     }
   };
 
-  const deleteLog = async (id) => {
+  const deleteLog = async (id: string): Promise<void> => {
     if (!window.confirm("Delete this email?")) return;
 
     try {
@@ -620,7 +656,7 @@ export default function EmailSection({ leadId, leadEmail }) {
       }
     } catch (error) {
       console.error("❌ Error deleting email:", error);
-      alert(error.response?.data?.message || "Failed to delete email");
+      alert(axios.isAxiosError(error) ? error.response?.data?.message || "Failed to delete email" : "Failed to delete email");
     }
   };
 
@@ -740,7 +776,7 @@ export default function EmailSection({ leadId, leadEmail }) {
                     name="visibility"
                     value="admin"
                     checked={templateVisibility === "admin"}
-                    onChange={(e) => setTemplateVisibility(e.target.value)}
+                    onChange={(e) => setTemplateVisibility(e.target.value as "admin" | "all")}
                     className="w-4 h-4 text-cyan-500"
                   />
                   <span className="text-sm text-gray-700">Visible To Admin</span>
@@ -751,7 +787,7 @@ export default function EmailSection({ leadId, leadEmail }) {
                     name="visibility"
                     value="all"
                     checked={templateVisibility === "all"}
-                    onChange={(e) => setTemplateVisibility(e.target.value)}
+                    onChange={(e) => setTemplateVisibility(e.target.value as "admin" | "all")}
                     className="w-4 h-4 text-cyan-500"
                   />
                   <span className="text-sm text-gray-700">Visible To All</span>
@@ -814,7 +850,6 @@ export default function EmailSection({ leadId, leadEmail }) {
           <button onClick={() => setShowAddForm(true)} className="bg-gray-500 text-white px-5 py-2.5 rounded hover:bg-gray-700 font-medium whitespace-nowrap">Add More</button>
         </div>
 
-
         <div className="mb-4"><label className="block mb-2 text-gray-700 font-medium">To</label><textarea className="border border-gray-300 w-full p-2.5 rounded-sm hover:bg-gray-100 resize-y hide-scrollbar" value={toEmail} onChange={(e) => setToEmail(e.target.value)} rows={1} /></div>
         <div className="mb-4"><label className="block mb-2 text-gray-700 font-medium">Subject</label><input type="text" className="border border-gray-300 w-full p-2.5 rounded-sm hover:bg-gray-100" value={subject} placeholder="Enter subject" onChange={(e) => setSubject(e.target.value)} /></div>
 
@@ -838,7 +873,6 @@ export default function EmailSection({ leadId, leadEmail }) {
           </div>
         </div>
 
-
         <div className="mb-4">
           <label className="block mb-2 text-gray-700 font-medium">Message</label>
           {showSourceCode ? (
@@ -852,13 +886,12 @@ export default function EmailSection({ leadId, leadEmail }) {
                 <MenuButton label="View" items={[{ label: 'Fullscreen', shortcut: 'F11', onClick: () => handleViewAction('fullscreen') }, { label: 'Source code', onClick: () => handleViewAction('sourceCode') }]} />
                 <MenuButton label="Format" items={[{ label: 'Bold', shortcut: 'Ctrl+B', onClick: () => handleFormatAction('bold') }, { label: 'Italic', shortcut: 'Ctrl+I', onClick: () => handleFormatAction('italic') }, { label: 'Underline', shortcut: 'Ctrl+U', onClick: () => handleFormatAction('underline') }, { label: 'Strikethrough', onClick: () => handleFormatAction('strike') }, 'divider', { label: 'Superscript', onClick: () => handleFormatAction('script', 'super') }, { label: 'Subscript', onClick: () => handleFormatAction('script', 'sub') }]} />
                 <MenuButton label="Table" items={[{ label: 'Insert table', onClick: () => handleInsertAction('table') }]} />
-                <MenuButton label="Tools" items={[{ label: 'Source code', onClick: () => handleViewAction('sourceCode') }, { label: 'Word count', onClick: () => { const text = quillRef.current?.getText() || ''; const words = text.trim().split(/\s+/).filter(w => w).length; const chars = text.length; alert(`📊 Statistics:\n\nWords: ${words}\nCharacters: ${chars}`); } }]} />
+                <MenuButton label="Tools" items={[{ label: 'Source code', onClick: () => handleViewAction('sourceCode') }, { label: 'Word count', onClick: () => { const text = quillRef.current?.getText() || ''; const words = text.trim().split(/\s+/).filter((w: string) => w).length; const chars = text.length; alert(`📊 Statistics:\n\nWords: ${words}\nCharacters: ${chars}`); } }]} />
               </div>
               <div id="editor" style={{ minHeight: '150px', backgroundColor: 'white' }}></div>
             </div>
           )}
         </div>
-
 
         <button onClick={openTemplateModal} className="mt-3 px-4 py-2 bg-blue-100 border border-blue-400 text-blue-700 rounded hover:bg-blue-200">📄 Save as Template</button>
       </div>
@@ -873,7 +906,7 @@ export default function EmailSection({ leadId, leadEmail }) {
           type="file"
           multiple
           ref={fileInputRef}
-          onChange={handleFileChange} // FIXED
+          onChange={handleFileChange}
           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
           className="w-full text-sm text-gray-700
           file:mr-4 file:py-2 file:px-4
@@ -914,8 +947,6 @@ export default function EmailSection({ leadId, leadEmail }) {
         </p>
       </div>
 
-
-
       <div className="flex gap-4 mt-4">
         <button
           onClick={sendEmail}
@@ -927,9 +958,7 @@ export default function EmailSection({ leadId, leadEmail }) {
         <button onClick={resetForm} className="border border-gray-400 px-6 py-2 rounded hover:bg-gray-100 font-medium">Cancel</button>
       </div>
 
-
       <div className="border-t border-dashed border-gray-300 my-6"></div>
-
 
       <div className="overflow-x-auto hidden md:block hide-scrollbar">
         <table className="w-full text-sm border-collapse border border-gray-300">
@@ -944,7 +973,7 @@ export default function EmailSection({ leadId, leadEmail }) {
           <tbody>
             {emailLogs.length === 0 ? (
               <tr>
-                <td colSpan="4" className="py-8 text-center text-red-500 font-medium border border-gray-300">No Records</td>
+                <td colSpan={4} className="py-8 text-center text-red-500 font-medium border border-gray-300">No Records</td>
               </tr>
             ) : (
               emailLogs.map(log => (
@@ -974,7 +1003,6 @@ export default function EmailSection({ leadId, leadEmail }) {
           </tbody>
         </table>
       </div>
-
 
       <div className="md:hidden space-y-3">
         {emailLogs.length === 0 ? (

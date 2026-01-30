@@ -1,10 +1,47 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, ChangeEvent, FormEvent } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function CreateLead() {
-  const [formData, setFormData] = useState({
+// Type definitions
+interface FormData {
+  firstName: string;
+  lastName: string;
+  company: string;
+  email: string;
+  phone: string;
+  mobile: string;
+  fax: string;
+  designation: string;
+  website: string;
+  testerSalesman: string;
+  category: string;
+  product: string;
+  leadSource: string;
+  leadStatus: string;
+  leadStartDate: string;
+  leadStartTime: string;
+  leadRemindDate: string;
+  leadRemindTime: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  expectedAmount: string;
+  paymentReceived: string;
+  comment: string;
+  facebook: string;
+  skype: string;
+  linkedIn: string;
+  gtalk: string;
+  twitter: string;
+  convertOption: string;
+}
+
+export default function CreateLead(): React.JSX.Element {
+  const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
     company: "",
@@ -39,16 +76,16 @@ export default function CreateLead() {
     convertOption: "",
   });
 
-  const [leads, setLeads] = useState([]);
+  const [leads, setLeads] = useState<FormData[]>([]);
 
   // dynamic input handler
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // form submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
 
     // validation
@@ -71,7 +108,7 @@ export default function CreateLead() {
   };
 
   // reset form handler
-  const handleReset = () => {
+  const handleReset = (): void => {
     setFormData({
       firstName: "",
       lastName: "",
@@ -111,7 +148,7 @@ export default function CreateLead() {
   };
 
   // cancel handler (optional toast)
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     toast.warning("❌ Lead creation cancelled!");
   };
 
@@ -148,7 +185,7 @@ export default function CreateLead() {
                 type="text"
                 name={name}
                 placeholder={placeholder}
-                value={formData[name]}
+                value={formData[name as keyof FormData]}
                 onChange={handleChange}
                 className="border rounded-md p-2"
               />
@@ -166,7 +203,7 @@ export default function CreateLead() {
               <div key={i} className="flex gap-2">
                 <select
                   name={name}
-                  value={formData[name]}
+                  value={formData[name as keyof FormData]}
                   onChange={handleChange}
                   className="border rounded-md p-2 w-full"
                 >
@@ -319,7 +356,7 @@ export default function CreateLead() {
           <h3 className="font-semibold mb-2">Social Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="pr-4 space-y-4 border-r border-gray-300">
-              {["facebook", "skype", "linkedIn"].map((name) => (
+              {(["facebook", "skype", "linkedIn"] as const).map((name) => (
                 <input
                   key={name}
                   name={name}
@@ -332,7 +369,7 @@ export default function CreateLead() {
               ))}
             </div>
             <div className="pl-4 space-y-4">
-              {["gtalk", "twitter"].map((name) => (
+              {(["gtalk", "twitter"] as const).map((name) => (
                 <input
                   key={name}
                   name={name}
