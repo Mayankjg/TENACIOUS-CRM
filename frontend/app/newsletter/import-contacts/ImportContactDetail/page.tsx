@@ -1,15 +1,23 @@
-// frontend/app/newsletter/import-contact-detail/page.tsx
+// frontend/app/newsletter/import-contact-detail/page.tsx - UPDATED WITH TENANT-AWARE API
 "use client";
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE = "https://tt-crm-pro.onrender.com";
+// Import tenant-aware utilities (same as Products page)
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  validateSession,
+} from "@/utils/api";
 
 interface Product {
   _id?: string;
   id?: string;
   name: string;
+  [key: string]: any;
 }
 
 interface Contact {
@@ -24,6 +32,12 @@ interface ImportData {
   columnHeaders: string[];
 }
 
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 export default function ImportContactDetail() {
   const router = useRouter();
   const [fileData, setFileData] = useState<string[][]>([]);
@@ -34,44 +48,43 @@ export default function ImportContactDetail() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
 
-  // Fetch products from API
+  // Validate session and fetch products on mount using tenant-aware API
   useEffect(() => {
+    if (!validateSession()) {
+      console.error("❌ Invalid session in Import Contact Detail");
+      alert("Session expired. Please login again.");
+      router.push("/login");
+      return;
+    }
+
     fetchProducts();
   }, []);
 
+  // Fetch products using tenant-aware API (same as Products page)
   const fetchProducts = async (): Promise<void> => {
+    if (!validateSession()) {
+      console.error("❌ Cannot fetch products - invalid session");
+      return;
+    }
+
     try {
       setLoadingProducts(true);
-      const res = await fetch(`${API_BASE}/api/manage-items/products/get-products`);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      console.log("🔄 Fetching products for import contact detail...");
+
+      const result: ApiResponse<Product[]> = await apiGet(
+        "/api/manage-items/products/get-products"
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch products");
       }
-      
-      const data = await res.json();
-      
-      // Handle different response formats
-      let productsArray: Product[] = [];
-      
-      if (Array.isArray(data)) {
-        // If response is directly an array
-        productsArray = data;
-      } else if (data.products && Array.isArray(data.products)) {
-        // If response has a products property
-        productsArray = data.products;
-      } else if (data.data && Array.isArray(data.data)) {
-        // If response has a data property
-        productsArray = data.data;
-      } else {
-        console.warn("Unexpected API response format:", data);
-        productsArray = [];
-      }
-      
-      setProducts(productsArray);
-    } catch (err) {
-      console.error("Fetch products error:", err);
-      alert("Error loading products. Please try again.");
-      setProducts([]); // Set empty array on error
+
+      console.log("✅ Fetched products:", result.data?.length || 0);
+      setProducts(result.data || []);
+    } catch (err: any) {
+      console.error("❌ Fetch products error:", err);
+      alert(err.message || "Failed to load products");
+      setProducts([]);
     } finally {
       setLoadingProducts(false);
     }
@@ -181,7 +194,7 @@ export default function ImportContactDetail() {
                     <select
                       value={selectedProduct}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedProduct(e.target.value)}
-                      className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent"
+                      className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent cursor-pointer"
                       disabled={loadingProducts}
                     >
                       <option value="">
@@ -195,7 +208,9 @@ export default function ImportContactDetail() {
                     </select>
                   </div>
                   {!loadingProducts && (!Array.isArray(products) || products.length === 0) && (
-                    <p className="text-amber-600 text-sm sm:ml-[152px]">No products available. Please add products first.</p>
+                    <p className="text-amber-600 text-sm sm:ml-[152px]">
+                      No products available. Please add products first in the Products page.
+                    </p>
                   )}
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
@@ -205,7 +220,7 @@ export default function ImportContactDetail() {
                     <select
                       value={nameColumnIndex}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => setNameColumnIndex(e.target.value)}
-                      className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent"
+                      className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent cursor-pointer"
                     >
                       <option value="">None</option>
                       {columnHeaders.map((header, index) => (
@@ -223,7 +238,7 @@ export default function ImportContactDetail() {
                     <select
                       value={emailColumnIndex}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => setEmailColumnIndex(e.target.value)}
-                      className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent"
+                      className="w-full sm:flex-1 border border-gray-300 rounded-md px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring hover:bg-gray-100 focus:border-transparent cursor-pointer"
                     >
                       <option value="">None</option>
                       {columnHeaders.map((header, index) => (

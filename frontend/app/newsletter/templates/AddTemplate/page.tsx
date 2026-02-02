@@ -1,15 +1,23 @@
-// frontend/app/newsletter/add-template/page.tsx
+// frontend/app/newsletter/add-template/page.tsx - UPDATED WITH TENANT-AWARE PRODUCT SYNC
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
-const API_BASE = "https://tt-crm-pro.onrender.com";
+// Import tenant-aware utilities (same as Products page)
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  validateSession,
+} from "@/utils/api";
 
 interface Product {
   _id?: string;
   id?: string;
   name: string;
+  [key: string]: any;
 }
 
 interface Template {
@@ -21,6 +29,12 @@ interface Template {
   isCustom: boolean;
   previewImage: string | null;
   createdAt: string;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
 declare global {
@@ -49,45 +63,43 @@ export default function AddTemplatePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
 
-  // Fetch products from API
+  // Validate session and fetch products on mount
   useEffect(() => {
+    if (!validateSession()) {
+      console.error("❌ Invalid session in Add Template");
+      alert("Session expired. Please login again.");
+      router.push("/login");
+      return;
+    }
+
     fetchProducts();
   }, []);
 
+  // Fetch products using tenant-aware API (same as Products page)
   const fetchProducts = async (): Promise<void> => {
+    if (!validateSession()) {
+      console.error("❌ Cannot fetch products - invalid session");
+      return;
+    }
+
     try {
       setLoadingProducts(true);
-      const res = await fetch(`${API_BASE}/api/manage-items/products/get-products`);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      console.log("🔄 Fetching products for template...");
+
+      const result: ApiResponse<Product[]> = await apiGet(
+        "/api/manage-items/products/get-products"
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch products");
       }
-      
-      const data = await res.json();
-      
-      // Handle different response formats
-      let productsArray: Product[] = [];
-      
-      if (Array.isArray(data)) {
-        // If response is directly an array
-        productsArray = data;
-      } else if (data.products && Array.isArray(data.products)) {
-        // If response has a products property
-        productsArray = data.products;
-      } else if (data.data && Array.isArray(data.data)) {
-        // If response has a data property
-        productsArray = data.data;
-      } else {
-        console.warn("Unexpected API response format:", data);
-        productsArray = [];
-      }
-      
-      console.log("Fetched products:", productsArray);
-      setProducts(productsArray);
-    } catch (err) {
-      console.error("Fetch products error:", err);
-      alert("Error loading products. Please try again.");
-      setProducts([]); // Set empty array on error
+
+      console.log("✅ Fetched products:", result.data?.length || 0);
+      setProducts(result.data || []);
+    } catch (err: any) {
+      console.error("❌ Fetch products error:", err);
+      alert(err.message || "Failed to load products");
+      setProducts([]);
     } finally {
       setLoadingProducts(false);
     }
@@ -335,7 +347,9 @@ export default function AddTemplatePage() {
                     ))}
                   </select>
                   {!loadingProducts && (!Array.isArray(products) || products.length === 0) && (
-                    <p className="text-amber-600 text-sm mt-2">No products available. Please add products first.</p>
+                    <p className="text-amber-600 text-sm mt-2">
+                      No products available. Please add products first in the Products page.
+                    </p>
                   )}
                   {loadingProducts && (
                     <p className="text-blue-600 text-sm mt-2">Loading products...</p>
@@ -455,13 +469,13 @@ export default function AddTemplatePage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button 
                     onClick={handleSave} 
-                    className="w-full sm:w-auto bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-8 py-1.5 rounded-md text-base font-medium transition-colors"
+                    className="w-full sm:w-auto bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-8 py-1.5 rounded-md text-base font-medium transition-colors cursor-pointer"
                   >
                     Save
                   </button>
                   <button 
                     onClick={handleCancel} 
-                    className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-8 py-1.5 rounded-md text-base font-medium transition-colors"
+                    className="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-700 px-8 py-1.5 rounded-md text-base font-medium transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>

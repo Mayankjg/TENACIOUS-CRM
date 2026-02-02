@@ -1,4 +1,4 @@
-// frontend/app/newsletter/template/page.tsx - CORRECTED VERSION
+// frontend/app/newsletter/template/page.tsx - UPDATED WITH TENANT-AWARE API
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent, MouseEvent } from 'react';
@@ -6,7 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, Link, Image, Table, Code, Palette, Type, Undo, Redo, ChevronDown } from 'lucide-react';
 import { FaPen, FaTrash } from 'react-icons/fa';
 
-const API_BASE = "https://tt-crm-pro.onrender.com";
+// Import tenant-aware utilities (same as Products page)
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  validateSession,
+} from "@/utils/api";
 
 interface TemplateContent {
   title: string;
@@ -28,6 +35,7 @@ interface Product {
   _id?: string;
   id?: string;
   name: string;
+  [key: string]: any;
 }
 
 interface Email {
@@ -64,6 +72,12 @@ interface ToolbarButtonProps {
   title: string;
 }
 
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 const TEMPLATES: TemplateType[] = [
   { id: 'default-01', name: 'Default 01', colors: ['#e8d4c4', '#d4b89c', '#8b4513'], content: { title: 'Tenacious Sales', subtitle: 'Your Lead Manager', description: 'Tenacious is one of the best online digital marketing agency for businesses and startups across the world for Website, Apps, SEO,SMM and SEM.', body: 'Tenacious Group was founded in 2011, and so far we have served more than 175 clients across 15 countries all around the globe. We have delivered more than 253+ successful projects till date.', callToAction: 'Get Started Today', footer: 'Thank you for choosing our services. We look forward to working with you.' } },
   { id: 'default-02', name: 'Default 02', colors: ['#f5c4c4', '#e89c9c', '#c24040'], content: { title: 'Food-Chow', subtitle: 'Online Ordering System', description: 'It includes point-of-sale software to manage billing, orders, and payments in-house.', body: 'FoodChow is a technology platform and software suite for online food ordering, restaurant point-of-sale (POS), and restaurant business management — primarily aimed at helping restaurants, cafés, cloud kitchens, and hospitality businesses go digital and accept orders without relying on third-party aggregators.', callToAction: 'View Our Portfolio', footer: 'Let\'s create something amazing together. Contact us today!' } },
@@ -95,41 +109,47 @@ export default function Template() {
   const [editedEmail, setEditedEmail] = useState<string>('');
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
 
-  // Fetch products from backend API - FIXED
+  // Validate session and fetch products on mount using tenant-aware API
   useEffect(() => {
-    const fetchProducts = async (): Promise<void> => {
-      try {
-        setIsLoadingProducts(true);
-        const res = await fetch(`${API_BASE}/api/manage-items/products/get-products`);
-        const data = await res.json();
-        
-        console.log("API Response:", data); // Debug log
-        
-        // Handle different response formats
-        let productsArray: Product[] = [];
-        if (Array.isArray(data)) {
-          productsArray = data;
-        } else if (data.products && Array.isArray(data.products)) {
-          productsArray = data.products;
-        } else if (data.data && Array.isArray(data.data)) {
-          productsArray = data.data;
-        } else {
-          console.warn("Unexpected API response format:", data);
-          productsArray = [];
-        }
-        
-        console.log("Products Array:", productsArray); // Debug log
-        setProducts(productsArray);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setProducts([]);
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
+    if (!validateSession()) {
+      console.error("❌ Invalid session in Template");
+      alert("Session expired. Please login again.");
+      router.push("/login");
+      return;
+    }
 
     fetchProducts();
   }, []);
+
+  // Fetch products using tenant-aware API (same as Products page)
+  const fetchProducts = async (): Promise<void> => {
+    if (!validateSession()) {
+      console.error("❌ Cannot fetch products - invalid session");
+      return;
+    }
+
+    try {
+      setIsLoadingProducts(true);
+      console.log("🔄 Fetching products for template...");
+
+      const result: ApiResponse<Product[]> = await apiGet(
+        "/api/manage-items/products/get-products"
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch products");
+      }
+
+      console.log("✅ Fetched products:", result.data?.length || 0);
+      setProducts(result.data || []);
+    } catch (err: any) {
+      console.error("❌ Fetch products error:", err);
+      alert(err.message || "Failed to load products");
+      setProducts([]);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("fromEmails");
@@ -404,6 +424,9 @@ export default function Template() {
             <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.646 7.354a.75.75 0 011.06 1.06l-6.177 6.177a.75.75 0 01-1.06 0L3.354 8.414a.75.75 0 011.06-1.06l4.878 4.879z" /></svg>
           </div>
         </div>
+        {!isLoadingProducts && (!Array.isArray(products) || products.length === 0) && (
+          <p className="text-amber-600 text-sm">No products available. Please add products first.</p>
+        )}
       </div>
 
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">

@@ -340,7 +340,11 @@ const SalespersonCard: React.FC = () => {
                         </div>
 
                         <div className="flex items-center justify-end md:col-span-3">
-                          <button className="bg-red-500 cursor-pointer text-white text-sm px-4 py-1.5 rounded hover:bg-red-600 transition-colors whitespace-nowrap">
+                          {/* ✅ UPDATED: Redirects to /leads/leadpage */}
+                          <button
+                            onClick={() => router.push(`/leads/leadpage?salespersonId=${sp.id}`)}
+                            className="bg-red-500 cursor-pointer text-white text-sm px-4 py-1.5 rounded hover:bg-red-600 transition-colors whitespace-nowrap"
+                          >
                             View Leads
                           </button>
                         </div>
