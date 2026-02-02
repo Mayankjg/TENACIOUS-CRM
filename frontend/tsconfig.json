@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/dashboard/page.js", "proxy.ts"  ],
+, "app/dashboard/page.tsx", "proxy.ts", "app/dashboard/components/SalesSummary.tsx" , "app/dashboard/SalesSummary.tsx", "app/manage-items/tags/TagModal.tsx", "app/manage-salespersons/salesperson-list/managesalesperson/components/SalespersonCard.tsx", "app/reports/deals-list/page.tsx" ],
   "exclude": ["node_modules"]
 }
