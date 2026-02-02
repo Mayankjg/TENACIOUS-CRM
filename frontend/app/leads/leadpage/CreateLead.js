@@ -1,4 +1,4 @@
-// frontend/app/leads/CreateLead.tsx - COMPLETE MULTI-SOURCE TAG SELECTOR (TypeScript)
+// frontend/app/leads/CreateLead.jsx - MERGED VERSION WITH CALENDAR & ANALOG CLOCK
 
 "use client";
 
@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import "react-toastify/dist/ReactToastify.css";
+import { Calendar, ArrowLeft, ArrowRight } from 'lucide-react';
 
 import ActivityHistory from "./ActivityHistoryPage.js/ActivityHistory";
 import CategoriesModal from "@/app/manage-items/categories/CategoriesModal";
@@ -24,102 +25,13 @@ import {
   isSalesperson
 } from "@/utils/api";
 
-interface Country {
-  name: string;
-  callingCode: string;
-  displayName: string;
-}
-
-interface User {
-  id: string;
-  role: string;
-  tenantId: string;
-  tenantName?: string;
-  username: string;
-}
-
-interface FormData {
-  firstName: string;
-  lastName: string;
-  company: string;
-  email: string;
-  phone: string;
-  mobile: string;
-  fax: string;
-  designation: string;
-  website: string;
-  salesperson: string;
-  category: string;
-  product: string;
-  leadSource: string;
-  leadStatus: string;
-  tags: string[];
-  leadStartDate: string;
-  leadStartTime: string;
-  leadRemindDate: string;
-  leadRemindTime: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  postalCode: string;
-  expectedAmount: string;
-  paymentReceived: string;
-  comment: string;
-  facebook: string;
-  skype: string;
-  linkedIn: string;
-  gtalk: string;
-  twitter: string;
-  convertOption: string;
-}
-
-interface DropdownItem {
-  _id: string;
-  name: string;
-  username?: string;
-}
-
-interface Tag {
-  _id: string;
-  name: string;
-  color: string;
-  description?: string;
-  source?: string;
-}
-
-interface NewTag {
-  name: string;
-  color: string;
-  description: string;
-}
-
-interface Salesperson {
-  _id?: string;
-  id?: string;
-  username: string;
-}
-
-interface ExistingData {
-  _id: string;
-  [key: string]: any;
-}
-
-interface CreateLeadProps {
-  onSave?: (data?: any) => void;
-  onCancel?: () => void;
-  existingData?: ExistingData | null;
-}
-
-type TagSource = "crm" | "systemeio" | "whatsapp";
-
-export default function CreateLead({ onSave, onCancel, existingData }: CreateLeadProps) {
+export default function CreateLead({ onSave, onCancel, existingData }) {
   const router = useRouter();
-  const activityHistoryRef = useRef<HTMLDivElement>(null);
+  const activityHistoryRef = useRef(null);
   const isEditMode = Boolean(existingData?._id);
 
   /* --------------------------- USER & SESSION --------------------------- */
-  const [loggedUser, setLoggedUser] = useState<User | null>(null);
+  const [loggedUser, setLoggedUser] = useState(null);
 
   useEffect(() => {
     if (!validateSession()) {
@@ -130,7 +42,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
 
     const user = getUser();
     if (user) {
-      setLoggedUser(user as User);
+      setLoggedUser(user);
       console.log("✅ User loaded:", {
         id: user.id,
         role: user.role,
@@ -139,17 +51,12 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     }
   }, [router]);
 
-  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(false);
-  const [userIsSalesperson, setUserIsSalesperson] = useState<boolean>(false);
-
-  useEffect(() => {
-    setUserIsAdmin(isAdmin());
-    setUserIsSalesperson(isSalesperson());
-  }, []);
+  const userIsAdmin = isAdmin();
+  const userIsSalesperson = isSalesperson();
 
   /* --------------------------- COUNTRIES --------------------------- */
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [loadingCountries, setLoadingCountries] = useState<boolean>(true);
+  const [countries, setCountries] = useState([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -159,8 +66,8 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
         );
         const data = await response.json();
 
-        const formattedCountries: Country[] = data
-          .map((country: any) => {
+        const formattedCountries = data
+          .map((country) => {
             const name = country.name?.common || "";
             const root = country.idd?.root || "";
             const suffixes = country.idd?.suffixes || [];
@@ -176,8 +83,8 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
               displayName: callingCode ? `${name} (${callingCode})` : name,
             };
           })
-          .filter((c: Country) => c.name && c.callingCode)
-          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
+          .filter((c) => c.name && c.callingCode)
+          .sort((a, b) => a.name.localeCompare(b.name));
 
         setCountries(formattedCountries);
         setLoadingCountries(false);
@@ -191,8 +98,16 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     fetchCountries();
   }, []);
 
+  /* --------------------------- CALENDAR & TIME PICKER STATE --------------------------- */
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectingMinute, setSelectingMinute] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const clockRef = useRef(null);
+
   /* --------------------------- DEFAULT FORM --------------------------- */
-  const defaultForm = useCallback((): FormData => {
+  const defaultForm = useCallback(() => {
     const now = new Date();
     return {
       firstName: "",
@@ -212,8 +127,8 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       tags: [],
       leadStartDate: now.toISOString().split("T")[0],
       leadStartTime: now.toTimeString().slice(0, 5),
-      leadRemindDate: now.toISOString().split("T")[0],
-      leadRemindTime: now.toTimeString().slice(0, 5),
+      leadRemindDate: "",
+      leadRemindTime: "12:15",
       address: "",
       city: "",
       state: "",
@@ -231,24 +146,24 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     };
   }, []);
 
-  const [formData, setFormData] = useState<FormData>(defaultForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const submittedRef = useRef<boolean>(false);
+  const [formData, setFormData] = useState(defaultForm);
+  const [errors, setErrors] = useState({});
+  const submittedRef = useRef(false);
 
   /* --------------------------- DROPDOWNS --------------------------- */
-  const [categories, setCategories] = useState<DropdownItem[]>([]);
-  const [products, setProducts] = useState<DropdownItem[]>([]);
-  const [leadSources, setLeadSources] = useState<DropdownItem[]>([]);
-  const [leadStatuses, setLeadStatuses] = useState<DropdownItem[]>([]);
-  const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [leadSources, setLeadSources] = useState([]);
+  const [leadStatuses, setLeadStatuses] = useState([]);
+  const [salespersons, setSalespersons] = useState([]);
+  const [tags, setTags] = useState([]);
 
   /* 🔥 MULTI-SOURCE TAG SYSTEM 🔥 */
-  const [activeTagSource, setActiveTagSource] = useState<TagSource>("crm");
-  const [systemeioTags, setSystemeioTags] = useState<Tag[]>([]);
-  const [whatsappTags, setWhatsappTags] = useState<Tag[]>([]);
-  const [loadingExternalTags, setLoadingExternalTags] = useState<boolean>(false);
-  const [showTagDropdown, setShowTagDropdown] = useState<boolean>(false);
+  const [activeTagSource, setActiveTagSource] = useState("crm");
+  const [systemeioTags, setSystemeioTags] = useState([]);
+  const [whatsappTags, setWhatsappTags] = useState([]);
+  const [loadingExternalTags, setLoadingExternalTags] = useState(false);
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   // 🔥 Fetch Systeme.io Tags
   const fetchSystemeioTags = async () => {
@@ -268,7 +183,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       }
 
       const data = await response.json();
-      const formattedTags: Tag[] = (data.tags || []).map((tag: any) => ({
+      const formattedTags = (data.tags || []).map(tag => ({
         _id: `systemeio_${tag.id}`,
         name: tag.name,
         color: "#FF6B00",
@@ -292,7 +207,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       setLoadingExternalTags(true);
       console.log("🔄 Fetching WhatsApp tags via CRM backend...");
 
-      const customerId = "1";
+      const customerId = "1"; // working WhatsApp customerId
       const result = await apiGet(`/api/external-tags/whatsapp/${customerId}`);
 
       console.log("📦 Full API result:", result);
@@ -307,7 +222,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
 
       console.log("🏷️ Extracted WhatsApp tags:", tagArray);
 
-      const formattedTags: Tag[] = tagArray.map((tag: any) => ({
+      const formattedTags = tagArray.map((tag) => ({
         _id: `whatsapp_${tag.id}`,
         name: tag.tag,
         color: "#25D366",
@@ -336,7 +251,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   }, [activeTagSource, loggedUser]);
 
   // 🔥 Get current tag list based on active source
-  const getCurrentTagList = (): Tag[] => {
+  const getCurrentTagList = () => {
     switch (activeTagSource) {
       case "systemeio":
         return systemeioTags;
@@ -386,8 +301,149 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     }
   }, [loggedUser, fetchDropdownData]);
 
+  /* --------------------------- CALENDAR FUNCTIONS --------------------------- */
+  const daysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysArray = [];
+
+    const firstDayOfWeek = firstDay.getDay();
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      daysArray.push({ day: prevMonthLastDay - i, isCurrentMonth: false });
+    }
+
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      daysArray.push({ day: i, isCurrentMonth: true });
+    }
+
+    const remainingDays = 42 - daysArray.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      daysArray.push({ day: i, isCurrentMonth: false });
+    }
+
+    return daysArray;
+  };
+
+  const handleDateSelect = (day, isCurrentMonth) => {
+    if (!isCurrentMonth) return;
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    setFormData(prev => ({ ...prev, leadRemindDate: `${year}-${month}-${dayStr}` }));
+    setShowCalendar(false);
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  };
+
+  const isPastDate = (day, isCurrentMonth) => {
+    if (!isCurrentMonth) return true;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const selectedDate = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    );
+
+    return selectedDate < today;
+  };
+
+  /* --------------------------- ANALOG CLOCK TIME PICKER FUNCTIONS --------------------------- */
+  const handleClockClick = (e) => {
+    if (!clockRef.current) return;
+
+    const rect = clockRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const x = e.clientX - rect.left - centerX;
+    const y = e.clientY - rect.top - centerY;
+
+    const distance = Math.sqrt(x * x + y * y);
+    let angle = Math.atan2(y, x) * (180 / Math.PI);
+    angle = (angle + 90 + 360) % 360;
+
+    if (selectingMinute) {
+      let selectedMinute = Math.round(angle / 6) % 60;
+      const timeValue = `${formData.leadRemindTime.split(':')[0]}:${selectedMinute.toString().padStart(2, '0')}`;
+      setFormData(prev => ({ ...prev, leadRemindTime: timeValue }));
+
+      if (!isDragging) {
+        setTimeout(() => {
+          setShowTimePicker(false);
+          setSelectingMinute(false);
+        }, 200);
+      }
+    } else {
+      const isInnerCircle = distance < 65;
+      let selectedHour;
+      let hourPosition = Math.round(angle / 30) % 12;
+
+      if (isInnerCircle) {
+        selectedHour = hourPosition === 0 ? 12 : hourPosition;
+      } else {
+        selectedHour = hourPosition === 0 ? 0 : hourPosition + 12;
+      }
+
+      const timeValue = `${selectedHour.toString().padStart(2, '0')}:${formData.leadRemindTime.split(':')[1]}`;
+      setFormData(prev => ({ ...prev, leadRemindTime: timeValue }));
+
+      if (!isDragging) {
+        setSelectingMinute(true);
+      }
+    }
+  };
+
+  const handleClockMouseMove = (e) => {
+    if (!isDragging || !clockRef.current) return;
+    handleClockClick(e);
+  };
+
+  const handleTimeClick = (hour) => {
+    const timeValue = `${hour.toString().padStart(2, '0')}:${formData.leadRemindTime.split(':')[1]}`;
+    setFormData(prev => ({ ...prev, leadRemindTime: timeValue }));
+    setSelectingMinute(true);
+  };
+
+  const handleMinuteClick = (minute) => {
+    const timeValue = `${formData.leadRemindTime.split(':')[0]}:${minute.toString().padStart(2, '0')}`;
+    setFormData(prev => ({ ...prev, leadRemindTime: timeValue }));
+    setTimeout(() => {
+      setShowTimePicker(false);
+      setSelectingMinute(false);
+    }, 200);
+  };
+
+  const getCurrentAngle = () => {
+    const [hours, minutes] = formData.leadRemindTime.split(':').map(Number);
+    if (selectingMinute) {
+      return (minutes / 60) * 360;
+    } else {
+      let hour12 = hours % 12;
+      if (hour12 === 0) hour12 = 12;
+      return (hour12 / 12) * 360;
+    }
+  };
+
+  const getCurrentRadius = () => {
+    if (selectingMinute) return 'outer';
+    const hours = parseInt(formData.leadRemindTime.split(':')[0]);
+    return (hours >= 1 && hours <= 12) ? 'inner' : 'outer';
+  };
+
   /* --------------------------- COUNTRY CALLING CODE LOGIC --------------------------- */
-  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
+  const extractPhoneNumber = (phoneValue, callingCode) => {
     if (!phoneValue) return "";
 
     const trimmed = phoneValue.trim();
@@ -400,7 +456,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     return cleanedPhone;
   };
 
-  const formatPhoneWithCode = (phoneNumber: string, callingCode: string): string => {
+  const formatPhoneWithCode = (phoneNumber, callingCode) => {
     if (!phoneNumber) return callingCode ? `${callingCode} ` : "";
 
     const cleanPhone = phoneNumber.trim();
@@ -409,7 +465,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     return callingCode ? `${callingCode} ${cleanPhone}` : cleanPhone;
   };
 
-  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCountryChange = (e) => {
     const selectedCountryName = e.target.value;
     const selectedCountry = countries.find((c) => c.name === selectedCountryName);
     const newCallingCode = selectedCountry?.callingCode || "";
@@ -433,29 +489,17 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     setErrors((prev) => ({ ...prev, country: "" }));
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handlePhoneInputChange = (e, fieldName) => {
+    const rawValue = e.target.value;
 
     const currentCountry = countries.find((c) => c.name === formData.country);
     const callingCode = currentCountry?.callingCode || "";
 
-    if (callingCode && value && !value.startsWith(callingCode)) {
-      const expectedPrefix = `${callingCode} `;
-      if (!value.startsWith(expectedPrefix)) {
-        const numberPart = extractPhoneNumber(value, callingCode);
-        const newValue = formatPhoneWithCode(numberPart, callingCode);
-
-        setFormData((prev) => ({
-          ...prev,
-          [name]: newValue,
-        }));
-        return;
-      }
-    }
+    const fullValue = callingCode ? `${callingCode} ${rawValue}` : rawValue;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [fieldName]: fullValue,
     }));
   };
 
@@ -465,7 +509,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       console.log("📝 Edit Mode - Processing tags:", existingData.tags);
 
       const normalizedTags = (existingData.tags || [])
-        .map((t: any) => {
+        .map((t) => {
           if (typeof t === "string") {
             if (t.length === 24 && /^[a-f0-9]{24}$/i.test(t)) {
               const foundTag = tags.find((tag) => tag._id === t);
@@ -509,7 +553,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   }, [isEditMode, userIsSalesperson, loggedUser]);
 
   /* --------------------------- INPUT --------------------------- */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (userIsSalesperson && name === "salesperson") return;
@@ -520,8 +564,8 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   };
 
   /* --------------------------- VALIDATION --------------------------- */
-  const validateForm = (): Partial<Record<keyof FormData, string>> => {
-    const e: Partial<Record<keyof FormData, string>> = {};
+  const validateForm = () => {
+    const e = {};
     if (!formData.firstName) e.firstName = "Required";
     if (!formData.salesperson) e.salesperson = "Required";
     if (!formData.category) e.category = "Required";
@@ -531,7 +575,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   };
 
   /* --------------------------- ACTIVITY HISTORY --------------------------- */
-  const [latestComment, setLatestComment] = useState<string>("");
+  const [latestComment, setLatestComment] = useState("");
 
   useEffect(() => {
     if (isEditMode && formData.comment) {
@@ -539,7 +583,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     }
   }, [isEditMode, formData.comment]);
 
-  const handleCommentUpdate = (newComment: string) => {
+  const handleCommentUpdate = (newComment) => {
     console.log("📝 Comment Update Triggered:", newComment);
     setLatestComment(newComment);
     setFormData((prev) => ({
@@ -549,7 +593,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   };
 
   /* --------------------------- SUBMIT --------------------------- */
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (submittedRef.current) return;
     submittedRef.current = true;
@@ -584,13 +628,13 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
           ...formData,
           comment: latestComment,
           tags: formData.tags || [],
-          tenantId: user.tenantId, 
+          tenantId: user.tenantId,
         };
 
         console.log("📤 Update Payload:", updatePayload); 
 
         const result = await apiPut(
-          `/api/leads/update-lead/${existingData!._id}`,
+          `/api/leads/update-lead/${existingData._id}`,
           updatePayload
         );
 
@@ -621,7 +665,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
         handleReset();
         onSave?.({ success: true });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("❌ Submit Error:", err);
       toast.error(err.message || "Something went wrong");
     } finally {
@@ -647,17 +691,17 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   };
 
   /* --------------------------- MODALS --------------------------- */
-  const [showCategoryModal, setShowCategoryModal] = useState<boolean>(false);
-  const [showProductModal, setShowProductModal] = useState<boolean>(false);
-  const [showLeadSourceModal, setShowLeadSourceModal] = useState<boolean>(false);
-  const [showLeadStatusModal, setShowLeadStatusModal] = useState<boolean>(false);
-  const [showTagModal, setShowTagModal] = useState<boolean>(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showLeadSourceModal, setShowLeadSourceModal] = useState(false);
+  const [showLeadStatusModal, setShowLeadStatusModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
 
-  const [newCategoryName, setNewCategoryName] = useState<string>("");
-  const [newProduct, setNewProduct] = useState<string>("");
-  const [newLeadName, setNewLeadName] = useState<string>("");
-  const [newLeadStatus, setNewLeadStatus] = useState<string>("");
-  const [newTag, setNewTag] = useState<NewTag>({
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newProduct, setNewProduct] = useState("");
+  const [newLeadName, setNewLeadName] = useState("");
+  const [newLeadStatus, setNewLeadStatus] = useState("");
+  const [newTag, setNewTag] = useState({
     name: "",
     color: "#3B82F6",
     description: "",
@@ -678,7 +722,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       setShowCategoryModal(false);
       setNewCategoryName("");
       toast.success("Category added successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Add Category Error:", error);
       toast.error(error.message || "Failed to add category");
     }
@@ -699,7 +743,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       setShowProductModal(false);
       setNewProduct("");
       toast.success("Product added successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Add Product Error:", error);
       toast.error(error.message || "Failed to add product");
     }
@@ -720,7 +764,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       setShowLeadSourceModal(false);
       setNewLeadName("");
       toast.success("Lead source added successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Add Lead Source Error:", error);
       toast.error(error.message || "Failed to add lead source");
     }
@@ -741,7 +785,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       setShowLeadStatusModal(false);
       setNewLeadStatus("");
       toast.success("Lead status added successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Add Lead Status Error:", error);
       toast.error(error.message || "Failed to add lead status");
     }
@@ -772,14 +816,14 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
       setShowTagModal(false);
       setNewTag({ name: "", color: "#3B82F6", description: "" });
       toast.success("Tag added and selected!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Add Tag Error:", error);
       toast.error(error.message || "Failed to add tag");
     }
   };
 
   /* --------------------------- TAG SELECTION --------------------------- */
-  const handleTagSelect = (tagName: string) => {
+  const handleTagSelect = (tagName) => {
     setFormData((prev) => {
       const exists = prev.tags?.includes(tagName);
       return {
@@ -791,7 +835,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
     });
   };
 
-  const removeTag = (tagName: string) => {
+  const removeTag = (tagName) => {
     setFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tagName),
@@ -811,6 +855,12 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   ];
 
   /* -------------------- UI -------------------- */
+  const currentCountry = countries.find((c) => c.name === formData.country);
+  const currentCallingCode = currentCountry?.callingCode || "";
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentAngle = getCurrentAngle();
+  const currentRadius = getCurrentRadius();
+
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-6">
       <ToastContainer position="top-right" autoClose={2000} />
@@ -848,17 +898,82 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
               </div>
 
               {/* Remaining left fields */}
-              {leftFields.map(({ key, placeholder, isPhone }) => (
-                <div key={key}>
-                  <input
-                    name={key}
-                    value={(formData as any)[key] || ""}
-                    onChange={isPhone ? handlePhoneChange : handleChange}
-                    placeholder={placeholder}
-                    className="border rounded-sm px-3 h-[40px] w-full text-sm"
-                  />
-                </div>
-              ))}
+              {leftFields.map(({ key, placeholder, isPhone }) => {
+                if (isPhone) {
+                  return (
+                    <div key={key}>
+                      <div className="relative h-[40px]">
+                        <div className="absolute left-0 top-0 h-full w-[50px] border border-r-0 rounded-l-sm bg-gray-300 flex items-center justify-center text-gray-600 text-sm font-medium select-none pointer-events-none z-10">
+                          {currentCallingCode || "+91"}
+                        </div>
+
+                        <input
+                          type="text"
+                          name={key}
+                          value={extractPhoneNumber(formData[key] || "", currentCallingCode)}
+                          onChange={(e) => handlePhoneInputChange(e, key)}
+                          placeholder={placeholder}
+                          className="w-full h-full border rounded-sm pl-[68px] pr-3 outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Special handling for website field - add country beside it
+                if (key === "website") {
+                  return (
+                    <React.Fragment key={key}>
+                      <div>
+                        <input
+                          name={key}
+                          value={formData[key] || ""}
+                          onChange={handleChange}
+                          placeholder={placeholder}
+                          className="border rounded-sm px-3 h-[40px] w-full text-sm"
+                        />
+                      </div>
+                      
+                      {/* Country dropdown beside website */}
+                      <div>
+                        <select
+                          name="country"
+                          value={formData.country}
+                          onChange={handleCountryChange}
+                          disabled={loadingCountries}
+                          className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${
+                            errors.country ? "border-red-500" : ""
+                          }`}
+                        >
+                          <option value="">
+                            {loadingCountries ? "Loading countries..." : "Select Country"}
+                          </option>
+                          {countries.map((country) => (
+                            <option key={country.name} value={country.name}>
+                              {country.displayName}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.country && (
+                          <p className="text-red-500 text-xs mt-1">{errors.country}</p>
+                        )}
+                      </div>
+                    </React.Fragment>
+                  );
+                }
+
+                return (
+                  <div key={key}>
+                    <input
+                      name={key}
+                      value={formData[key] || ""}
+                      onChange={handleChange}
+                      placeholder={placeholder}
+                      className="border rounded-sm px-3 h-[40px] w-full text-sm"
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -872,7 +987,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                     name="salesperson"
                     value={formData.salesperson}
                     onChange={handleChange}
-                    className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.salesperson ? "border-red-500" : ""
+                    className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${errors.salesperson ? "border-red-500" : ""
                       }`}
                   >
                     <option value="">Select Sales person *</option>
@@ -885,7 +1000,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
 
                   <button
                     type="button"
-                    className="bg-gray-300 hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
+                    className="bg-gray-300 cursor-pointer hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
                     onClick={() =>
                       router.push(
                         "/manage-salespersons/salesperson-list/managesalesperson/add"
@@ -910,7 +1025,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.category ? "border-red-500" : ""
+                  className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${errors.category ? "border-red-500" : ""
                     }`}
                 >
                   <option value="">Select Category *</option>
@@ -924,7 +1039,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                 <button
                   type="button"
                   onClick={() => setShowCategoryModal(true)}
-                  className="bg-gray-300 hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
+                  className="bg-gray-300 cursor-pointer hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
                 >
                   +
                 </button>
@@ -941,7 +1056,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                   name="product"
                   value={formData.product}
                   onChange={handleChange}
-                  className={`border rounded-sm px-3 h-[40px] w-full text-sm ${errors.product ? "border-red-500" : ""
+                  className={`border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm ${errors.product ? "border-red-500" : ""
                     }`}
                 >
                   <option value="">Select Product *</option>
@@ -955,7 +1070,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                 <button
                   type="button"
                   onClick={() => setShowProductModal(true)}
-                  className="bg-gray-300 hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
+                  className="bg-gray-300 cursor-pointer hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
                 >
                   +
                 </button>
@@ -971,7 +1086,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                 name="leadSource"
                 value={formData.leadSource}
                 onChange={handleChange}
-                className="border rounded-sm px-3 h-[40px] w-full text-sm"
+                className="border cursor-pointer rounded-sm px-3 h-[40px] w-full text-sm"
               >
                 <option value="">Select Lead Source</option>
                 {leadSources.map((src) => (
@@ -984,7 +1099,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
               <button
                 type="button"
                 onClick={() => setShowLeadSourceModal(true)}
-                className="bg-gray-300 hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
+                className="bg-gray-300 cursor-pointer hover:bg-gray-400 w-[40px] h-[40px] flex-shrink-0 rounded text-xl transition-colors"
               >
                 +
               </button>
@@ -1180,46 +1295,265 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
           </div>
         </div>
 
-        {/* -------------------- DATES (Start & Remind) -------------------- */}
+        {/* -------------------- DATES (Start & Remind) WITH CALENDAR & ANALOG CLOCK -------------------- */}
         <div className="flex flex-col lg:flex-row w-full border-b border-gray-200 mt-6 pb-6 gap-6">
           <div className="flex-1 lg:pr-6 lg:border-r border-gray-300">
-            <h3 className="font-semibold mb-2">Lead Start Date</h3>
+            <h3 className="font-semibold mb-2 text-sm">Lead Start Date</h3>
             <div className="flex gap-2">
+              <div className="relative w-[30%]">
+                <input
+                  type="text"
+                  value={formData.leadStartDate}
+                  readOnly
+                  className="w-full pl-2 pr-9 h-[38px] border rounded-sm bg-gray-0 text-gray-700 text-xs cursor-not-allowed"
+                />
+                <button type="button" className="absolute right-0 top-0 h-full w-9 bg-blue-500 text-white rounded-r flex items-center justify-center cursor-not-allowed">
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </div>
               <input
-                type="date"
-                name="leadStartDate"
-                value={formData.leadStartDate}
-                onChange={handleChange}
-                className="border cursor-pointer rounded-sm px-3 h-[40px] w-1/2 text-sm"
-              />
-              <input
-                type="time"
-                name="leadStartTime"
+                type="text"
                 value={formData.leadStartTime}
-                onChange={handleChange}
-                className="border cursor-pointer rounded-sm px-3 h-[40px] w-1/2 text-sm"
+                readOnly
+                className="w-[30%] px-2 h-[38px] border rounded-sm bg-gray-0 text-gray-700 text-center text-xs cursor-not-allowed"
               />
             </div>
           </div>
 
-          <div className="w-full lg:w-[33%] lg:pl-6">
-            <h3 className="font-semibold mb-2">Lead Remind Date</h3>
+          <div className="w-full lg:w-[33%] lg:pl-6 relative">
+            <h3 className="font-semibold mb-2 text-sm">Lead Remind Date</h3>
             <div className="flex gap-2">
-              <input
-                type="date"
-                name="leadRemindDate"
-                value={formData.leadRemindDate}
-                onChange={handleChange}
-                className="border cursor-pointer rounded-sm px-3 h-[40px] w-1/2 text-sm"
-              />
-              <input
-                type="time"
-                name="leadRemindTime"
-                value={formData.leadRemindTime}
-                onChange={handleChange}
-                className="border cursor-pointer rounded-sm px-3 h-[40px] w-1/2 text-sm"
-              />
+              <div className="relative w-1/2">
+                <input
+                  type="text"
+                  value={formData.leadRemindDate || '0000-00-00'}
+                  readOnly
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="w-full pl-2 pr-9 h-[38px] border rounded-sm bg-white text-gray-400 cursor-pointer text-xs"
+                  placeholder="0000-00-00"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="absolute right-0 top-0 h-full w-9 bg-blue-500 text-white rounded-r flex items-center justify-center hover:bg-blue-600"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Analog Time Picker Input */}
+              <div className="relative w-1/2">
+                <input
+                  type="text"
+                  value={formData.leadRemindTime || '12:15'}
+                  readOnly
+                  onClick={() => {
+                    setShowTimePicker(!showTimePicker);
+                    setSelectingMinute(false);
+                  }}
+                  className="w-full px-2 h-[38px] border rounded-sm bg-white text-gray-700 text-center cursor-pointer text-xs hover:bg-gray-50"
+                  placeholder="00:00"
+                />
+              </div>
             </div>
+
+            {/* Calendar Popup */}
+            {showCalendar && (
+              <div className="absolute mt-1 bg-white border rounded-lg shadow-lg p-2 w-50 z-30">
+                <div className="flex items-center justify-between mb-2">
+                  <button type="button" onClick={prevMonth} className="text-blue-500 hover:text-blue-700 w-7 h-7 flex items-center justify-center">
+                    <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
+                  </button>
+                  <h3 className="font-semibold text-gray-700 text-xs">
+                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                  </h3>
+                  <button type="button" onClick={nextMonth} className="text-blue-500 hover:text-blue-700 w-7 h-7 flex items-center justify-center">
+                    <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                    <div key={i} className="text-center text-[10px] font-bold text-gray-600 py-0.5">{day}</div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-0">
+                  {daysInMonth(currentMonth).map((item, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleDateSelect(item.day, item.isCurrentMonth)}
+                      disabled={isPastDate(item.day, item.isCurrentMonth)}
+                      className={`py-1 text-center rounded text-xs ${
+                        isPastDate(item.day, item.isCurrentMonth)
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-blue-100 cursor-pointer'
+                      }`}
+                    >
+                      {item.day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Analog Clock Time Picker Popup */}
+            {showTimePicker && (
+              <div className="absolute mt-2 bg-white border border-gray-500 rounded-lg shadow-lg overflow-hidden w-52 z-30 left-[65%] transform -translate-x-1/2">
+                <div className="text-center mb-1 bg-white py-1.5">
+                  <span className={`text-2xl font-light cursor-pointer ${selectingMinute ? 'text-gray-400' : 'text-cyan-400'}`}
+                    onClick={() => setSelectingMinute(false)}>
+                    {formData.leadRemindTime.split(':')[0]}
+                  </span>
+                  <span className="text-2xl font-light text-gray-400 mx-1">:</span>
+                  <span className={`text-2xl font-light cursor-pointer ${selectingMinute ? 'text-cyan-400' : 'text-gray-400'}`}
+                    onClick={() => setSelectingMinute(true)}>
+                    {formData.leadRemindTime.split(':')[1]}
+                  </span>
+                </div>
+
+                <div className="bg-gray-100 p-1.5">
+                  <div
+                    ref={clockRef}
+                    className="relative w-40 h-40 mx-auto cursor-pointer select-none"
+                    onClick={handleClockClick}
+                    onMouseDown={() => setIsDragging(true)}
+                    onMouseUp={() => setIsDragging(false)}
+                    onMouseLeave={() => setIsDragging(false)}
+                    onMouseMove={handleClockMouseMove}
+                  >
+                    <div className="absolute inset-0 border-2 border-gray-300 rounded-full bg-white"></div>
+
+                    {!selectingMinute ? (
+                      <>
+                        {/* Inner circle: 1-12 */}
+                        {[...Array(12)].map((_, i) => {
+                          const hour = i + 1;
+                          const angle = (hour * 30 - 90) * (Math.PI / 180);
+                          const radius = 40;
+                          const x = 80 + radius * Math.cos(angle);
+                          const y = 80 + radius * Math.sin(angle);
+                          const currentHour = parseInt(formData.leadRemindTime.split(':')[0]);
+                          const isSelected = currentHour === hour;
+
+                          return (
+                            <button
+                              key={hour}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTimeClick(hour);
+                              }}
+                              className={`absolute w-6 h-6 flex items-center justify-center rounded-full text-xs hover:bg-cyan-100 transition-colors ${
+                                isSelected ? 'bg-cyan-400 text-white font-semibold shadow-md' : 'text-gray-700 font-normal'
+                              }`}
+                              style={{
+                                left: `${x - 12}px`,
+                                top: `${y - 12}px`
+                              }}
+                            >
+                              {hour}
+                            </button>
+                          );
+                        })}
+
+                        {/* Outer circle: 13-24/0 */}
+                        {[...Array(12)].map((_, i) => {
+                          const hour = i === 11 ? 0 : i + 13;
+                          const angle = ((i + 1) * 30 - 90) * (Math.PI / 180);
+                          const radius = 66;
+                          const x = 80 + radius * Math.cos(angle);
+                          const y = 80 + radius * Math.sin(angle);
+                          const currentHour = parseInt(formData.leadRemindTime.split(':')[0]);
+                          const isSelected = currentHour === hour;
+
+                          return (
+                            <button
+                              key={`outer-${hour}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTimeClick(hour);
+                              }}
+                              className={`absolute w-6 h-6 flex items-center justify-center rounded-full text-xs hover:bg-cyan-100 transition-colors ${
+                                isSelected ? 'bg-cyan-400 text-white font-semibold shadow-md' : 'text-gray-600 font-normal'
+                              }`}
+                              style={{
+                                left: `${x - 12}px`,
+                                top: `${y - 12}px`
+                              }}
+                            >
+                              {hour === 0 ? '00' : hour}
+                            </button>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      /* Minutes: 0, 5, 10, ..., 55 */
+                      [...Array(12)].map((_, i) => {
+                        const minute = i * 5;
+                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                        const radius = 66;
+                        const x = 80 + radius * Math.cos(angle);
+                        const y = 80 + radius * Math.sin(angle);
+                        const currentMinute = parseInt(formData.leadRemindTime.split(':')[1]);
+                        const isSelected = currentMinute === minute;
+
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMinuteClick(minute);
+                            }}
+                            className={`absolute w-6 h-6 flex items-center justify-center rounded-full text-xs hover:bg-cyan-100 transition-colors ${
+                              isSelected ? 'bg-cyan-400 text-white font-semibold shadow-md' : 'text-gray-600 font-normal'
+                            }`}
+                            style={{
+                              left: `${x - 12}px`,
+                              top: `${y - 12}px`
+                            }}
+                          >
+                            {String(minute).padStart(2, '0')}
+                          </button>
+                        );
+                      })
+                    )}
+
+                    {/* Clock hand with circle at end */}
+                    <div
+                      className="absolute w-0.5 bg-cyan-400 origin-bottom pointer-events-none"
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        height: selectingMinute ? '62px' : (currentRadius === 'inner' ? '38px' : '62px'),
+                        transform: `translateX(-50%) translateY(-100%) rotate(${currentAngle}deg)`,
+                        transformOrigin: 'bottom center',
+                        transition: isDragging ? 'none' : 'all 0.15s ease-out'
+                      }}
+                    >
+                      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-cyan-400 rounded-full border-2 border-white shadow"></div>
+                    </div>
+
+                    {/* Center dot */}
+                    <div className="absolute top-1/2 left-1/2 w-2.5 h-2.5 bg-cyan-400 rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-white shadow"></div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Close time picker on outside click */}
+            {showTimePicker && (
+              <div
+                className="fixed inset-0 z-20"
+                onClick={() => {
+                  setShowTimePicker(false);
+                  setSelectingMinute(false);
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -1256,23 +1590,6 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                 placeholder="State"
                 className="border rounded-sm px-3 h-[40px] w-full text-sm mb-3"
               />
-
-              <select
-                name="country"
-                value={formData.country}
-                onChange={handleCountryChange}
-                disabled={loadingCountries}
-                className="border rounded-sm px-3 h-[40px] w-full text-sm mb-3"
-              >
-                <option value="">
-                  {loadingCountries ? "Loading countries..." : "Select Country"}
-                </option>
-                {countries.map((country) => (
-                  <option key={country.name} value={country.name}>
-                    {country.displayName}
-                  </option>
-                ))}
-              </select>
 
               <input
                 name="postalCode"
@@ -1485,7 +1802,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
           <br />
           <br />
           <ActivityHistory
-            leadId={existingData!._id}
+            leadId={existingData._id}
             currentComment={latestComment}
             onCommentUpdate={handleCommentUpdate}
           />

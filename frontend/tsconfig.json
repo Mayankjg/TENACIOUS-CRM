@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/dashboard/page.tsx", "proxy.ts", "app/change-password/page.tsx", "app/dashboard/components/DatePicker.tsx", "app/dashboard/components/SalesSummary.tsx", "app/dashboard/SalesSummary.tsx", "app/feedback/page.tsx", "app/leads/import-leads/page.tsx", "app/leads/calendar/page.tsx", "components/Navbar.tsx", "context/AuthContext.jsx", "app/manage-salespersons/salesperson-list/managesalesperson/add/page.tsx"  ],
+, "app/dashboard/page.tsx", "proxy.ts", "app/change-password/page.tsx", "app/dashboard/components/DatePicker.tsx", "app/dashboard/components/SalesSummary.tsx", "app/dashboard/SalesSummary.tsx", "app/feedback/page.tsx", "app/leads/import-leads/page.tsx", "app/leads/calendar/page.tsx", "components/Navbar.tsx", "context/AuthContext.jsx", "app/manage-salespersons/salesperson-list/managesalesperson/add/page.tsx", "app/leads/leadpage/CreateLead.js"  ],
   "exclude": ["node_modules"]
 }
