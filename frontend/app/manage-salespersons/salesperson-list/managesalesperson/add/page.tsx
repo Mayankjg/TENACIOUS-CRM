@@ -1,16 +1,14 @@
 // frontend/app/manage-salespersons/salesperson-list/managesalesperson/add/page.tsx
-// MULTI-TENANT FIXED
+// MULTI-TENANT FIXED + DYNAMIC COUNTRIES + AUTO COUNTRY CODE
 
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
-
-// CRITICAL: Import tenant-aware utilities
 import { validateSession, isAdmin } from "@/utils/api";
-
-// --- Type Definitions ---
 
 interface SalespersonFormData {
   userName: string;
@@ -22,6 +20,12 @@ interface SalespersonFormData {
   countryCode: string;
   contactNo: string;
   profileImage: File | null;
+}
+
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
 }
 
 const AddSalespersonForm: React.FC = () => {
@@ -46,7 +50,51 @@ const AddSalespersonForm: React.FC = () => {
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // CRITICAL: Validate session and admin role on mount
+  // 🔥 DYNAMIC COUNTRIES STATE
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
+
+  // 🔥 FETCH COUNTRIES FROM REST API
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,idd"
+        );
+        const data = await response.json();
+
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
+            const name = country.name?.common || "";
+            const root = country.idd?.root || "";
+            const suffixes = country.idd?.suffixes || [];
+
+            let callingCode = "";
+            if (root) {
+              callingCode = suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
+            }
+
+            return {
+              name,
+              callingCode,
+              displayName: callingCode ? `${name} (${callingCode})` : name,
+            };
+          })
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
+
+        setCountries(formattedCountries);
+        setLoadingCountries(false);
+      } catch (error) {
+        console.error("❌ Error fetching countries:", error);
+        toast.error("Failed to load countries");
+        setLoadingCountries(false);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
   useEffect(() => {
     if (!validateSession()) {
       console.error("❌ Invalid session");
@@ -67,9 +115,21 @@ const AddSalespersonForm: React.FC = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // -------------------------------
-  // HANDLE IMAGE (INPUT + DRAG / DROP)
-  // -------------------------------
+  // 🔥 HANDLE COUNTRY CHANGE - AUTO POPULATE COUNTRY CODE
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCountryName = e.target.value;
+    const selectedCountry = countries.find((c) => c.name === selectedCountryName);
+    const callingCode = selectedCountry?.callingCode || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      country: selectedCountryName,
+      countryCode: callingCode, // Auto-populate country code
+    }));
+
+    if (errors.country) setErrors((prev) => ({ ...prev, country: "" }));
+  };
+
   const processImageFile = (file: File | undefined | null) => {
     if (!file) return;
 
@@ -120,7 +180,6 @@ const AddSalespersonForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // CRITICAL: Save with automatic tenant isolation (JWT token contains tenantId)
   const handleSave = async () => {
     if (!validateForm()) {
       alert("Please fill in all required fields correctly.");
@@ -154,7 +213,6 @@ const AddSalespersonForm: React.FC = () => {
     try {
       console.log("💾 Creating salesperson...");
 
-      // Get token from localStorage
       const token = localStorage.getItem("ts-token");
       
       if (!token) {
@@ -173,7 +231,7 @@ const AddSalespersonForm: React.FC = () => {
         }
       );
 
-      console.log("Salesperson created successfully");
+      console.log("✅ Salesperson created successfully");
 
       alert("Salesperson Saved Successfully!");
       router.push("/manage-salespersons/salesperson-list/managesalesperson");
@@ -361,8 +419,9 @@ const AddSalespersonForm: React.FC = () => {
             </div>
           </div>
 
-          {/* ROW 4 */}
+          {/* ROW 4 - COUNTRY & CONTACT */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            {/* 🔥 DYNAMIC COUNTRY DROPDOWN */}
             <div>
               <label className="block text-sm text-gray-600 mb-2">
                 Country*
@@ -370,24 +429,29 @@ const AddSalespersonForm: React.FC = () => {
               <select
                 name="country"
                 value={formData.country}
-                onChange={handleInputChange}
+                onChange={handleCountryChange}
+                disabled={loadingCountries}
                 className={`w-full px-4 py-2.5 border ${
                   errors.country ? "border-red-500" : "border-gray-300"
-                } rounded`}
+                } rounded cursor-pointer`}
               >
-                <option value="">Select Country</option>
-                <option value="United States">United States</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="Canada">Canada</option>
-                <option value="India">India</option>
-                <option value="Australia">Australia</option>
+                <option value="">
+                  {loadingCountries ? "Loading countries..." : "Select Country"}
+                </option>
+                {countries.map((country) => (
+                  <option key={country.name} value={country.name}>
+                    {country.displayName}
+                  </option>
+                ))}
               </select>
               {errors.country && (
                 <p className="text-red-500 text-xs mt-1">{errors.country}</p>
               )}
             </div>
 
+            {/* COUNTRY CODE (DISABLED) & CONTACT NUMBER */}
             <div className="grid grid-cols-2 gap-4">
+              {/* 🔥 DISABLED COUNTRY CODE FIELD */}
               <div>
                 <label className="block text-sm text-gray-600 mb-2">
                   Country Code
@@ -396,12 +460,13 @@ const AddSalespersonForm: React.FC = () => {
                   type="text"
                   name="countryCode"
                   value={formData.countryCode}
-                  onChange={handleInputChange}
+                  disabled
                   placeholder="Code"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded bg-gray-50"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded bg-gray-100 cursor-not-allowed text-gray-600"
                 />
               </div>
 
+              {/* CONTACT NUMBER */}
               <div>
                 <label className="block text-sm text-gray-600 mb-2">
                   Contact No*

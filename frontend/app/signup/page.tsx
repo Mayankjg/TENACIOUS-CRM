@@ -1,9 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-// import "./signup.css";
 
 interface SignupForm {
   username: string;
@@ -16,19 +15,15 @@ interface SignupForm {
   role: string;
 }
 
-interface CountryCodes {
-  [key: string]: string;
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
 }
 
 export default function Signup() {
   const router = useRouter();
   const { signupUser } = useAuth();
-
-  const COUNTRY_CODES: CountryCodes = {
-    India: "+91",
-    USA: "+1",
-    UK: "+44",
-  };
 
   const [form, setForm] = useState<SignupForm>({
     username: "",
@@ -41,24 +36,68 @@ export default function Signup() {
     role: "admin", // forced admin
   });
 
+  // 🔥 DYNAMIC COUNTRIES STATE
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
+
+  // 🔥 FETCH COUNTRIES FROM REST API
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,idd"
+        );
+        const data = await response.json();
+
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
+            const name = country.name?.common || "";
+            const root = country.idd?.root || "";
+            const suffixes = country.idd?.suffixes || [];
+
+            let callingCode = "";
+            if (root) {
+              callingCode = suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
+            }
+
+            return {
+              name,
+              callingCode,
+              displayName: callingCode ? `${name} (${callingCode})` : name,
+            };
+          })
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
+
+        setCountries(formattedCountries);
+        setLoadingCountries(false);
+      } catch (error) {
+        console.error("❌ Error fetching countries:", error);
+        setLoadingCountries(false);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
     const { name, value } = e.target;
-
-    // Auto Code Logic (READ ONLY)
-    if (name === "country") {
-      const code = COUNTRY_CODES[value] || "";
-      setForm((prev) => ({
-        ...prev,
-        country: value,
-        countryCode: code, 
-      }));
-      return;
-    }
-
-    // Normal update
     setForm((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  // 🔥 HANDLE COUNTRY CHANGE - AUTO POPULATE COUNTRY CODE
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+    const selectedCountryName = e.target.value;
+    const selectedCountry = countries.find((c) => c.name === selectedCountryName);
+    const callingCode = selectedCountry?.callingCode || "";
+
+    setForm((prev) => ({
+      ...prev,
+      country: selectedCountryName,
+      countryCode: callingCode, // Auto-populate country code
     }));
   };
 
@@ -135,6 +174,7 @@ export default function Signup() {
               />
             </div>
 
+            {/* 🔥 DYNAMIC COUNTRY DROPDOWN */}
             <div className="w-full sm:w-1/2">
               <label className="block text-gray-700 mb-1 font-medium">
                 Select Country
@@ -142,13 +182,19 @@ export default function Signup() {
               <select
                 name="country"
                 required
-                onChange={handleChange}
-                className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
+                value={form.country}
+                onChange={handleCountryChange}
+                disabled={loadingCountries}
+                className="w-full border p-3 rounded-md outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
-                <option value="">Select Country</option>
-                <option>India</option>
-                <option>USA</option>
-                <option>UK</option>
+                <option value="">
+                  {loadingCountries ? "Loading countries..." : "Select Country"}
+                </option>
+                {countries.map((country) => (
+                  <option key={country.name} value={country.name}>
+                    {country.displayName}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -156,6 +202,7 @@ export default function Signup() {
           {/* Code + Contact + Promo */}
           <div className="flex flex-col sm:flex-row sm:space-x-6 space-y-4 sm:space-y-0">
             <div className="w-full sm:w-1/2 flex space-x-4">
+              {/* 🔥 DISABLED COUNTRY CODE FIELD */}
               <div className="w-1/3">
                 <label className="block text-gray-700 mb-1 font-medium">
                   Code
@@ -165,8 +212,8 @@ export default function Signup() {
                   value={form.countryCode}
                   placeholder="+91"
                   required
-                  readOnly // 👈 User cannot edit
-                  className="w-full border p-3 rounded-md bg-gray-200 cursor-not-allowed outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled // 👈 Cannot edit (auto-populated)
+                  className="w-full border p-3 rounded-md bg-gray-100 cursor-not-allowed outline-none"
                 />
               </div>
 
