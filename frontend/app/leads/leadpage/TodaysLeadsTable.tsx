@@ -1,10 +1,10 @@
-// frontend/app/leads/TodaysLeadsTable.tsx - MULTI-TENANT COMPLETE
+// frontend/app/leads/TodaysLeadsTable.tsx - MULTI-TENANT COMPLETE WITH ASSIGN MODAL
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { FaEdit, FaClipboard } from "react-icons/fa";
-// Import tenant-aware API utilities
 import { apiGet } from "@/utils/api";
+import AssignLeadsModal from "./ActivityHistoryPage.js/AssignLeadsModal";
 
 // Types
 interface Tag {
@@ -46,6 +46,11 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }: Today
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  
+  // Add state for AssignLeadsModal
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+
+  const API_BASE = "https://tt-crm-pro.onrender.com/api";
 
   // Fetch tags using tenant-aware API
   useEffect(() => {
@@ -131,10 +136,45 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }: Today
     );
   };
 
+  // Updated handleAssign to open modal
   const handleAssign = () => {
-    if (selectedLeads.length === 0)
+    if (selectedLeads.length === 0) {
       return alert("Please select at least one lead to assign!");
-    alert(`${selectedLeads.length} lead(s) assigned successfully!`);
+    }
+    setIsAssignModalOpen(true);
+  };
+
+  // Function to handle actual assignment
+  const handleAssignLeads = async (salespersonId: string, salespersonName: string) => {
+    try {
+      console.log("🔄 Assigning leads to salesperson:", salespersonName);
+      
+      const response = await fetch(`${API_BASE}/leads/assign-leads`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          leadIds: selectedLeads,
+          salespersonId: salespersonId,
+        }),
+      });
+
+      if (response.ok) {
+        alert(`Successfully assigned ${selectedLeads.length} lead(s) to ${salespersonName}!`);
+        setSelectedLeads([]);
+        setIsAssignModalOpen(false);
+        
+        // Optionally refresh the leads list here
+        // You might want to call a parent refresh function or refetch leads
+      } else {
+        const error = await response.json();
+        alert(`Failed to assign leads: ${error.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("❌ Error assigning leads:", error);
+      alert("An error occurred while assigning leads. Please try again.");
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -596,6 +636,14 @@ export default function TodaysLeadsTable({ leads = [], onDelete, onEdit }: Today
           </p>
         )}
       </div>
+
+      {/* ASSIGN LEADS MODAL */}
+      <AssignLeadsModal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        selectedLeadsCount={selectedLeads.length}
+        onAssign={handleAssignLeads}
+      />
     </div>
   );
 }
