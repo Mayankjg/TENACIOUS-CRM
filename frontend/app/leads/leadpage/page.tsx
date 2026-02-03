@@ -30,18 +30,19 @@ interface Lead {
   [key: string]: any;
 }
 
-interface FilterButton {
-  label: React.ReactNode;
-  onClick: () => void;
-  color: string;
-  active: boolean;
-}
+// interface FilterButton {
+//   label: React.ReactNode;
+//   onClick: () => void;
+//   color: string;
+//   active: boolean;
+// }
 
 export default function LeadsPage() {
   const { user, token, tokenReady } = useAuth();
   const searchParams = useSearchParams();
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  // const [FilterButton, setFilterButton] = useState<FilterButton[]>([]);
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [filter, setFilter] = useState("");

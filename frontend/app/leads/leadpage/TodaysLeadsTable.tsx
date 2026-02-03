@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { FaEdit, FaClipboard } from "react-icons/fa";
 import { apiGet } from "@/utils/api";
-import AssignLeadsModal from "./ActivityHistoryPage.js/AssignLeadsModal";
+import AssignLeadsModal from "./AssignLeadsModal";
 
 // Types
 interface Tag {
