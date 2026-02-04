@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 
