@@ -23,7 +23,6 @@ export default function ChangePasswordPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Password change data:", formData);
-    // Add your password change logic (API call, etc.)
   };
 
   const handleCancel = () => {
@@ -33,16 +32,13 @@ export default function ChangePasswordPage() {
   return (
     <div className="min-h-screen bg-[#e9ecef] flex justify-center items-start pt-10">
       <div className="w-full max-w-[1250px] bg-white border border-gray-200 rounded-sm shadow-sm">
-        {/* Header */}
         <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
           <h2 className="text-[18px] text-gray-800">
             Change <span className="font-semibold">Password</span>
           </h2>
         </div>
 
-        {/* Form Section */}
         <form onSubmit={handleSubmit} className="p-10 pb-0">
-          {/* Old Password */}
           <div className="mb-6">
             <label className="block text-gray-700 mb-2">Old Password</label>
             <input
@@ -55,7 +51,6 @@ export default function ChangePasswordPage() {
             />
           </div>
 
-          {/* New Password */}
           <div className="mb-6">
             <label className="block text-gray-700 mb-2">New Password</label>
             <input
@@ -68,7 +63,6 @@ export default function ChangePasswordPage() {
             />
           </div>
 
-          {/* Confirm Password */}
           <div className="mb-0">
             <label className="block text-gray-700 mb-2">Confirm Password</label>
             <input
@@ -81,7 +75,6 @@ export default function ChangePasswordPage() {
             />
           </div>
 
-          {/* Footer Section with Buttons */}
           <div className="bg-[#f5f7f9] h-[80px] w-[107%] mt-10 flex items-center gap-3 px-10 border-t border-gray-200 -mx-10 rounded-b-sm">
             <button
               type="submit"
