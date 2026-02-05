@@ -339,7 +339,44 @@ export default function SalesSummary({ salesPersons, onRefresh }: SalesSummaryPr
 }
 
 /* ------------------ DATE PICKER ------------------ */
+
+
 function DatePicker({ label, date, showCalendar, setShowCalendar, setDate }: DatePickerProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    setInputValue(date.toISOString().split("T")[0]);
+  }, [date]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleInputBlur = () => {
+    if (inputValue.trim() === "") {
+      setInputValue(date.toISOString().split("T")[0]);
+    } else {
+      const newDate = new Date(inputValue);
+      if (!isNaN(newDate.getTime())) {
+        setDate(newDate);
+      } else {
+        setInputValue(date.toISOString().split("T")[0]);
+      }
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleInputBlur();
+    } else if (e.key === "Escape") {
+      setInputValue(date.toISOString().split("T")[0]);
+    }
+  };
+
+  const handleCalendarButtonClick = () => {
+    setShowCalendar(!showCalendar);
+  };
+
   return (
     <div className="flex items-center gap-2 relative w-full md:w-auto">
       <label className="text-gray-700 font-medium text-sm w-20">{label}</label>
@@ -347,21 +384,23 @@ function DatePicker({ label, date, showCalendar, setShowCalendar, setDate }: Dat
       <div className="relative inline-block w-full md:w-auto">
         <input
           type="text"
-          readOnly
-          value={date.toISOString().split("T")[0]}
-          onClick={() => setShowCalendar(!showCalendar)}
-          className="border border-gray-300 rounded-md px-3 py-2 text-sm pr-12 cursor-pointer w-full md:w-[150px] text-[#666]"
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onKeyDown={handleInputKeyDown}
+          placeholder="YYYY-MM-DD"
+          className="border border-gray-300 rounded-md px-3 py-2 text-sm pr-12 cursor-text w-full md:w-[150px] text-[#666]"
         />
 
         <button
-          onClick={() => setShowCalendar(!showCalendar)}
-          className="absolute  cursor-pointer right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-md"
+          onClick={handleCalendarButtonClick}
+          className="absolute cursor-pointer right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-md"
         >
           <FaCalendarAlt className="text-white text-base" />
         </button>
 
         {showCalendar && (
-          <div className="absolute bottom-[110%] left-0 bg-white shadow-lg rounded-lg p-3 border border-gray-200 w-[220px] z-[999999]">
+          <div className="absolute top-full left-0 mt-2 bg-white shadow-xl rounded-lg p-3 border border-gray-200 w-[200px] z-[9999]">
             <CalendarUI
               date={date}
               setDate={setDate}
@@ -376,8 +415,34 @@ function DatePicker({ label, date, showCalendar, setShowCalendar, setDate }: Dat
 
 /* ------------------ CALENDAR UI ------------------ */
 function CalendarUI({ date, setDate, setShowCalendar }: CalendarUIProps) {
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
   const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Generate years (current year ± 50 years)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 101 }, (_, i) => currentYear - 50 + i);
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(date);
+    newDate.setMonth(monthIndex);
+    setDate(newDate);
+    setShowMonthPicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(date);
+    newDate.setFullYear(year);
+    setDate(newDate);
+    setShowYearPicker(false);
+  };
 
   return (
     <>
@@ -388,15 +453,31 @@ function CalendarUI({ date, setDate, setShowCalendar }: CalendarUIProps) {
             prev.setMonth(prev.getMonth() - 1);
             setDate(prev);
           }}
-          className="text-[#0099E6] text-lg font-bold"
+          className="text-[#0099E6] text-lg font-bold px-2 hover:bg-gray-100 rounded"
         >
           ‹
         </button>
 
-        <h3 className="font-semibold text-gray-800 text-sm">
-          {date.toLocaleString("default", { month: "long" })}{" "}
-          {date.getFullYear()}
-        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setShowMonthPicker(!showMonthPicker);
+              setShowYearPicker(false);
+            }}
+            className="font-semibold text-gray-800 text-sm hover:bg-gray-100 px-2 py-1 rounded"
+          >
+            {date.toLocaleString("default", { month: "long" })}
+          </button>
+          <button
+            onClick={() => {
+              setShowYearPicker(!showYearPicker);
+              setShowMonthPicker(false);
+            }}
+            className="font-semibold text-gray-800 text-sm hover:bg-gray-100 px-2 py-1 rounded"
+          >
+            {date.getFullYear()}
+          </button>
+        </div>
 
         <button
           onClick={() => {
@@ -404,47 +485,90 @@ function CalendarUI({ date, setDate, setShowCalendar }: CalendarUIProps) {
             next.setMonth(next.getMonth() + 1);
             setDate(next);
           }}
-          className="text-[#0099E6] text-lg font-bold"
+          className="text-[#0099E6] text-lg font-bold px-2 hover:bg-gray-100 rounded"
         >
           ›
         </button>
       </div>
 
-      <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-[#0099E6] mb-1">
-        {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
-          <div key={d}>{d}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 text-[11px] text-center gap-[2px]">
-        {Array.from({ length: 42 }).map((_, i) => {
-          const num = i - firstDay + 1;
-          const isValid = num > 0 && num <= days;
-          const isCurrent = num === date.getDate();
-
-          return (
-            <div
-              key={i}
-              className={`py-1.5 rounded-md cursor-pointer ${isValid
-                  ? isCurrent
-                    ? "bg-[#0099E6] text-white font-bold"
-                    : "text-gray-700 hover:bg-gray-200"
-                  : "text-gray-300"
+      {/* Month Picker */}
+      {showMonthPicker && (
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {months.map((month, index) => (
+            <button
+              key={month}
+              onClick={() => handleMonthSelect(index)}
+              className={`py-2 px-1 text-xs rounded hover:bg-gray-200 ${index === date.getMonth()
+                  ? "bg-[#0099E6] text-white font-bold"
+                  : "text-gray-700"
                 }`}
-              onClick={() => {
-                if (isValid) {
-                  const newDate = new Date(date);
-                  newDate.setDate(num);
-                  setDate(newDate);
-                  setShowCalendar(false);
-                }
-              }}
             >
-              {isValid ? num : ""}
-            </div>
-          );
-        })}
-      </div>
+              {month.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Year Picker */}
+      {showYearPicker && (
+        <div className="max-h-[150px] overflow-y-auto mb-2">
+          <div className="grid grid-cols-4 gap-2">
+            {years.map((year) => (
+              <button
+                key={year}
+                onClick={() => handleYearSelect(year)}
+                className={`py-2 px-1 text-xs rounded hover:bg-gray-200 ${year === date.getFullYear()
+                    ? "bg-[#0099E6] text-white font-bold"
+                    : "text-gray-700"
+                  }`}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Day Picker (shown when neither month nor year picker is active) */}
+      {!showMonthPicker && !showYearPicker && (
+        <>
+          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-[#0099E6] mb-1">
+            {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
+              <div key={d}>{d}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 text-[11px] text-center gap-[2px]">
+            {Array.from({ length: 42 }).map((_, i) => {
+              const num = i - firstDay + 1;
+              const isValid = num > 0 && num <= days;
+              const isCurrent = num === date.getDate();
+
+              return (
+                <div
+                  key={i}
+                  className={`py-1.5 rounded-md cursor-pointer ${isValid
+                      ? isCurrent
+                        ? "bg-[#0099E6] text-white font-bold"
+                        : "text-gray-700 hover:bg-gray-200"
+                      : "text-gray-300"
+                    }`}
+                  onClick={() => {
+                    if (isValid) {
+                      const newDate = new Date(date);
+                      newDate.setDate(num);
+                      setDate(newDate);
+                      setShowCalendar(false);
+                    }
+                  }}
+                >
+                  {isValid ? num : ""}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </>
   );
 }

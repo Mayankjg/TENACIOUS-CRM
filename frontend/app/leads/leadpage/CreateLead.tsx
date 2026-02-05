@@ -16,13 +16,7 @@ import ProductsTableModal from "@/app/manage-items/products/ProductsTableModal";
 import TagModal from "@/app/manage-items/tags/TagModal";
 
 import {
-  apiGet,
-  apiPost,
-  apiPut,
-  validateSession,
-  getUser,
-  isAdmin,
-  isSalesperson
+  apiGet, apiPost, apiPut, validateSession, getUser, isAdmin, isSalesperson
 } from "@/utils/api";
 
 // Types
@@ -208,6 +202,8 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   /* --------------------------- CALENDAR & TIME PICKER STATE --------------------------- */
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectingMinute, setSelectingMinute] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -451,6 +447,20 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
 
   const nextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  };
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(monthIndex);
+    setCurrentMonth(newDate);
+    setShowMonthPicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(currentMonth);
+    newDate.setFullYear(year);
+    setCurrentMonth(newDate);
+    setShowYearPicker(false);
   };
 
   const isPastDate = (day: number, isCurrentMonth: boolean): boolean => {
@@ -967,8 +977,11 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
   const currentCountry = countries.find((c) => c.name === formData.country);
   const currentCallingCode = currentCountry?.callingCode || "";
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const currentAngle = getCurrentAngle();
   const currentRadius = getCurrentRadius();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 101 }, (_, i) => currentYear - 50 + i);
 
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-6">
@@ -1440,7 +1453,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
               <div className="relative w-1/2">
                 <input
                   type="text"
-                  value={formData.leadRemindDate || '0000-00-00'}
+                  value={formData.leadRemindDate || 'yyyy-mm-dd'}
                   readOnly
                   onClick={() => setShowCalendar(!showCalendar)}
                   className="w-full pl-2 pr-9 h-[38px] border rounded-sm bg-white text-gray-400 cursor-pointer text-xs"
@@ -1459,7 +1472,7 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
               <div className="relative w-1/2">
                 <input
                   type="text"
-                  value={formData.leadRemindTime || '12:15'}
+                  value={formData.leadRemindTime || '00:00'}
                   readOnly
                   onClick={() => {
                     setShowTimePicker(!showTimePicker);
@@ -1478,36 +1491,104 @@ export default function CreateLead({ onSave, onCancel, existingData }: CreateLea
                   <button type="button" onClick={prevMonth} className="text-blue-500 hover:text-blue-700 w-7 h-7 flex items-center justify-center">
                     <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
                   </button>
-                  <h3 className="font-semibold text-gray-700 text-xs">
-                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMonthPicker(!showMonthPicker);
+                        setShowYearPicker(false);
+                      }}
+                      className="font-semibold text-gray-700 text-xs hover:bg-gray-100 px-2 py-1 rounded"
+                    >
+                      {monthNames[currentMonth.getMonth()]}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowYearPicker(!showYearPicker);
+                        setShowMonthPicker(false);
+                      }}
+                      className="font-semibold text-gray-700 text-xs hover:bg-gray-100 px-2 py-1 rounded"
+                    >
+                      {currentMonth.getFullYear()}
+                    </button>
+                  </div>
+
                   <button type="button" onClick={nextMonth} className="text-blue-500 hover:text-blue-700 w-7 h-7 flex items-center justify-center">
                     <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-1 mb-1">
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                    <div key={i} className="text-center text-[10px] font-bold text-gray-600 py-0.5">{day}</div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-0">
-                  {daysInMonth(currentMonth).map((item, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleDateSelect(item.day, item.isCurrentMonth)}
-                      disabled={isPastDate(item.day, item.isCurrentMonth)}
-                      className={`py-1 text-center rounded text-xs ${isPastDate(item.day, item.isCurrentMonth)
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-blue-100 cursor-pointer'
+                {/* Month Picker */}
+                {showMonthPicker && (
+                  <div className="grid grid-cols-3 gap-1 mb-2">
+                    {fullMonthNames.map((month, index) => (
+                      <button
+                        key={month}
+                        type="button"
+                        onClick={() => handleMonthSelect(index)}
+                        className={`py-1 px-1 text-[12px] rounded hover:bg-gray-200 ${
+                          index === currentMonth.getMonth()
+                            ? "bg-blue-500 text-white font-bold"
+                            : "text-gray-700"
                         }`}
-                    >
-                      {item.day}
-                    </button>
-                  ))}
-                </div>
+                      >
+                        {month.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Year Picker */}
+                {showYearPicker && (
+                  <div className="max-h-[150px] overflow-y-auto mb-2">
+                    <div className="grid grid-cols-4 gap-1">
+                      {years.map((year) => (
+                        <button
+                          key={year}
+                          type="button"
+                          onClick={() => handleYearSelect(year)}
+                          className={`py-1 px-1 text-[12px] rounded hover:bg-gray-200 ${
+                            year === currentMonth.getFullYear()
+                              ? "bg-blue-500 text-white font-bold"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Day Picker - only show when neither month nor year picker is active */}
+                {!showMonthPicker && !showYearPicker && (
+                  <>
+                    <div className="grid grid-cols-7 gap-1 mb-1">
+                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                        <div key={i} className="text-center text-[10px] font-bold text-gray-600 py-0.5">{day}</div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-0">
+                      {daysInMonth(currentMonth).map((item, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleDateSelect(item.day, item.isCurrentMonth)}
+                          disabled={isPastDate(item.day, item.isCurrentMonth)}
+                          className={`py-1 text-center rounded text-xs ${isPastDate(item.day, item.isCurrentMonth)
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-blue-100 cursor-pointer'
+                            }`}
+                        >
+                          {item.day}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
