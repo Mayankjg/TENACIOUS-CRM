@@ -1,156 +1,223 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Legend,
-  CartesianGrid,
-  ResponsiveContainer,
-  ReferenceLine,
-  Tooltip,
-  Cell,
-} from "recharts";
+import React, { useState, useEffect, useMemo } from "react";
+import { apiGet } from "@/utils/api";
 
-interface DataItem {
+interface Product {
+  _id: string;
   name: string;
-  leads: number;
+  description?: string;
+  source?: string;
 }
 
-const LeadsByProduct: React.FC = () => {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+interface Lead {
+  _id: string;
+  product?: string;
+  [key: string]: any;
+}
 
-  const data: DataItem[] = [
-    { name: "Galaxy S1", leads: 1 },
-    { name: "Galaxy S2", leads: 0 },
-    { name: "Bandhani", leads: 2 },
-    { name: "Lenovo Ideapad", leads: 0 },
-    { name: "hi", leads: 0 },
-  ];
+const ProductList: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
-  const handlePrint = (): void => {
-    window.print();
-  };
+  // Fetch products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        console.log("🔄 Fetching products...");
+        const result = await apiGet("/api/manage-items/products/get-products");
+        
+        if (result.success) {
+          setProducts(result.data || []);
+          console.log("✅ Products fetched:", result.data?.length || 0);
+        } else {
+          console.error("❌ Failed to fetch products:", result.error);
+          setProducts([]);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching products:", error);
+        setProducts([]);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
 
-  // Custom Legend
-  const CustomLegend = () => (
-    <div className="flex items-center pb-1 pl-12">
-      <div
-        style={{
-          width: 25,
-          height: 13,
-          backgroundColor: "#007bff",
-          marginRight: 6,
-          borderRadius: 2,
-        }}
-      ></div>
-      <span className="text-black text-[13px] font-medium">No of leads</span>
-    </div>
-  );
+  // Fetch leads
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        console.log("🔄 Fetching leads...");
+        const result = await apiGet("/api/leads/get-leads");
+        
+        if (result.success) {
+          setLeads(result.data || []);
+          console.log("✅ Leads fetched:", result.data?.length || 0);
+        } else {
+          console.error("❌ Failed to fetch leads:", result.error);
+          setLeads([]);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching leads:", error);
+        setLeads([]);
+      }
+    };
+    
+    fetchLeads();
+  }, []);
 
-  // Custom Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white border border-gray-300 rounded px-3 py-2 shadow-md">
-          <p className="m-0 font-bold text-black text-[13px]">{label}</p>
-          <p className="m-0 text-black text-[13px]">
-            No of leads: {payload[0].value}
-          </p>
-        </div>
-      );
+  // Calculate product-wise lead count dynamically with date filtering
+  const tableData = useMemo(() => {
+    if (products.length === 0) return [];
+
+    // Filter leads by date range if dates are selected
+    let filteredLeads = leads;
+    
+    if (fromDate || toDate) {
+      filteredLeads = leads.filter(lead => {
+        if (!lead.createdAt) return false;
+        
+        const leadDate = new Date(lead.createdAt);
+        const from = fromDate ? new Date(fromDate) : null;
+        const to = toDate ? new Date(toDate) : null;
+        
+        if (from && to) {
+          return leadDate >= from && leadDate <= to;
+        } else if (from) {
+          return leadDate >= from;
+        } else if (to) {
+          return leadDate <= to;
+        }
+        
+        return true;
+      });
     }
-    return null;
+
+    // Count leads for each product
+    const productLeadCount = new Map<string, number>();
+
+    // Initialize all products with 0 leads
+    products.forEach(product => {
+      productLeadCount.set(product.name, 0);
+    });
+
+    // Count leads for each product
+    filteredLeads.forEach(lead => {
+      if (lead.product && productLeadCount.has(lead.product)) {
+        productLeadCount.set(lead.product, (productLeadCount.get(lead.product) || 0) + 1);
+      }
+    });
+
+    // Convert to array format
+    return Array.from(productLeadCount.entries()).map(([name, count]) => ({
+      name,
+      count,
+    }));
+  }, [products, leads, fromDate, toDate]);
+
+  const handleSearch = () => {
+    // The data will automatically update through the useMemo dependency
+    console.log("🔍 Searching with dates:", { fromDate, toDate });
   };
 
   return (
-    <div className="flex items-center justify-center p-4">
-      <div className="border border-gray-300 shadow-md w-full max-w-6xl mx-auto bg-white">
+    <div className="bg-gray-100 min-h-screen flex justify-center items-start p-4 sm:p-6">
+      <div className="bg-white w-full max-w-6xl rounded-md border border-gray-300 relative text-black">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-[#f9f9f9]">
-          <h2 className="text-gray-700 text-sm font-semibold">
-            Leads by <span className="font-bold">Product</span>
+        <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-300 gap-3">
+          <h2 className="text-base sm:text-lg font-semibold text-black">
+            Leads By <span className="font-bold">Products List</span>
           </h2>
-
-          <button
-            onClick={handlePrint}
-            className="bg-purple-800 text-white text-sm px-4 py-1.5 rounded hover:bg-purple-900"
-          >
-            Print
-          </button>
         </div>
 
-        {/* Chart */}
-        <div className="p-6" style={{ userSelect: "none" }}>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-              barCategoryGap="20%"
+        {/* Date Filter Section */}
+        <div className="flex flex-col sm:flex-row justify-end items-center p-4 gap-2 border-b border-gray-300">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <label className="text-sm font-medium text-gray-700">From</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 text-black"
+            />
+            
+            <label className="text-sm font-medium text-gray-700">To</label>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 text-black"
+            />
+
+            <button
+              onClick={handleSearch}
+              className="bg-[#2986cc] cursor-pointer hover:bg-[#0b5394] text-white px-4 py-2 rounded-md text-sm font-semibold"
             >
-              <CartesianGrid stroke="#e0e0e0" vertical={false} />
-              <ReferenceLine y={0.5} stroke="#c0c0c0" />
-              <ReferenceLine y={1.5} stroke="#c0c0c0" />
-              <ReferenceLine y={2.5} stroke="#c0c0c0" />
-              <ReferenceLine y={3.5} stroke="#c0c0c0" />
-              <ReferenceLine y={0} stroke="#dddadaff" strokeWidth={1.5} />
+              Search
+            </button>
+          </div>
+        </div>
 
-              <XAxis
-                dataKey="name"
-                tick={{ fill: "#333" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: "#333" }}
-                allowDecimals={false}
-                domain={[0, "dataMax + 2"]}
-                axisLine={false}
-                tickLine={false}
-              />
+        <p className="text-sm text-red-600 text-right mt-2 mr-5">
+            Leads Count Contain (Custom Leads + Deals)
+          </p>
 
-              <Legend
-                verticalAlign="top"
-                align="left"
-                content={<CustomLegend />}
-                wrapperStyle={{
-                  paddingLeft: "10px",
-                  paddingBottom: "0px",
+        {/* Table */}
+        <div className="overflow-x-auto px-4 py-4 text-black">
+          {tableData.length > 0 ? (
+            <table className="w-full text-xs sm:text-sm border-collapse border border-gray-300">
+              <thead
+                style={{
+                  backgroundColor: "rgb(211, 214, 220)",
+                  borderColor: "rgb(211, 214, 220)",
                 }}
-              />
-
-              <Tooltip
-                content={<CustomTooltip />}
-                cursor={{ fill: "transparent" }}
-              />
-
-              <Bar
-                dataKey="leads"
-                name="No of leads"
-                barSize={60}
-                isAnimationActive={false}
-                onMouseEnter={(_, index: number) => setActiveIndex(index)}
-                onMouseLeave={() => setActiveIndex(null)}
               >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={index}
-                    fill={index === activeIndex ? "#0056b3" : "#007bff"}
-                    style={{
-                      transition: "fill 0.2s ease-in-out",
-                      cursor: "pointer",
-                    }}
-                  />
+                <tr className="text-black">
+                  <th className="border-t border-l border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-4 text-left">
+                    SR. NO.
+                  </th>
+                  <th className="border-t border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-4 text-left font-semibold">
+                    PRODUCT NAME
+                  </th>
+                  <th className="border-t border-r border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-4 text-left font-semibold">
+                    LEADS ADDED
+                  </th>
+                  {/* <th className="border-t border-r border-b border-gray-300 py-2 sm:py-3 px-2 sm:px-4 text-left font-semibold">
+                    FOLLOW UP LEADS
+                  </th> */}
+                </tr>
+              </thead>
+              <tbody className="font-medium text-black">
+                {tableData.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 border text-left border-gray-300">
+                      {index + 1}
+                    </td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 border border-gray-300">
+                      {item.name}
+                    </td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 border border-gray-300">
+                      {item.count}
+                    </td>
+                    {/* <td className="py-2 sm:py-3 px-2 sm:px-4 border border-gray-300">
+                      {item.count}
+                    </td> */}
+                  </tr>
                 ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center py-4 sm:py-6 text-gray-500 text-xs sm:text-sm">
+              No products found
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default LeadsByProduct;
+export default ProductList;
