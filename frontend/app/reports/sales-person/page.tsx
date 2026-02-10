@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { FaCalendarAlt } from "react-icons/fa";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { Calendar, ArrowLeft, ArrowRight } from 'lucide-react';
 import { apiGet } from "@/utils/api";
 
 // Types
@@ -22,8 +20,8 @@ interface Comment {
   _id?: string;
   text: string;
   createdAt: string;
-  addedBy?: string; // salesperson ID
-  addedByName?: string; // salesperson name
+  addedBy?: string;
+  addedByName?: string;
 }
 
 interface Lead {
@@ -37,25 +35,43 @@ interface Lead {
   leadStatus?: string;
   createdAt?: string;
   dueDate?: string;
-  assignedTo?: string; // salesperson ID
-  assignedToName?: string; // salesperson name
-  comment?: string; // Single comment field
-  comments?: Comment[]; // Array of comments
+  assignedTo?: string;
+  assignedToName?: string;
+  comment?: string;
+  comments?: Comment[];
   [key: string]: any;
+}
+
+interface CalendarDay {
+  day: number;
+  isCurrentMonth: boolean;
+}
+
+interface DatePickerCustomProps {
+  label: string;
+  date: Date | null;
+  showCalendar: boolean;
+  setShowCalendar: (show: boolean) => void;
+  setDate: (date: Date | null) => void;
+}
+
+interface CalendarUIProps {
+  date: Date;
+  setDate: (date: Date) => void;
+  setShowCalendar: (show: boolean) => void;
 }
 
 const CommentsBySalesPersonList: React.FC = () => {
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>("All");
+  const [showFromCalendar, setShowFromCalendar] = useState<boolean>(false);
+  const [showToCalendar, setShowToCalendar] = useState<boolean>(false);
   
   const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const fromDateRef = useRef<any>(null);
-  const toDateRef = useRef<any>(null);
 
   // Fetch salespersons dynamically
   useEffect(() => {
@@ -88,16 +104,13 @@ const CommentsBySalesPersonList: React.FC = () => {
         setLoading(true);
         console.log("🔄 Fetching leads with comments...");
         
-        // Try the correct API endpoint for fetching leads
         const result = await apiGet("/api/leads/get-leads");
         
         if (result.success && result.data) {
           const leadsData = result.data;
           console.log("✅ Raw leads data:", leadsData.length);
           
-          // Process leads to handle both single comment and comments array
           const processedLeads = leadsData.map((lead: Lead) => {
-            // If lead has a single comment field, convert it to comments array
             if (lead.comment && !lead.comments) {
               return {
                 ...lead,
@@ -113,7 +126,6 @@ const CommentsBySalesPersonList: React.FC = () => {
             return lead;
           });
           
-          // Filter only leads that have comments
           const leadsWithComments = processedLeads.filter(
             (lead: Lead) => {
               const hasComments = (lead.comments && lead.comments.length > 0) || 
@@ -148,15 +160,12 @@ const CommentsBySalesPersonList: React.FC = () => {
     
     let filtered = [...leads];
 
-    // Filter by salesperson
     if (selectedSalesPerson && selectedSalesPerson !== "All") {
       filtered = filtered.filter((lead) => {
-        // Check if assigned to the salesperson
         if (lead.assignedTo === selectedSalesPerson) {
           return true;
         }
         
-        // Check if any comment was added by the selected salesperson
         if (lead.comments) {
           return lead.comments.some(
             (comment) => comment.addedBy === selectedSalesPerson
@@ -167,10 +176,8 @@ const CommentsBySalesPersonList: React.FC = () => {
       });
     }
 
-    // Filter by date range - based on comment date or lead created date
     if (fromDate || toDate) {
       filtered = filtered.filter((lead) => {
-        // If lead has comments array, check comment dates
         if (lead.comments && lead.comments.length > 0) {
           return lead.comments.some((comment) => {
             const commentDate = new Date(comment.createdAt);
@@ -194,7 +201,6 @@ const CommentsBySalesPersonList: React.FC = () => {
           });
         }
         
-        // Fallback to lead creation date
         if (lead.createdAt) {
           const leadDate = new Date(lead.createdAt);
           let matchesFrom = true;
@@ -240,7 +246,6 @@ const CommentsBySalesPersonList: React.FC = () => {
 
     const rows: string[] = [];
     
-    // Header
     rows.push([
       "SR.NO.",
       "DATE",
@@ -252,7 +257,6 @@ const CommentsBySalesPersonList: React.FC = () => {
       "SALES PERSON",
     ].join(","));
 
-    // Data rows
     let serialNo = 1;
     filteredLeads.forEach((lead) => {
       const contactPerson = `${lead.firstName || ""} ${lead.lastName || ""}`.trim();
@@ -313,7 +317,6 @@ const CommentsBySalesPersonList: React.FC = () => {
     console.log("✅ Export completed");
   };
 
-  // Format date for display
   const formatDate = (dateString?: string): string => {
     if (!dateString) return "-";
     
@@ -331,12 +334,10 @@ const CommentsBySalesPersonList: React.FC = () => {
     }
   };
 
-  // Get salesperson ID (handle both _id and id fields)
   const getSalespersonId = (person: Salesperson): string => {
     return person._id || String(person.id) || "";
   };
 
-  // Generate rows for display - each comment gets its own row
   const generateTableRows = () => {
     const rows: React.ReactNode[] = [];
     let serialNo = 1;
@@ -379,7 +380,6 @@ const CommentsBySalesPersonList: React.FC = () => {
     return rows;
   };
 
-  // Calculate total comments count
   const getTotalCommentsCount = () => {
     return filteredLeads.reduce((total, lead) => {
       return total + (lead.comments?.length || 0);
@@ -426,35 +426,25 @@ const CommentsBySalesPersonList: React.FC = () => {
               ))}
             </select>
 
-            {/* From Date */}
-            <div className="relative flex items-center">
-              <DatePicker
-                ref={fromDateRef}
-                selected={fromDate}
-                onChange={(d: Date | null) => setFromDate(d)}
-                placeholderText="From Date"
-                dateFormat="dd-MM-yyyy"
-                className="border border-gray-300 rounded-md p-2 w-64 pl-3 text-sm focus:ring-1 focus:ring-[#00AEEF]"
-              />
-              <FaCalendarAlt
-                className="absolute right-3 text-[#00AEEF] cursor-pointer"
-                onClick={() => fromDateRef.current?.setOpen(true)}
+            {/* From Date - NEW CUSTOM CALENDAR */}
+            <div className="w-full md:w-auto cursor-pointer">
+              <DatePickerCustom
+                label="From"
+                date={fromDate}
+                showCalendar={showFromCalendar}
+                setShowCalendar={setShowFromCalendar}
+                setDate={setFromDate}
               />
             </div>
 
-            {/* To Date */}
-            <div className="relative flex items-center">
-              <DatePicker
-                ref={toDateRef}
-                selected={toDate}
-                onChange={(d: Date | null) => setToDate(d)}
-                placeholderText="To Date"
-                dateFormat="dd-MM-yyyy"
-                className="border border-gray-300 rounded-md p-2 w-64 pl-3 text-sm focus:ring-1 focus:ring-[#00AEEF]"
-              />
-              <FaCalendarAlt
-                className="absolute right-3 text-[#00AEEF] cursor-pointer"
-                onClick={() => toDateRef.current?.setOpen(true)}
+            {/* To Date - NEW CUSTOM CALENDAR */}
+            <div className="w-full md:w-auto cursor-pointer">
+              <DatePickerCustom
+                label="To"
+                date={toDate}
+                showCalendar={showToCalendar}
+                setShowCalendar={setShowToCalendar}
+                setDate={setToDate}
               />
             </div>
           </div>
@@ -544,559 +534,240 @@ const CommentsBySalesPersonList: React.FC = () => {
 
 export default CommentsBySalesPersonList;
 
-
-
-// "use client";
-
-// import React, { useState, useRef } from "react";
-// import { FaCalendarAlt } from "react-icons/fa";
-// import DatePicker from "react-datepicker";
-// import "react-datepicker/dist/react-datepicker.css";
-
-// interface DataRow {
-//   id: number;
-//   date: string;
-//   contactPerson: string;
-//   company: string;
-//   dueDate: string;
-//   location: string;
-//   comments: string;
-//   salesPerson: string;
-// }
-
-// const CommentsBySalesPersonList: React.FC = () => {
-//   const [fromDate, setFromDate] = useState<Date | null>(null);
-//   const [toDate, setToDate] = useState<Date | null>(null);
-//   const [selectedSalesPerson, setSelectedSalesPerson] =
-//     useState<string>("All Sales Person");
-
-//   const fromDateRef = useRef<any>(null);
-//   const toDateRef = useRef<any>(null);
-
-//   const salesPersons: string[] = [
-//     "All Sales Person",
-//     "Test (CEO)",
-//     "John Doe",
-//     "Jane Smith",
-//   ];
-
-//   const data: DataRow[] = [
-//     {
-//       id: 1,
-//       date: "03-Nov-25 17:17",
-//       contactPerson: "MPL ZXS",
-//       company: "Company Inc.",
-//       dueDate: "10-Mar-21 14:05",
-//       location: "Surat, India",
-//       comments: "hi - By Test",
-//       salesPerson: "Test (CEO)",
-//     },
-//     {
-//       id: 2,
-//       date: "28-Oct-25 10:29",
-//       contactPerson: "MPL1 ZXS1",
-//       company: "Company Inc.",
-//       dueDate: "09-Mar-21 10:33",
-//       location: "Surat, India",
-//       comments: "Need to have a followup call. - By Test",
-//       salesPerson: "Test (CEO)",
-//     },
-//   ];
-
-//   const handleSearch = (): void => {
-//     console.log("Filter Applied:", selectedSalesPerson, fromDate, toDate);
-//   };
-
-//   const handleExport = (): void => {
-//     console.log("Export Excel...");
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gray-100 flex justify-center items-start py-6">
-//       <div className="w-full max-w-7xl bg-white border border-gray-300 rounded-md shadow-md">
-//         {/* Header */}
-//         <div className="border-b border-gray-300 px-5 py-3 flex justify-between items-center">
-//           <h2 className="text-gray-800 text-base font-semibold">
-//             Comments Given By <span className="font-bold">Sales Person</span>
-//           </h2>
-
-//           <button
-//             onClick={handleExport}
-//             className="bg-[#4B63A1] text-white text-sm font-semibold px-4 py-1.5 rounded shadow-sm hover:bg-[#3B4F8C] transition"
-//           >
-//             Export To Excel
-//           </button>
-//         </div>
-
-//         {/* Filters */}
-//         <div className="flex flex-wrap items-center justify-between px-8 py-4">
-//           {/* Left Filters */}
-//           <div className="flex items-center flex-wrap gap-6">
-//             {/* Sales Person Select */}
-//             <select
-//               value={selectedSalesPerson}
-//               onChange={(e) => setSelectedSalesPerson(e.target.value)}
-//               className="border border-gray-300 rounded-md p-2 w-80 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#00AEEF]"
-//             >
-//               {salesPersons.map((person, i) => (
-//                 <option key={i}>{person}</option>
-//               ))}
-//             </select>
-
-//             {/* From Date */}
-//             <div className="relative flex items-center">
-//               <DatePicker
-//                 ref={fromDateRef}
-//                 selected={fromDate}
-//                 onChange={(d: Date | null) => setFromDate(d)}
-//                 placeholderText="From Date"
-//                 dateFormat="dd-MM-yyyy"
-//                 className="border border-gray-300 rounded-md p-2 w-64 pl-3 text-sm focus:ring-1 focus:ring-[#00AEEF]"
-//               />
-//               <FaCalendarAlt
-//                 className="absolute right-3 text-[#00AEEF] cursor-pointer"
-//                 onClick={() => fromDateRef.current?.setOpen(true)}
-//               />
-//             </div>
-
-//             {/* To Date */}
-//             <div className="relative flex items-center">
-//               <DatePicker
-//                 ref={toDateRef}
-//                 selected={toDate}
-//                 onChange={(d: Date | null) => setToDate(d)}
-//                 placeholderText="To Date"
-//                 dateFormat="dd-MM-yyyy"
-//                 className="border border-gray-300 rounded-md p-2 w-64 pl-3 text-sm focus:ring-1 focus:ring-[#00AEEF]"
-//               />
-//               <FaCalendarAlt
-//                 className="absolute right-3 text-[#00AEEF] cursor-pointer"
-//                 onClick={() => toDateRef.current?.setOpen(true)}
-//               />
-//             </div>
-//           </div>
-
-//           {/* Search Button */}
-//           <div className="mt-4 sm:mt-0">
-//             <button
-//               onClick={handleSearch}
-//               className="bg-[#00AEEF] text-white text-sm font-semibold px-8 py-2 rounded shadow-sm hover:bg-[#0095D9] transition"
-//             >
-//               Search
-//             </button>
-//           </div>
-//         </div>
-
-//         {/* Table */}
-//         <div className="px-6 pb-6 overflow-x-auto">
-//           <table className="min-w-full text-sm border border-gray-300">
-//             <thead>
-//               <tr className="bg-gray-100 text-gray-700">
-//                 <th className="py-2 px-4 border-b font-semibold">SR.NO.</th>
-//                 <th className="py-2 px-4 border-b font-semibold">DATE</th>
-//                 <th className="py-2 px-4 border-b font-semibold">
-//                   CONTACT PERSON
-//                 </th>
-//                 <th className="py-2 px-4 border-b font-semibold">COMPANY</th>
-//                 <th className="py-2 px-4 border-b font-semibold">DUE DATE</th>
-//                 <th className="py-2 px-4 border-b font-semibold">LOCATION</th>
-//                 <th className="py-2 px-4 border-b font-semibold">COMMENTS</th>
-//                 <th className="py-2 px-4 border-b font-semibold">
-//                   SALES PERSON
-//                 </th>
-//               </tr>
-//             </thead>
-
-//             <tbody>
-//               {data.map((row) => (
-//                 <tr
-//                   key={row.id}
-//                   className="hover:bg-gray-50 border-b text-gray-700"
-//                 >
-//                   <td className="py-2 px-4">{row.id}</td>
-//                   <td className="py-2 px-4">{row.date}</td>
-//                   <td className="py-2 px-4">{row.contactPerson}</td>
-//                   <td className="py-2 px-4">{row.company}</td>
-//                   <td className="py-2 px-4">{row.dueDate}</td>
-//                   <td className="py-2 px-4">{row.location}</td>
-//                   <td className="py-2 px-4">{row.comments}</td>
-//                   <td className="py-2 px-4">{row.salesPerson}</td>
-//                 </tr>
-//               ))}
-//             </tbody>
-//           </table>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default CommentsBySalesPersonList;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// "use client";
-
-// import React, { useState, useRef, useEffect } from "react";
-// import { FaCalendarAlt } from "react-icons/fa";
-// import DatePicker from "react-datepicker";
-// import "react-datepicker/dist/react-datepicker.css";
-// import { apiGet } from "@/utils/api";
-
-// interface Salesperson {
-//   _id: string;
-//   name: string;
-//   email?: string;
-//   role?: string;
-// }
-
-// interface Comment {
-//   _id: string;
-//   text: string;
-//   createdAt: string;
-//   salesPersonId: string;
-//   salesPersonName: string;
-// }
-
-// interface DataRow {
-//   _id: string;
-//   date: string;
-//   contactPerson: string;
-//   company: string;
-//   dueDate: string;
-//   location: string;
-//   comments: Comment[];
-//   salesPersonId: string;
-//   salesPersonName: string;
-// }
-
-// const CommentsBySalesPersonList: React.FC = () => {
-//   const [fromDate, setFromDate] = useState<Date | null>(null);
-//   const [toDate, setToDate] = useState<Date | null>(null);
-//   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>("All");
-//   const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
-//   const [data, setData] = useState<DataRow[]>([]);
-//   const [filteredData, setFilteredData] = useState<DataRow[]>([]);
-//   const [loading, setLoading] = useState(false);
-
-//   const fromDateRef = useRef<any>(null);
-//   const toDateRef = useRef<any>(null);
-
-//   // Fetch salespersons dynamically
-//   useEffect(() => {
-//     const fetchSalespersons = async () => {
-//       try {
-//         console.log("🔄 Fetching salespersons...");
-        
-//         const result = await apiGet("/api/users/salespersons");
-        
-//         if (result.success) {
-//           setSalespersons(result.data || []);
-//           console.log("✅ Salespersons fetched:", result.data?.length || 0);
-//         } else {
-//           console.error("❌ Failed to fetch salespersons:", result.error);
-//           setSalespersons([]);
-//         }
-//       } catch (error) {
-//         console.error("❌ Error fetching salespersons:", error);
-//         setSalespersons([]);
-//       }
-//     };
-    
-//     fetchSalespersons();
-//   }, []);
-
-//   // Fetch comments data
-//   useEffect(() => {
-//     const fetchComments = async () => {
-//       try {
-//         setLoading(true);
-//         console.log("🔄 Fetching comments...");
-        
-//         const result = await apiGet("/api/leads/comments");
-        
-//         if (result.success) {
-//           setData(result.data || []);
-//           setFilteredData(result.data || []);
-//           console.log("✅ Comments fetched:", result.data?.length || 0);
-//         } else {
-//           console.error("❌ Failed to fetch comments:", result.error);
-//           setData([]);
-//           setFilteredData([]);
-//         }
-//       } catch (error) {
-//         console.error("❌ Error fetching comments:", error);
-//         setData([]);
-//         setFilteredData([]);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-    
-//     fetchComments();
-//   }, []);
-
-//   // Handle search/filter
-//   const handleSearch = (): void => {
-//     console.log("Filter Applied:", selectedSalesPerson, fromDate, toDate);
-    
-//     let filtered = [...data];
-
-//     // Filter by salesperson
-//     if (selectedSalesPerson && selectedSalesPerson !== "All") {
-//       filtered = filtered.filter(
-//         (row) => row.salesPersonId === selectedSalesPerson
-//       );
-//     }
-
-//     // Filter by date range
-//     if (fromDate) {
-//       filtered = filtered.filter(
-//         (row) => new Date(row.date) >= fromDate
-//       );
-//     }
-
-//     if (toDate) {
-//       filtered = filtered.filter(
-//         (row) => new Date(row.date) <= toDate
-//       );
-//     }
-
-//     setFilteredData(filtered);
-//   };
-
-//   // Reset filters
-//   const handleReset = (): void => {
-//     setSelectedSalesPerson("All");
-//     setFromDate(null);
-//     setToDate(null);
-//     setFilteredData(data);
-//   };
-
-//   // Export to Excel
-//   const handleExport = (): void => {
-//     if (filteredData.length === 0) {
-//       return alert("No data to export!");
-//     }
-
-//     const csv = [
-//       [
-//         "SR.NO.",
-//         "DATE",
-//         "CONTACT PERSON",
-//         "COMPANY",
-//         "DUE DATE",
-//         "LOCATION",
-//         "COMMENTS",
-//         "SALES PERSON",
-//       ].join(","),
-
-//       ...filteredData.map((row, idx) => [
-//         idx + 1,
-//         row.date,
-//         row.contactPerson,
-//         row.company,
-//         row.dueDate,
-//         row.location,
-//         `"${formatComments(row.comments)}"`, // Wrap in quotes to handle commas
-//         row.salesPersonName,
-//       ].join(","))
-//     ].join("\n");
-
-//     const blob = new Blob([csv], { type: "text/csv" });
-//     const url = window.URL.createObjectURL(blob);
-
-//     const a = document.createElement("a");
-//     a.href = url;
-//     a.download = "comments_by_salesperson.csv";
-//     a.click();
-
-//     window.URL.revokeObjectURL(url);
-//   };
-
-//   // Format comments with "By - SalespersonName"
-//   const formatComments = (comments: Comment[]): string => {
-//     if (!comments || comments.length === 0) return "No comments";
-    
-//     return comments
-//       .map((comment) => `${comment.text} - By ${comment.salesPersonName}`)
-//       .join("; ");
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gray-100 flex justify-center items-start py-6">
-//       <div className="w-full max-w-7xl bg-white border border-gray-300 rounded-md shadow-md">
-//         {/* Header */}
-//         <div className="border-b border-gray-300 px-5 py-3 flex justify-between items-center">
-//           <h2 className="text-gray-800 text-base font-semibold">
-//             Comments Given By <span className="font-bold">Sales Person</span>
-//           </h2>
-
-//           <button
-//             onClick={handleExport}
-//             className="bg-[#4B63A1] text-white text-sm font-semibold px-4 py-1.5 rounded shadow-sm hover:bg-[#3B4F8C] transition"
-//           >
-//             Export To Excel
-//           </button>
-//         </div>
-
-//         {/* Filters */}
-//         <div className="flex flex-wrap items-center justify-between px-8 py-4 gap-4">
-//           {/* Left Filters */}
-//           <div className="flex items-center flex-wrap gap-6">
-//             {/* Sales Person Select */}
-//             <select
-//               value={selectedSalesPerson}
-//               onChange={(e) => setSelectedSalesPerson(e.target.value)}
-//               className="border border-gray-300 rounded-md p-2 w-80 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#00AEEF]"
-//             >
-//               <option value="All">All Sales Person</option>
-//               {salespersons.map((person) => (
-//                 <option key={person._id} value={person._id}>
-//                   {person.name} {person.role ? `(${person.role})` : ""}
-//                 </option>
-//               ))}
-//             </select>
-
-//             {/* From Date */}
-//             <div className="relative flex items-center">
-//               <DatePicker
-//                 ref={fromDateRef}
-//                 selected={fromDate}
-//                 onChange={(d: Date | null) => setFromDate(d)}
-//                 placeholderText="From Date"
-//                 dateFormat="dd-MM-yyyy"
-//                 className="border border-gray-300 rounded-md p-2 w-64 pl-3 text-sm focus:ring-1 focus:ring-[#00AEEF]"
-//               />
-//               <FaCalendarAlt
-//                 className="absolute right-3 text-[#00AEEF] cursor-pointer"
-//                 onClick={() => fromDateRef.current?.setOpen(true)}
-//               />
-//             </div>
-
-//             {/* To Date */}
-//             <div className="relative flex items-center">
-//               <DatePicker
-//                 ref={toDateRef}
-//                 selected={toDate}
-//                 onChange={(d: Date | null) => setToDate(d)}
-//                 placeholderText="To Date"
-//                 dateFormat="dd-MM-yyyy"
-//                 className="border border-gray-300 rounded-md p-2 w-64 pl-3 text-sm focus:ring-1 focus:ring-[#00AEEF]"
-//               />
-//               <FaCalendarAlt
-//                 className="absolute right-3 text-[#00AEEF] cursor-pointer"
-//                 onClick={() => toDateRef.current?.setOpen(true)}
-//               />
-//             </div>
-//           </div>
-
-//           {/* Action Buttons */}
-//           <div className="flex gap-2">
-//             <button
-//               onClick={handleSearch}
-//               className="bg-[#00AEEF] text-white text-sm font-semibold px-8 py-2 rounded shadow-sm hover:bg-[#0095D9] transition"
-//             >
-//               Search
-//             </button>
-
-//             <button
-//               onClick={handleReset}
-//               className="bg-gray-500 text-white text-sm font-semibold px-6 py-2 rounded shadow-sm hover:bg-gray-600 transition"
-//             >
-//               Reset
-//             </button>
-//           </div>
-//         </div>
-
-//         {/* Loading State */}
-//         {loading && (
-//           <div className="px-6 py-8 text-center text-gray-500">
-//             Loading comments...
-//           </div>
-//         )}
-
-//         {/* Table */}
-//         {!loading && (
-//           <div className="px-6 pb-6 overflow-x-auto">
-//             <table className="min-w-full text-sm border border-gray-300">
-//               <thead>
-//                 <tr className="bg-gray-100 text-gray-700">
-//                   <th className="py-2 px-4 border-b font-semibold text-left">SR.NO.</th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">DATE</th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">
-//                     CONTACT PERSON
-//                   </th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">COMPANY</th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">DUE DATE</th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">LOCATION</th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">COMMENTS</th>
-//                   <th className="py-2 px-4 border-b font-semibold text-left">
-//                     SALES PERSON
-//                   </th>
-//                 </tr>
-//               </thead>
-
-//               <tbody>
-//                 {filteredData.length > 0 ? (
-//                   filteredData.map((row, idx) => (
-//                     <tr
-//                       key={row._id}
-//                       className="hover:bg-gray-50 border-b text-gray-700"
-//                     >
-//                       <td className="py-2 px-4">{idx + 1}</td>
-//                       <td className="py-2 px-4">{row.date}</td>
-//                       <td className="py-2 px-4">{row.contactPerson}</td>
-//                       <td className="py-2 px-4">{row.company}</td>
-//                       <td className="py-2 px-4">{row.dueDate}</td>
-//                       <td className="py-2 px-4">{row.location}</td>
-//                       <td className="py-2 px-4 max-w-xs">
-//                         <div className="whitespace-pre-wrap break-words">
-//                           {formatComments(row.comments)}
-//                         </div>
-//                       </td>
-//                       <td className="py-2 px-4">{row.salesPersonName}</td>
-//                     </tr>
-//                   ))
-//                 ) : (
-//                   <tr>
-//                     <td
-//                       colSpan={8}
-//                       className="text-center py-8 text-gray-500 text-sm"
-//                     >
-//                       No comments found. Try adjusting your filters.
-//                     </td>
-//                   </tr>
-//                 )}
-//               </tbody>
-//             </table>
-//           </div>
-//         )}
-
-//         {/* Results Info */}
-//         {!loading && filteredData.length > 0 && (
-//           <div className="px-6 pb-4 text-sm text-gray-600 text-right">
-//             Showing {filteredData.length} result(s)
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default CommentsBySalesPersonList;
+/* ------------------ CUSTOM DATE PICKER (UPDATED WITH CALENDAR FROM FIRST CODE) ------------------ */
+
+function DatePickerCustom({ label, date, showCalendar, setShowCalendar, setDate }: DatePickerCustomProps) {
+  const [currentMonth, setCurrentMonth] = useState(date || new Date());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
+  useEffect(() => {
+    if (date) {
+      setCurrentMonth(date);
+    }
+  }, [date]);
+
+  const handleCalendarButtonClick = () => {
+    if (!date) {
+      setDate(new Date());
+      setCurrentMonth(new Date());
+    }
+    setShowCalendar(!showCalendar);
+  };
+
+  const daysInMonth = (dateObj: Date): CalendarDay[] => {
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysArray: CalendarDay[] = [];
+
+    const firstDayOfWeek = firstDay.getDay();
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      daysArray.push({ day: prevMonthLastDay - i, isCurrentMonth: false });
+    }
+
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      daysArray.push({ day: i, isCurrentMonth: true });
+    }
+
+    const remainingDays = 42 - daysArray.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      daysArray.push({ day: i, isCurrentMonth: false });
+    }
+
+    return daysArray;
+  };
+
+  const handleDateSelect = (day: number, isCurrentMonth: boolean) => {
+    if (!isCurrentMonth) return;
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const newDate = new Date(year, month, day);
+    setDate(newDate);
+    setShowCalendar(false);
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  };
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(monthIndex);
+    setCurrentMonth(newDate);
+    setShowMonthPicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(currentMonth);
+    newDate.setFullYear(year);
+    setCurrentMonth(newDate);
+    setShowYearPicker(false);
+  };
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 101 }, (_, i) => currentYear - 50 + i);
+
+  return (
+    <div className="flex items-center gap-2 relative w-full md:w-auto">
+      <label className="text-gray-700 font-medium text-sm w-20">{label}</label>
+
+      <div className="relative inline-block w-full md:w-auto">
+        <input
+          type="text"
+          value={date ? date.toISOString().split("T")[0] : 'yyyy-mm-dd'}
+          readOnly
+          onClick={handleCalendarButtonClick}
+          placeholder="yyyy-mm-dd"
+          className="border border-gray-300 rounded-md px-3 py-2 text-sm pr-12 cursor-pointer w-full md:w-[150px] text-gray-400"
+        />
+
+        <button
+          type="button"
+          onClick={handleCalendarButtonClick}
+          className="absolute cursor-pointer right-0 top-0 h-full bg-blue-500 px-3 flex items-center justify-center rounded-r-md hover:bg-blue-600"
+        >
+          <Calendar className="text-white w-4 h-4" />
+        </button>
+
+        {showCalendar && (
+          <>
+            <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-2 w-50 z-[9999]">
+              <div className="flex items-center justify-between mb-2">
+                <button type="button" onClick={prevMonth} className="text-blue-500 hover:text-blue-700 w-7 h-7 flex items-center justify-center">
+                  <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMonthPicker(!showMonthPicker);
+                      setShowYearPicker(false);
+                    }}
+                    className="font-semibold text-gray-700 text-xs hover:bg-gray-100 px-2 py-1 rounded"
+                  >
+                    {monthNames[currentMonth.getMonth()]}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowYearPicker(!showYearPicker);
+                      setShowMonthPicker(false);
+                    }}
+                    className="font-semibold text-gray-700 text-xs hover:bg-gray-100 px-2 py-1 rounded"
+                  >
+                    {currentMonth.getFullYear()}
+                  </button>
+                </div>
+
+                <button type="button" onClick={nextMonth} className="text-blue-500 hover:text-blue-700 w-7 h-7 flex items-center justify-center">
+                  <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+              </div>
+
+              {/* Month Picker */}
+              {showMonthPicker && (
+                <div className="grid grid-cols-3 gap-1 mb-2">
+                  {fullMonthNames.map((month, index) => (
+                    <button
+                      key={month}
+                      type="button"
+                      onClick={() => handleMonthSelect(index)}
+                      className={`py-1 px-1 text-[12px] rounded hover:bg-gray-200 ${
+                        index === currentMonth.getMonth()
+                          ? "bg-blue-500 text-white font-bold"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {month.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Year Picker */}
+              {showYearPicker && (
+                <div className="max-h-[150px] overflow-y-auto mb-2">
+                  <div className="grid grid-cols-4 gap-1">
+                    {years.map((year) => (
+                      <button
+                        key={year}
+                        type="button"
+                        onClick={() => handleYearSelect(year)}
+                        className={`py-1 px-1 text-[12px] rounded hover:bg-gray-200 ${
+                          year === currentMonth.getFullYear()
+                            ? "bg-blue-500 text-white font-bold"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Day Picker */}
+              {!showMonthPicker && !showYearPicker && (
+                <>
+                  <div className="grid grid-cols-7 gap-1 mb-1">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                      <div key={i} className="text-center text-[10px] font-bold text-gray-600 py-0.5">{day}</div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-0">
+                    {daysInMonth(currentMonth).map((item, index) => {
+                      const isSelected = date && 
+                        item.isCurrentMonth && 
+                        item.day === date.getDate() && 
+                        currentMonth.getMonth() === date.getMonth() && 
+                        currentMonth.getFullYear() === date.getFullYear();
+
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleDateSelect(item.day, item.isCurrentMonth)}
+                          className={`py-1 text-center rounded text-xs ${
+                            !item.isCurrentMonth
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-blue-500 text-white font-bold'
+                              : 'text-gray-700 hover:bg-blue-100 cursor-pointer'
+                          }`}
+                        >
+                          {item.day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Click outside to close */}
+            <div
+              className="fixed inset-0 z-[9998]"
+              onClick={() => {
+                setShowCalendar(false);
+                setShowMonthPicker(false);
+                setShowYearPicker(false);
+              }}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
