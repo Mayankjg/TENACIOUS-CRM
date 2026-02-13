@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import { useState } from "react";
 import { FaCalendarAlt } from "react-icons/fa";
 
 interface SalesPerson {
