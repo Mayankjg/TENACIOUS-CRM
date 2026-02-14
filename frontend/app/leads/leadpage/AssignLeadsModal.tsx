@@ -1,6 +1,8 @@
 // frontend/app/leads/AssignLeadsModal.tsx
 // MULTI-TENANT AWARE - Shows only salespersons from current tenant
 
+"use client";
+
 import { useState, useEffect } from 'react';
 import { apiGet } from "@/utils/api";
 
