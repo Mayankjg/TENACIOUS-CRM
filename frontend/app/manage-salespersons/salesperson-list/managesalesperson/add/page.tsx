@@ -60,6 +60,12 @@ interface FormData {
   cancelledChequeFile: File | null;
 }
 
+interface Country {
+  name: string;
+  callingCode: string;
+  displayName: string;
+}
+
 interface LabelProps {
   children: React.ReactNode;
   required?: boolean;
@@ -75,6 +81,8 @@ interface InputFieldProps {
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   icon?: string;
   disabled?: boolean;
+  error?: string;
+  maxLength?: number;
 }
 
 interface SelectFieldProps {
@@ -122,6 +130,10 @@ interface StepComponentProps {
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   onFile: (name: string, file: File | null) => void;
   onSlabChange?: (slabs: IncentiveSlab[]) => void;
+  fieldErrors: Record<string, string>;
+  countries: Country[];
+  onCountryChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  onPhoneInputChange: (e: ChangeEvent<HTMLInputElement>, fieldName: "mobileNumber" | "alternateNumber") => void;
 }
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
@@ -177,6 +189,119 @@ const INITIAL_STATE: FormData = {
   cancelledChequeFile: null,
 };
 
+// ─── VALIDATION HELPERS ─────────────────────────────────────────────────────────
+function validateMobileNumber(number: string): string | null {
+  if (!number.trim()) return "Mobile Number is required";
+  
+  const digits = number.replace(/\D/g, '');
+  
+  if (!/^\d+$/.test(digits)) {
+    return "Mobile Number must contain only digits";
+  }
+  
+  if (digits.length < 10) {
+    return "Mobile Number must be at least 10 digits";
+  }
+  if (digits.length > 15) {
+    return "Mobile Number cannot exceed 15 digits";
+  }
+  
+  return null;
+}
+
+function validateAlternateNumber(number: string): string | null {
+  if (!number.trim()) return null;
+  
+  const digits = number.replace(/\D/g, '');
+  
+  if (!/^\d+$/.test(digits)) {
+    return "Alternate Number must contain only digits";
+  }
+  
+  if (digits.length < 10) {
+    return "Alternate Number must be at least 10 digits";
+  }
+  if (digits.length > 15) {
+    return "Alternate Number cannot exceed 15 digits";
+  }
+  
+  return null;
+}
+
+function validateEmail(email: string): string | null {
+  if (!email.trim()) return "Email Address is required";
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailRegex.test(email)) {
+    return "Please enter a valid email address";
+  }
+  
+  if (email.includes('..')) {
+    return "Email address cannot contain consecutive dots";
+  }
+  
+  if (email.startsWith('.') || email.endsWith('.')) {
+    return "Email address cannot start or end with a dot";
+  }
+  
+  return null;
+}
+
+function validateDateOfJoining(date: string): string | null {
+  if (!date) return "Date of Joining is required";
+  
+  const selectedDate = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (isNaN(selectedDate.getTime())) {
+    return "Please enter a valid date";
+  }
+  
+  if (selectedDate > today) {
+    return "Date of Joining cannot be in the future";
+  }
+  
+  const fiftyYearsAgo = new Date();
+  fiftyYearsAgo.setFullYear(fiftyYearsAgo.getFullYear() - 50);
+  
+  if (selectedDate < fiftyYearsAgo) {
+    return "Date of Joining seems too far in the past";
+  }
+  
+  return null;
+}
+
+function validateAadhaarNumber(aadhaar: string): string | null {
+  if (!aadhaar.trim()) return "Aadhaar Number is required";
+  
+  const digits = aadhaar.replace(/\s/g, '');
+  
+  if (!/^\d+$/.test(digits)) {
+    return "Aadhaar Number must contain only digits";
+  }
+  
+  if (digits.length !== 12) {
+    return "Aadhaar Number must be exactly 12 digits";
+  }
+  
+  return null;
+}
+
+function validatePanNumber(pan: string): string | null {
+  if (!pan.trim()) return "PAN Number is required";
+  
+  const panUpper = pan.toUpperCase();
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  
+  if (!panRegex.test(panUpper)) {
+    return "PAN must be 10 characters (5 letters, 4 digits, 1 letter)";
+  }
+  
+  return null;
+}
+
 // ─── REUSABLE FIELD COMPONENTS ─────────────────────────────────────────────────
 const Label: React.FC<LabelProps> = ({ children, required }) => (
   <label className="block text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1.5">
@@ -187,7 +312,7 @@ const Label: React.FC<LabelProps> = ({ children, required }) => (
 const inputBase =
   "w-full bg-slate-800/70 border border-slate-600/50 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/70 focus:bg-slate-800 transition-all duration-200";
 
-const InputField: React.FC<InputFieldProps> = ({ label, name, type = "text", placeholder, required, value, onChange, icon, disabled }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, name, type = "text", placeholder, required, value, onChange, icon, disabled, error, maxLength }) => (
   <div className="flex flex-col">
     <Label required={required}>{label}</Label>
     <div className="relative">
@@ -199,9 +324,15 @@ const InputField: React.FC<InputFieldProps> = ({ label, name, type = "text", pla
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={`${inputBase} ${icon ? "pl-9" : ""} ${disabled ? "opacity-50 cursor-not-allowed bg-slate-900/50" : "cursor-text"}`}
+        maxLength={maxLength}
+        className={`${inputBase} ${icon ? "pl-9" : ""} ${disabled ? "opacity-50 cursor-not-allowed bg-slate-900/50" : "cursor-text"} ${error ? "border-red-500/50 focus:border-red-500" : ""}`}
       />
     </div>
+    {error && (
+      <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <span>⚠</span> {error}
+      </p>
+    )}
   </div>
 );
 
@@ -324,7 +455,7 @@ const IncentiveSlabs: React.FC<IncentiveSlabsProps> = ({ slabs, onChange }) => {
 };
 
 // ─── STEP 1: BASIC INFO ─────────────────────────────────────────────────────────
-const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => {
+const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErrors, countries, onCountryChange, onPhoneInputChange }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -333,6 +464,19 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => {
     const reader = new FileReader();
     reader.onloadend = () => setPreview(reader.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const currentCountry = countries.find((c) => c.name === data.country);
+  const currentCallingCode = currentCountry?.callingCode || "";
+
+  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
+    if (!phoneValue) return "";
+    const trimmed = phoneValue.trim();
+    if (callingCode && trimmed.startsWith(callingCode)) {
+      return trimmed.slice(callingCode.length).trim();
+    }
+    const cleanedPhone = trimmed.replace(/^\+\d{1,4}\s*/, "");
+    return cleanedPhone;
   };
 
   return (
@@ -363,32 +507,117 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => {
           <InputField label="Full Name" name="fullName" placeholder="Enter full name" required value={data.fullName} onChange={onChange} icon="✏️" />
           <SelectField label="Gender" name="gender" options={["Male", "Female", "Other", "Prefer not to say"]} required value={data.gender} onChange={onChange} icon="⚧" />
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Mobile Number" name="mobileNumber" type="tel" placeholder="+91 98765 43210" required value={data.mobileNumber} onChange={onChange} icon="📱" />
-          <InputField label="Alternate Number" name="alternateNumber" type="tel" placeholder="+91 98765 43210" value={data.alternateNumber} onChange={onChange} icon="📞" />
+          {/* Mobile Number with Country Code */}
+          <div className="flex flex-col">
+            <Label required>Mobile Number</Label>
+            <div className="relative h-[40px]">
+              <div className="absolute left-0 top-0 h-full w-[60px] border border-r-0 rounded-l-xl bg-slate-700 flex items-center justify-center text-slate-300 text-xs font-medium select-none pointer-events-none z-10">
+                {currentCallingCode || "+91"}
+              </div>
+              <input
+                type="text"
+                name="mobileNumber"
+                value={extractPhoneNumber(data.mobileNumber || "", currentCallingCode)}
+                onChange={(e) => onPhoneInputChange(e, "mobileNumber")}
+                placeholder="98765 43210"
+                maxLength={15}
+                className={`${inputBase} pl-[72px] h-full ${fieldErrors.mobileNumber ? "border-red-500/50 focus:border-red-500" : ""}`}
+              />
+            </div>
+            {fieldErrors.mobileNumber && (
+              <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                <span>⚠</span> {fieldErrors.mobileNumber}
+              </p>
+            )}
+          </div>
+
+          {/* Alternate Number with Country Code */}
+          <div className="flex flex-col">
+            <Label>Alternate Number</Label>
+            <div className="relative h-[40px]">
+              <div className="absolute left-0 top-0 h-full w-[60px] border border-r-0 rounded-l-xl bg-slate-700 flex items-center justify-center text-slate-300 text-xs font-medium select-none pointer-events-none z-10">
+                {currentCallingCode || "+91"}
+              </div>
+              <input
+                type="text"
+                name="alternateNumber"
+                value={extractPhoneNumber(data.alternateNumber || "", currentCallingCode)}
+                onChange={(e) => onPhoneInputChange(e, "alternateNumber")}
+                placeholder="98765 43210"
+                maxLength={15}
+                className={`${inputBase} pl-[72px] h-full ${fieldErrors.alternateNumber ? "border-red-500/50 focus:border-red-500" : ""}`}
+              />
+            </div>
+            {fieldErrors.alternateNumber && (
+              <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                <span>⚠</span> {fieldErrors.alternateNumber}
+              </p>
+            )}
+          </div>
         </div>
-        <InputField label="Email Address" name="emailAddress" type="email" placeholder="name@company.com" required value={data.emailAddress} onChange={onChange} icon="✉️" />
-        <InputField label="Date of Joining" name="dateOfJoining" type="date" required value={data.dateOfJoining} onChange={onChange} icon="📅" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField 
+            label="Email Address" 
+            name="emailAddress" 
+            type="email" 
+            placeholder="name@company.com" 
+            required 
+            value={data.emailAddress} 
+            onChange={onChange} 
+            icon="✉️" 
+            error={fieldErrors.emailAddress}
+          />
+          <InputField 
+            label="Date of Joining" 
+            name="dateOfJoining" 
+            type="date" 
+            required 
+            value={data.dateOfJoining} 
+            onChange={onChange} 
+            icon="📅" 
+            error={fieldErrors.dateOfJoining}
+          />
+        </div>
       </div>
     </div>
   );
 };
 
 // ─── STEP 2: ADDRESS ────────────────────────────────────────────────────────────
-const Step2: React.FC<StepComponentProps> = ({ data, onChange }) => (
+const Step2: React.FC<StepComponentProps> = ({ data, onChange, countries, onCountryChange }) => (
   <div>
     <SectionTitle icon="🏠" title="Address Details" subtitle="Residential and location information" />
     <div className="space-y-5">
       <TextareaField label="Current Address" name="currentAddress" placeholder="House/Flat No., Street, Area, Landmark..." required value={data.currentAddress} onChange={onChange} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <SelectField label="Country" name="country" options={["India", "USA", "UK", "UAE", "Singapore", "Canada", "Australia", "Other"]} required value={data.country} onChange={onChange} icon="🌍" />
+        <div className="flex flex-col">
+          <Label required>Country</Label>
+          <div className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none z-10">🌍</span>
+            <select
+              name="country"
+              value={data.country}
+              onChange={onCountryChange}
+              className={`${inputBase} appearance-none pr-8 pl-9 cursor-pointer`}
+            >
+              <option value="" className="bg-slate-900">— Select Country —</option>
+              {countries.map((country) => (
+                <option key={country.name} value={country.name} className="bg-slate-900">
+                  {country.displayName}
+                </option>
+              ))}
+            </select>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs">▾</span>
+          </div>
+        </div>
 
         <InputField label="State" name="state" placeholder="Maharashtra" required value={data.state} onChange={onChange} icon="🗺️" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* city */}
         <InputField label="City" name="city" placeholder="Mumbai" required value={data.city} onChange={onChange} icon="🏙️" />
-
         <InputField label="Postal Code" name="postalCode" placeholder="400001" required value={data.postalCode} onChange={onChange} icon="📮" />
       </div>
     </div>
@@ -396,7 +625,7 @@ const Step2: React.FC<StepComponentProps> = ({ data, onChange }) => (
 );
 
 // ─── STEP 3: KYC ───────────────────────────────────────────────────────────────
-const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => (
+const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErrors }) => (
   <div>
     <SectionTitle icon="🆔" title="Identity & KYC" subtitle="Government ID and verification documents" />
     <div className="space-y-5">
@@ -405,8 +634,28 @@ const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => (
         <p className="text-xs text-blue-300">All documents are encrypted and stored securely. Fields marked * are mandatory for KYC compliance.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <InputField label="Aadhaar Number" name="aadhaarNumber" placeholder="XXXX XXXX XXXX" required value={data.aadhaarNumber} onChange={onChange} icon="🪪" />
-        <InputField label="PAN Number" name="panNumber" placeholder="ABCDE1234F" required value={data.panNumber} onChange={onChange} icon="🗂️" />
+        <InputField 
+          label="Aadhaar Number" 
+          name="aadhaarNumber" 
+          placeholder="XXXX XXXX XXXX" 
+          required 
+          value={data.aadhaarNumber} 
+          onChange={onChange} 
+          icon="🪪" 
+          error={fieldErrors.aadhaarNumber}
+          maxLength={14}
+        />
+        <InputField 
+          label="PAN Number" 
+          name="panNumber" 
+          placeholder="ABCDE1234F" 
+          required 
+          value={data.panNumber} 
+          onChange={onChange} 
+          icon="🗂️" 
+          error={fieldErrors.panNumber}
+          maxLength={10}
+        />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FileField label="Aadhaar Upload" name="aadhaarFile" accept=".pdf,.jpg,.png" required
@@ -462,7 +711,6 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
         <p className="text-xs text-green-300">Salary details are confidential and accessible only to HR and Admin roles.</p>
       </div>
 
-      {/* Fixed Salary */}
       <div className="flex flex-col">
         <Label required>Fixed Salary (₹/month)</Label>
         <div className="relative">
@@ -473,7 +721,6 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
         </div>
       </div>
 
-      {/* Commission Type Toggle */}
       <div className="flex flex-col gap-2">
         <Label required>Commission Type</Label>
         <div className="grid grid-cols-2 gap-3">
@@ -500,7 +747,6 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
         </div>
       </div>
 
-      {/* Commission Value */}
       <div className="flex flex-col">
         <Label required>{data.commissionType === "flat" ? "Flat Commission Amount (₹ per sale)" : "Commission Percentage (%)"}</Label>
         <div className="relative">
@@ -515,7 +761,6 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
 
       {onSlabChange && <IncentiveSlabs slabs={data.incentiveSlabs} onChange={onSlabChange} />}
 
-      {/* Bonus Eligibility */}
       <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
         <div className="flex items-center justify-between">
           <div>
@@ -587,7 +832,6 @@ const Step6: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => {
           )}
         </div>
 
-        {/* IFSC with verify */}
         <div className="flex flex-col gap-1.5">
           <Label required>IFSC Code</Label>
           <div className="flex gap-2">
@@ -644,14 +888,37 @@ const Step6: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => {
 const STEP_COMPONENTS: React.FC<StepComponentProps>[] = [Step1, Step2, Step3, Step4, Step5, Step6];
 
 // ─── VALIDATION PER STEP ────────────────────────────────────────────────────────
-function validateStep(step: number, data: FormData): string[] {
+function validateStep(step: number, data: FormData): { errors: string[]; fieldErrors: Record<string, string> } {
   const errors: string[] = [];
+  const fieldErrors: Record<string, string> = {};
+  
   if (step === 1) {
     if (!data.fullName.trim()) errors.push("Full Name is required");
     if (!data.gender) errors.push("Gender is required");
-    if (!data.mobileNumber.trim()) errors.push("Mobile Number is required");
-    if (!data.emailAddress.trim()) errors.push("Email Address is required");
-    if (!data.dateOfJoining) errors.push("Date of Joining is required");
+    
+    const mobileError = validateMobileNumber(data.mobileNumber);
+    if (mobileError) {
+      errors.push(mobileError);
+      fieldErrors.mobileNumber = mobileError;
+    }
+    
+    const alternateError = validateAlternateNumber(data.alternateNumber);
+    if (alternateError) {
+      errors.push(alternateError);
+      fieldErrors.alternateNumber = alternateError;
+    }
+    
+    const emailError = validateEmail(data.emailAddress);
+    if (emailError) {
+      errors.push(emailError);
+      fieldErrors.emailAddress = emailError;
+    }
+    
+    const dateError = validateDateOfJoining(data.dateOfJoining);
+    if (dateError) {
+      errors.push(dateError);
+      fieldErrors.dateOfJoining = dateError;
+    }
   }
   if (step === 2) {
     if (!data.currentAddress.trim()) errors.push("Current Address is required");
@@ -661,8 +928,17 @@ function validateStep(step: number, data: FormData): string[] {
     if (!data.postalCode.trim()) errors.push("Postal Code is required");
   }
   if (step === 3) {
-    if (!data.aadhaarNumber.trim()) errors.push("Aadhaar Number is required");
-    if (!data.panNumber.trim()) errors.push("PAN Number is required");
+    const aadhaarError = validateAadhaarNumber(data.aadhaarNumber);
+    if (aadhaarError) {
+      errors.push(aadhaarError);
+      fieldErrors.aadhaarNumber = aadhaarError;
+    }
+    
+    const panError = validatePanNumber(data.panNumber);
+    if (panError) {
+      errors.push(panError);
+      fieldErrors.panNumber = panError;
+    }
   }
   if (step === 4) {
     if (!data.productCategoryAccess) errors.push("Product Category Access is required");
@@ -682,7 +958,8 @@ function validateStep(step: number, data: FormData): string[] {
     if (data.accountNumber !== data.confirmAccountNumber)
       errors.push("Account numbers do not match");
   }
-  return errors;
+  
+  return { errors, fieldErrors };
 }
 
 // ─── MAIN WIZARD ────────────────────────────────────────────────────────────────
@@ -691,24 +968,142 @@ export default function SalespersonOnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdName, setCreatedName] = useState("");
   const topRef = useRef<HTMLDivElement>(null);
+
+  // Countries state
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
 
   useEffect(() => {
     if (!validateSession()) { router.push("/login"); return; }
     if (!isAdmin()) { router.push("/dashboard"); return; }
   }, [router]);
 
-  // Scroll to top on step change
+  // Fetch countries
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch("https://restcountries.com/v3.1/all?fields=name,idd");
+        const data = await response.json();
+
+        const formattedCountries: Country[] = data
+          .map((country: any) => {
+            const name = country.name?.common || "";
+            const root = country.idd?.root || "";
+            const suffixes = country.idd?.suffixes || [];
+
+            let callingCode = "";
+            if (root) {
+              callingCode = suffixes.length > 0 ? `${root}${suffixes[0]}` : root;
+            }
+
+            return {
+              name,
+              callingCode,
+              displayName: callingCode ? `${name} (${callingCode})` : name,
+            };
+          })
+          .filter((c: Country) => c.name && c.callingCode)
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
+
+        setCountries(formattedCountries);
+        setLoadingCountries(false);
+      } catch (error) {
+        console.error("❌ Error fetching countries:", error);
+        setLoadingCountries(false);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
   useEffect(() => {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [currentStep]);
 
+  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
+    if (!phoneValue) return "";
+    const trimmed = phoneValue.trim();
+    if (callingCode && trimmed.startsWith(callingCode)) {
+      return trimmed.slice(callingCode.length).trim();
+    }
+    const cleanedPhone = trimmed.replace(/^\+\d{1,4}\s*/, "");
+    return cleanedPhone;
+  };
+
+  const formatPhoneWithCode = (phoneNumber: string, callingCode: string): string => {
+    if (!phoneNumber) return callingCode ? `${callingCode} ` : "";
+    const cleanPhone = phoneNumber.trim();
+    if (!cleanPhone) return callingCode ? `${callingCode} ` : "";
+    return callingCode ? `${callingCode} ${cleanPhone}` : cleanPhone;
+  };
+
+  const handleCountryChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const selectedCountryName = e.target.value;
+    const selectedCountry = countries.find((c) => c.name === selectedCountryName);
+    const newCallingCode = selectedCountry?.callingCode || "";
+
+    const currentCountry = countries.find((c) => c.name === formData.country);
+    const currentCallingCode = currentCountry?.callingCode || "";
+
+    const pureMobile = extractPhoneNumber(formData.mobileNumber, currentCallingCode);
+    const pureAlternate = extractPhoneNumber(formData.alternateNumber, currentCallingCode);
+
+    const newMobile = formatPhoneWithCode(pureMobile, newCallingCode);
+    const newAlternate = formatPhoneWithCode(pureAlternate, newCallingCode);
+
+    setFormData((prev) => ({
+      ...prev,
+      country: selectedCountryName,
+      mobileNumber: newMobile,
+      alternateNumber: newAlternate,
+    }));
+
+    if (fieldErrors.country) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.country;
+        return newErrors;
+      });
+    }
+  };
+
+  const handlePhoneInputChange = (e: ChangeEvent<HTMLInputElement>, fieldName: "mobileNumber" | "alternateNumber") => {
+    const rawValue = e.target.value;
+    const currentCountry = countries.find((c) => c.name === formData.country);
+    const callingCode = currentCountry?.callingCode || "";
+    const fullValue = callingCode ? `${callingCode} ${rawValue}` : rawValue;
+
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: fullValue,
+    }));
+
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
     setStepErrors([]);
   };
 
@@ -721,30 +1116,38 @@ export default function SalespersonOnboardingWizard() {
   };
 
   const handleNext = () => {
-    const errors = validateStep(currentStep, formData);
-    if (errors.length > 0) { setStepErrors(errors); return; }
+    const validation = validateStep(currentStep, formData);
+    if (validation.errors.length > 0) {
+      setStepErrors(validation.errors);
+      setFieldErrors(validation.fieldErrors);
+      return;
+    }
     setStepErrors([]);
+    setFieldErrors({});
     setCurrentStep((s) => Math.min(s + 1, STEPS.length));
   };
 
   const handlePrev = () => {
     setStepErrors([]);
+    setFieldErrors({});
     setCurrentStep((s) => Math.max(s - 1, 1));
   };
 
   const handleSubmit = async () => {
-    const errors = validateStep(currentStep, formData);
-    if (errors.length > 0) { setStepErrors(errors); return; }
+    const validation = validateStep(currentStep, formData);
+    if (validation.errors.length > 0) {
+      setStepErrors(validation.errors);
+      setFieldErrors(validation.fieldErrors);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("ts-token");
       if (!token) throw new Error("No authentication token found");
 
-      // Build form data for multipart upload
       const fd = new FormData();
 
-      // Map onboarding fields to backend salesperson model fields
       const nameParts = formData.fullName.trim().split(" ");
       const firstname = nameParts[0] || "";
       const lastname = nameParts.slice(1).join(" ") || "";
@@ -756,9 +1159,8 @@ export default function SalespersonOnboardingWizard() {
       fd.append("email", formData.emailAddress);
       fd.append("designation", formData.accessLevel || "Sales Executive");
       fd.append("contact", formData.mobileNumber);
-      fd.append("password", "Welcome@123"); // default password — admin changes later
+      fd.append("password", "Welcome@123");
 
-      // Extended profile fields
       fd.append("gender", formData.gender);
       fd.append("alternateNumber", formData.alternateNumber);
       fd.append("dateOfJoining", formData.dateOfJoining);
@@ -786,7 +1188,6 @@ export default function SalespersonOnboardingWizard() {
       fd.append("ifscCode", formData.ifscCode);
       fd.append("accountType", formData.accountType);
 
-      // File attachments
       if (formData.profilePhoto) fd.append("profileImage", formData.profilePhoto);
       if (formData.aadhaarFile) fd.append("aadhaarFile", formData.aadhaarFile);
       if (formData.panFile) fd.append("panFile", formData.panFile);
@@ -822,7 +1223,12 @@ export default function SalespersonOnboardingWizard() {
     }
   };
 
-  // ── SUCCESS SCREEN ────────────────────────────────────────────────────────────
+  const handleReset = () => {
+    setFormData(INITIAL_STATE);
+    setStepErrors([]);
+    setFieldErrors({});
+  };
+
   if (submitSuccess) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6" style={{ fontFamily: "Georgia, serif" }}>
@@ -846,7 +1252,7 @@ export default function SalespersonOnboardingWizard() {
               View Salesperson List →
             </button>
             <button
-              onClick={() => { setFormData(INITIAL_STATE); setCurrentStep(1); setSubmitSuccess(false); }}
+              onClick={() => { setFormData(INITIAL_STATE); setCurrentStep(1); setSubmitSuccess(false); setFieldErrors({}); }}
               className="px-6 py-2.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors cursor-pointer">
               Add Another
             </button>
@@ -859,19 +1265,25 @@ export default function SalespersonOnboardingWizard() {
   const StepComponent = STEP_COMPONENTS[currentStep - 1];
   const progressPct = ((currentStep - 1) / (STEPS.length - 1)) * 100;
 
-  // Step component props
-  const stepProps: StepComponentProps = { data: formData, onChange: handleChange, onFile: handleFile, onSlabChange: handleSlabChange };
+  const stepProps: StepComponentProps = { 
+    data: formData, 
+    onChange: handleChange, 
+    onFile: handleFile, 
+    onSlabChange: handleSlabChange,
+    fieldErrors,
+    countries,
+    onCountryChange: handleCountryChange,
+    onPhoneInputChange: handlePhoneInputChange,
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-6" style={{ fontFamily: "Georgia, serif" }}>
-      {/* Ambient BG */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-400/3 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-600/4 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-4xl mx-auto relative" ref={topRef}>
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-widest text-amber-400 font-bold mb-1">Sales Team Management</p>
@@ -885,7 +1297,6 @@ export default function SalespersonOnboardingWizard() {
           </div>
         </div>
 
-        {/* Progress Bar */}
         <div className="mb-5 h-1 bg-slate-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-500"
@@ -893,7 +1304,6 @@ export default function SalespersonOnboardingWizard() {
           />
         </div>
 
-        {/* Step Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
           {STEPS.map((step) => (
             <button
@@ -901,6 +1311,7 @@ export default function SalespersonOnboardingWizard() {
               type="button"
               onClick={() => {
                 setStepErrors([]);
+                setFieldErrors({});
                 setCurrentStep(step.id);
               }}
               className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-300 cursor-pointer
@@ -916,13 +1327,11 @@ export default function SalespersonOnboardingWizard() {
             </button>
           ))}
         </div>
-        {/* Card */}
+
         <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl backdrop-blur-sm shadow-2xl shadow-black/40">
-          {/* Content */}
           <div className="p-6 sm:p-8">
             <StepComponent {...stepProps} />
 
-            {/* Error Banner */}
             {stepErrors.length > 0 && (
               <div className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
                 <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-2">Please fix the following:</p>
@@ -937,7 +1346,6 @@ export default function SalespersonOnboardingWizard() {
             )}
           </div>
 
-          {/* Footer Nav */}
           <div className="px-6 sm:px-8 pb-6 flex items-center justify-between gap-4 border-t border-slate-800/60 pt-5">
             <button
               type="button"
