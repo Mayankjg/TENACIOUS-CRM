@@ -1,17 +1,18 @@
+// frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/NewPasswordModal.tsx
 "use client";
-import React, { useState, MouseEvent, ChangeEvent } from "react";
+import React, { useState } from "react";
 
 interface NewPasswordModalProps {
   salespersonId: string | number;
   onClose: () => void;
-  onPasswordChange: (id: string | number, password: string) => void;
+  onPasswordChange: (id: string | number, newPassword: string) => void;
 }
 
-const NewPasswordModal: React.FC<NewPasswordModalProps> = ({
+export default function NewPasswordModal({
   salespersonId,
   onClose,
   onPasswordChange,
-}) => {
+}: NewPasswordModalProps) {
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -40,7 +41,7 @@ const NewPasswordModal: React.FC<NewPasswordModalProps> = ({
     >
       <div
         className="bg-white p-4 border border-black rounded-lg w-full max-w-md shadow-lg"
-        onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-xl font-semibold bg-[#e5e9ec] mb-4 text-gray-900">
           Change Password
@@ -57,9 +58,7 @@ const NewPasswordModal: React.FC<NewPasswordModalProps> = ({
           type="password"
           className="w-full p-2.5 mb-4 border border-gray-300 rounded-md pl-5 text-black"
           value={newPassword}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setNewPassword(e.target.value)
-          }
+          onChange={(e) => setNewPassword(e.target.value)}
         />
 
         <label className="block mb-2 text-sm font-medium text-gray-700">
@@ -69,9 +68,7 @@ const NewPasswordModal: React.FC<NewPasswordModalProps> = ({
           type="password"
           className="w-full p-2.5 mb-4 border border-gray-300 rounded-md pl-5 text-black"
           value={confirmPassword}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setConfirmPassword(e.target.value)
-          }
+          onChange={(e) => setConfirmPassword(e.target.value)}
         />
 
         <div className="flex justify-end gap-3 mt-4">
@@ -92,6 +89,4 @@ const NewPasswordModal: React.FC<NewPasswordModalProps> = ({
       </div>
     </div>
   );
-};
-
-export default NewPasswordModal;
+}

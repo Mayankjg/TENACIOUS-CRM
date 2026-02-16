@@ -1,5 +1,6 @@
+// frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/ChangeEmailModal.tsx
 "use client";
-import React, { useState, MouseEvent, ChangeEvent } from "react";
+import React, { useState } from "react";
 
 interface ChangeEmailModalProps {
   salespersonId: string | number;
@@ -7,16 +8,16 @@ interface ChangeEmailModalProps {
   onEmailChange: (id: string | number, email: string) => void;
 }
 
-const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
+export default function ChangeEmailModal({
   salespersonId,
   onClose,
   onEmailChange,
-}) => {
+}: ChangeEmailModalProps) {
   const [newEmail, setNewEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
 
   // Email Validation
-  const validate = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validate = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const submit = () => {
     setError("");
@@ -39,7 +40,7 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
     >
       <div
         className="bg-white p-8 border border-black rounded-lg w-full max-w-md shadow-lg"
-        onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-xl font-semibold bg-[#e5e9ec] mb-4 text-gray-900">
           Change Email ID
@@ -57,9 +58,7 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
           type="email"
           className="w-full p-2.5 mb-4 border border-gray-300 rounded-md pl-5 text-black"
           value={newEmail}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setNewEmail(e.target.value)
-          }
+          onChange={(e) => setNewEmail(e.target.value)}
         />
 
         <div className="flex justify-end gap-3 mt-4">
@@ -80,6 +79,4 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
       </div>
     </div>
   );
-};
-
-export default ChangeEmailModal;
+}

@@ -1,218 +1,129 @@
 // frontend/app/manage-salespersons/salesperson-list/managesalesperson/components/SalespersonCard.tsx
-// MULTI-TENANT FIXED
-
+// MULTI-TENANT — works with both old AddSalesperson AND new OnboardingWizard
 "use client";
-
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Mail, Phone, Briefcase, Trash2, Key } from "lucide-react";
-
 import NewPasswordModal from "./NewPasswordModal";
 import ChangeEmailModal from "./ChangeEmailModal";
+import { apiGet, apiDelete, apiPut, validateSession, isAdmin, getTenantInfo } from "@/utils/api";
 
-// Import tenant-aware utilities
-import {
-  apiGet,
-  apiDelete,
-  apiPut,
-  validateSession,
-  isAdmin,
-  getTenantInfo
-} from "@/utils/api";
-
-// --- Type Definitions ---
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://one4-02-2026.onrender.com";
 
 interface Salesperson {
   id: string | number;
   username: string;
-  firstname: string;
-  lastname: string;
   email: string;
-  designation: string;
-  contact: string;
+  firstname?: string;
+  lastname?: string;
+  designation?: string;
+  contact?: string;
   profileImage?: string;
 }
 
-const SalespersonCard: React.FC = () => {
+export default function SalespersonCard() {
   const router = useRouter();
-
   const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
-
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
-
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
 
-  // Validate session and admin role on mount
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!validateSession()) {
-      console.error("❌ Invalid session");
-      router.push("/login");
-      return;
-    }
-
-    if (!isAdmin()) {
-      console.error("❌ Not authorized - Admin only");
-      router.push("/dashboard");
-      return;
-    }
-
+    if (!validateSession()) { router.push("/login"); return; }
+    if (!isAdmin()) { router.push("/dashboard"); return; }
     const tenantInfo = getTenantInfo();
-    console.log("✅ Salesperson List - Tenant Context:", tenantInfo);
-
+    console.log("✅ SalespersonCard — Tenant:", tenantInfo);
     fetchList();
   }, [router]);
 
-  // Fetch salespersons with tenant filtering (done by backend)
-  const fetchList = async () => {
-    if (!validateSession()) {
-      console.error("❌ Cannot fetch salespersons - invalid session");
-      return;
-    }
-
+  // ── Fetch list ──────────────────────────────────────────────────────────────
+  const fetchList = useCallback(async () => {
+    if (!validateSession()) return;
     try {
       setLoading(true);
-
-      console.log("🔄 Fetching salespersons...");
-
       const result = await apiGet("/api/salespersons/get-salespersons");
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to fetch salespersons");
-      }
-
-      console.log("✅ Fetched salespersons:", result.data?.length || 0);
-
+      if (!result.success) throw new Error(result.error || "Failed to fetch salespersons");
       setSalespersons(result.data || []);
     } catch (error: any) {
-      console.error("❌ Error fetching salespersons:", error);
+      console.error("❌ fetchList error:", error);
       alert(error.message || "Failed to load salespersons");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Delete salesperson with tenant validation
+  // ── Delete ──────────────────────────────────────────────────────────────────
   const deleteSP = async (id: string | number) => {
     if (!confirm("Delete this salesperson?")) return;
-
-    if (!validateSession()) {
-      console.error("❌ Cannot delete - invalid session");
-      return;
-    }
-
+    if (!validateSession()) return;
     try {
-      console.log("🗑️ Deleting salesperson:", id);
-
       const result = await apiDelete(`/api/salespersons/delete-salesperson/${id}`);
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to delete salesperson");
-      }
-
-      console.log("✅ Salesperson deleted successfully");
-
+      if (!result.success) throw new Error(result.error || "Failed to delete");
       setSalespersons((prev) => prev.filter((sp) => sp.id !== id));
       alert("Salesperson deleted successfully!");
     } catch (error: any) {
-      console.error("❌ Error deleting salesperson:", error);
+      console.error("❌ deleteSP error:", error);
       alert(error.message || "Failed to delete salesperson");
     }
   };
 
-  // Update password with tenant validation
+  // ── Password change ─────────────────────────────────────────────────────────
   const handlePasswordChange = async (id: string | number, newPassword: string) => {
-    if (!validateSession()) {
-      console.error("❌ Cannot update password - invalid session");
-      return;
-    }
-
+    if (!validateSession()) return;
     try {
-      console.log("🔑 Updating password for salesperson:", id);
-
-      const result = await apiPut(
-        `/api/salespersons/update-salesperson-password/${id}`,
-        { newPassword }
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update password");
-      }
-
-      console.log("✅ Password updated successfully");
+      const result = await apiPut(`/api/salespersons/update-salesperson-password/${id}`, { newPassword });
+      if (!result.success) throw new Error(result.error || "Failed to update password");
       alert("Password Updated!");
     } catch (error: any) {
-      console.error("❌ Error updating password:", error);
+      console.error("❌ handlePasswordChange error:", error);
       alert(error.message || "Failed to update password");
     }
   };
 
-  // Update email with tenant validation
+  // ── Email change ────────────────────────────────────────────────────────────
   const handleEmailChange = async (id: string | number, email: string) => {
-    if (!validateSession()) {
-      console.error("❌ Cannot update email - invalid session");
-      return;
-    }
-
+    if (!validateSession()) return;
     try {
-      console.log("📧 Updating email for salesperson:", id);
-
-      const result = await apiPut(
-        `/api/salespersons/update-salesperson-email/${id}`,
-        { email }
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update email");
-      }
-
-      console.log("✅ Email updated successfully");
-
+      const result = await apiPut(`/api/salespersons/update-salesperson-email/${id}`, { email });
+      if (!result.success) throw new Error(result.error || "Failed to update email");
       setSalespersons((prev) =>
-        prev.map((sp) =>
-          sp.id === id ? { ...sp, email: result.data.email } : sp
-        )
+        prev.map((sp) => (sp.id === id ? { ...sp, email: result.data?.email || email } : sp))
       );
-
       alert("Email updated successfully!");
     } catch (error: any) {
-      console.error("❌ Error updating email:", error);
+      console.error("❌ handleEmailChange error:", error);
       alert(error.message || "Failed to update email");
     }
   };
 
-  const resolveImageSrc = (profileImage?: string) => {
-    if (!profileImage)
-      return "/uploads/default-avatar.png";
-
+  // ── Image resolver ──────────────────────────────────────────────────────────
+  const resolveImageSrc = (profileImage?: string): string => {
+    if (!profileImage) return "/uploads/default-avatar.png";
     if (/^https?:\/\//i.test(profileImage)) return profileImage;
-
-    if (profileImage.startsWith("/uploads")) {
-      return profileImage;
-    }
-
+    if (profileImage.startsWith("/uploads")) return `${API_BASE}${profileImage}`;
     return profileImage;
   };
 
   const filtered = searchQuery
     ? salespersons.filter(
       (sp) =>
-        (sp.username || "")
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (sp.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+        (sp.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (sp.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (sp.firstname || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (sp.lastname || "").toLowerCase().includes(searchQuery.toLowerCase())
     )
     : salespersons;
 
-  // ✅ LOADING STATE
+  // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4" />
           <p className="text-gray-600">Loading salespersons...</p>
         </div>
       </div>
@@ -221,18 +132,16 @@ const SalespersonCard: React.FC = () => {
 
   return (
     <div className="bg-[#f9fafb] p-5 min-h-[80vh] flex justify-center">
-      {/* PASSWORD MODAL */}
-      {isModalOpen && selectedId !== null && (
+      {/* Password Modal */}
+      {isModalOpen && selectedId && (
         <NewPasswordModal
           salespersonId={selectedId}
           onClose={() => setIsModalOpen(false)}
           onPasswordChange={handlePasswordChange}
         />
       )}
-
-
-      {/* EMAIL MODAL */}
-      {isEmailModalOpen && selectedEmailId !== null && (
+      {/* Email Modal */}
+      {isEmailModalOpen && selectedEmailId && (
         <ChangeEmailModal
           salespersonId={selectedEmailId}
           onClose={() => setIsEmailModalOpen(false)}
@@ -240,21 +149,17 @@ const SalespersonCard: React.FC = () => {
         />
       )}
 
-
       <div className="bg-white w-full max-w-[1400px] border border-black text-black">
-        {/* HEADER */}
+        {/* Header */}
         <div className="py-4">
           <div className="px-6">
             <div className="flex flex-col md:flex-row justify-between gap-3 md:items-center">
               <h2 className="text-2xl text-gray-700 cursor-pointer">
                 Salesperson <strong>List</strong>
               </h2>
-
               <button
                 onClick={() =>
-                  router.push(
-                    "/manage-salespersons/salesperson-list/managesalesperson/add"
-                  )
+                  router.push("/manage-salespersons/salesperson-list/managesalesperson/add")
                 }
                 className="bg-[#374151] cursor-pointer hover:bg-[#1f2937] text-white px-5 py-2.5 rounded"
               >
@@ -262,73 +167,87 @@ const SalespersonCard: React.FC = () => {
               </button>
             </div>
           </div>
-
           <hr className="border-gray-300 mt-4" />
         </div>
 
-        {/* SEARCH BAR */}
+        {/* Search */}
         <div className="flex flex-col md:flex-row justify-end px-6 mb-4 gap-2">
           <input
             type="text"
-            placeholder="Search"
-            className="border border-gray-300 px-3 py-2 w-full md:w-[200px] rounded-md outline-none focus:border-gray-400"
+            placeholder="Search by name or email..."
+            className="border border-gray-300 px-3 py-2 w-full md:w-[220px] rounded-md outline-none focus:border-gray-400"
             value={searchQuery}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-
-          <button className="bg-[#18a3dd] text-white px-4 py-2 rounded-md hover:bg-[#1095cc]">
-            Search
+          <button
+            onClick={() => setSearchQuery("")}
+            className="bg-[#18a3dd] text-white px-4 py-2 rounded-md hover:bg-[#1095cc]"
+          >
+            {searchQuery ? "Clear" : "Search"}
           </button>
         </div>
 
-        {/* LIST */}
-        {filtered.length === 0 ? (
-          <p className="text-center py-10 text-gray-500">
-            No Salespersons Found
+        {/* Summary count */}
+        <div className="px-6 mb-3">
+          <p className="text-xs text-gray-400">
+            Showing {filtered.length} of {salespersons.length} salesperson{salespersons.length !== 1 ? "s" : ""}
           </p>
+        </div>
+
+        {/* List */}
+        {filtered.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-4xl mb-3">👥</p>
+            <p className="text-base font-medium">No Salespersons Found</p>
+            {salespersons.length === 0 && (
+              <p className="text-sm mt-1">
+                Click{" "}
+                <button
+                  className="text-cyan-500 underline cursor-pointer"
+                  onClick={() =>
+                    router.push("/manage-salespersons/salesperson-list/managesalesperson/add")
+                  }
+                >
+                  Add Sales Person
+                </button>{" "}
+                to onboard your first team member.
+              </p>
+            )}
+          </div>
         ) : (
           <div className="px-6 grid gap-3 pb-6">
             {filtered.map((sp) => {
               const imageSrc = resolveImageSrc(sp.profileImage);
-
               return (
-                <div
-                  key={sp.id}
-                  className="p-4 bg-white border rounded-lg hover:bg-gray-50 shadow-sm"
-                >
+                <div key={sp.id} className="p-4 bg-white border rounded-lg hover:bg-gray-50 shadow-sm transition-colors">
                   <div className="flex gap-4">
-                    {/* LEFT - Image */}
+                    {/* Avatar */}
                     <img
-                      src={imageSrc || "/default-avatar.png"}
+                      src={imageSrc}
                       className="w-16 h-20 border rounded object-cover flex-shrink-0"
                       alt={sp.username || "salesperson"}
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/uploads/default-avatar.png"; }}
                     />
 
-                    {/* MIDDLE - Info Grid */}
+                    {/* Info Grid */}
                     <div className="flex-1 min-w-0">
                       {/* Row 1: Username */}
                       <div className="mb-2">
-                        <h3 className="text-base font-bold text-gray-800">
-                          {sp.username}
-                        </h3>
+                        <h3 className="text-base font-bold text-gray-800">{sp.username}</h3>
                       </div>
 
-                      {/* Row 2: First Name | Designation | Delete | View Leads */}
+                      {/* Row 2: Name | Designation | Delete | View Leads */}
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 mb-2">
                         <div className="text-sm text-gray-600 md:col-span-3">
-                          {sp.firstname} {sp.lastname}
+                          {[sp.firstname, sp.lastname].filter(Boolean).join(" ")}
                         </div>
-
                         <div className="flex items-center gap-2 md:col-span-4">
                           <Briefcase className="w-4 h-4 text-gray-500 flex-shrink-0" />
                           <span className="text-sm text-gray-700 truncate">
                             Designation:{" "}
-                            <strong className="text-gray-900">
-                              {sp.designation}
-                            </strong>
+                            <strong className="text-gray-900">{sp.designation || "—"}</strong>
                           </span>
                         </div>
-
                         <div className="flex items-center gap-2 md:col-span-2">
                           <button
                             onClick={() => deleteSP(sp.id)}
@@ -338,19 +257,14 @@ const SalespersonCard: React.FC = () => {
                             Delete
                           </button>
                         </div>
-
                         <div className="flex items-center justify-end md:col-span-3">
-                          {/* ✅ UPDATED: Redirects to /leads/leadpage */}
-                          <button
-                            onClick={() => router.push(`/leads/leadpage?salespersonId=${sp.id}`)}
-                            className="bg-red-500 cursor-pointer text-white text-sm px-4 py-1.5 rounded hover:bg-red-600 transition-colors whitespace-nowrap"
-                          >
+                          <button className="bg-red-500 cursor-pointer text-white text-sm px-4 py-1.5 rounded hover:bg-red-600 transition-colors whitespace-nowrap">
                             View Leads
                           </button>
                         </div>
                       </div>
 
-                      {/* Row 3: Email | Contact | Change Password | Change Email ID */}
+                      {/* Row 3: Email | Contact | Change Password | Change Email */}
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4">
                         <div className="flex items-center gap-1.5 min-w-0 md:col-span-3">
                           <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
@@ -362,38 +276,25 @@ const SalespersonCard: React.FC = () => {
                             {sp.email}
                           </a>
                         </div>
-
                         <div className="flex items-center gap-2 md:col-span-4">
                           <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
                           <span className="text-sm text-gray-700 truncate">
                             Contact:{" "}
-                            <strong className="text-gray-900">
-                              {sp.contact}
-                            </strong>
+                            <strong className="text-gray-900">{sp.contact || "—"}</strong>
                           </span>
                         </div>
-
                         <div className="flex items-center gap-2 md:col-span-2">
                           <button
-                            onClick={() => {
-                              setSelectedId(sp.id);
-                              setIsModalOpen(true);
-                            }}
+                            onClick={() => { setSelectedId(sp.id); setIsModalOpen(true); }}
                             className="flex cursor-pointer items-center gap-1.5 text-sm text-blue-700 hover:text-blue-900 transition-colors whitespace-nowrap"
                           >
                             <Key className="w-4 h-4 flex-shrink-0" />
-                            <span className="whitespace-nowrap">
-                              Change Password
-                            </span>
+                            <span className="whitespace-nowrap">Change Password</span>
                           </button>
                         </div>
-
                         <div className="flex items-center justify-end md:col-span-3">
                           <button
-                            onClick={() => {
-                              setSelectedEmailId(sp.id);
-                              setIsEmailModalOpen(true);
-                            }}
+                            onClick={() => { setSelectedEmailId(sp.id); setIsEmailModalOpen(true); }}
                             className="bg-[#2b3342] cursor-pointer text-white text-sm px-4 py-1.5 rounded hover:bg-[#1f2937] transition-colors whitespace-nowrap"
                           >
                             Change Email ID
@@ -410,6 +311,4 @@ const SalespersonCard: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default SalespersonCard;
+}

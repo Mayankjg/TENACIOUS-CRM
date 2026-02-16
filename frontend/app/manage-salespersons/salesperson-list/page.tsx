@@ -1,8 +1,6 @@
-import React from "react";
+// app/manage-salespersons/salesperson-list/page.tsx
 import SalespersonCard from "./managesalesperson/components/SalespersonCard";
 
-const SalespersonListLoader: React.FC = () => {
+export default function SalespersonListLoader() {
   return <SalespersonCard />;
-};
-
-export default SalespersonListLoader;
+}
