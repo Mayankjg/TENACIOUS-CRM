@@ -1,4 +1,3 @@
-// frontend/app/manage-salespersons/salesperson-list/managesalesperson/add/SalespersonOnboardingWizard.tsx
 "use client";
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -103,6 +102,7 @@ interface TextareaFieldProps {
   required?: boolean;
   value: string;
   onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  resizable?: boolean;
 }
 
 interface FileFieldProps {
@@ -134,6 +134,14 @@ interface StepComponentProps {
   countries: Country[];
   onCountryChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   onPhoneInputChange: (e: ChangeEvent<HTMLInputElement>, fieldName: "mobileNumber" | "alternateNumber") => void;
+  selectedCountryCode: string;
+  onCountryCodeChange: (code: string) => void;
+}
+
+interface CalendarProps {
+  date: Date;
+  onDateSelect: (date: Date) => void;
+  onClose: () => void;
 }
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
@@ -302,15 +310,199 @@ function validatePanNumber(pan: string): string | null {
   return null;
 }
 
+// ─── CALENDAR COMPONENT ────────────────────────────────────────────────────────
+const CustomCalendar: React.FC<CalendarProps> = ({ date, onDateSelect, onClose }) => {
+  const [currentDate, setCurrentDate] = useState(date);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 101 }, (_, i) => currentYear - 50 + i);
+
+  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(monthIndex);
+    setCurrentDate(newDate);
+    setShowMonthPicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(year);
+    setCurrentDate(newDate);
+    setShowYearPicker(false);
+  };
+
+  const handlePrevMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentDate(newDate);
+  };
+
+  const handleNextMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentDate(newDate);
+  };
+
+  const handleDayClick = (day: number) => {
+    const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    onDateSelect(selectedDate);
+    onClose();
+  };
+
+  return (
+    <div
+      ref={calendarRef}
+      className="absolute bottom-full left-0 mb-2 bg-white shadow-xl rounded-lg p-3 border border-gray-200 w-[280px] z-[9999]"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <button
+          onClick={handlePrevMonth}
+          className="text-[#0099E6] text-xl font-bold px-2 hover:bg-gray-100 rounded cursor-pointer"
+        >
+          ‹
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setShowMonthPicker(!showMonthPicker);
+              setShowYearPicker(false);
+            }}
+            className="font-semibold text-gray-800 text-sm hover:bg-gray-100 px-2 py-1 rounded cursor-pointer"
+          >
+            {currentDate.toLocaleString("default", { month: "long" })}
+          </button>
+          <button
+            onClick={() => {
+              setShowYearPicker(!showYearPicker);
+              setShowMonthPicker(false);
+            }}
+            className="font-semibold text-gray-800 text-sm hover:bg-gray-100 px-2 py-1 rounded cursor-pointer"
+          >
+            {currentDate.getFullYear()}
+          </button>
+        </div>
+
+        <button
+          onClick={handleNextMonth}
+          className="text-[#0099E6] text-xl font-bold px-2 hover:bg-gray-100 rounded cursor-pointer"
+        >
+          ›
+        </button>
+      </div>
+
+      {showMonthPicker && (
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {months.map((month, index) => (
+            <button
+              key={month}
+              onClick={() => handleMonthSelect(index)}
+              className={`py-2 px-1 text-xs rounded hover:bg-gray-200 cursor-pointer ${
+                index === currentDate.getMonth()
+                  ? "bg-[#0099E6] text-white font-bold"
+                  : "text-gray-700"
+              }`}
+            >
+              {month.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showYearPicker && (
+        <div className="max-h-[150px] overflow-y-auto mb-2">
+          <div className="grid grid-cols-4 gap-2">
+            {years.map((year) => (
+              <button
+                key={year}
+                onClick={() => handleYearSelect(year)}
+                className={`py-2 px-1 text-xs rounded hover:bg-gray-200 cursor-pointer ${
+                  year === currentDate.getFullYear()
+                    ? "bg-[#0099E6] text-white font-bold"
+                    : "text-gray-700"
+                }`}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!showMonthPicker && !showYearPicker && (
+        <>
+          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-[#0099E6] mb-2">
+            {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
+              <div key={d}>{d}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 text-[11px] text-center gap-1">
+            {Array.from({ length: 42 }).map((_, i) => {
+              const day = i - firstDay + 1;
+              const isValid = day > 0 && day <= daysInMonth;
+              const isCurrent = day === date.getDate() && 
+                              currentDate.getMonth() === date.getMonth() &&
+                              currentDate.getFullYear() === date.getFullYear();
+
+              return (
+                <div
+                  key={i}
+                  className={`py-1.5 rounded-md ${
+                    isValid
+                      ? isCurrent
+                        ? "bg-[#0099E6] text-white font-bold cursor-pointer"
+                        : "text-gray-700 hover:bg-gray-200 cursor-pointer"
+                      : "text-gray-300"
+                  }`}
+                  onClick={() => {
+                    if (isValid) {
+                      handleDayClick(day);
+                    }
+                  }}
+                >
+                  {isValid ? day : ""}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 // ─── REUSABLE FIELD COMPONENTS ─────────────────────────────────────────────────
 const Label: React.FC<LabelProps> = ({ children, required }) => (
-  <label className="block text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1.5">
+  <label className="block text-[11px] font-bold uppercase tracking-widest text-black mb-1.5">
     {children} {required && <span className="text-red-400 normal-case font-normal">*</span>}
   </label>
 );
 
 const inputBase =
-  "w-full bg-slate-800/70 border border-slate-600/50 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/70 focus:bg-slate-800 transition-all duration-200";
+  "w-full bg-gray-100 border border-black rounded-xl px-3.5 py-2.5 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black focus:bg-gray-100 transition-all duration-200";
 
 const InputField: React.FC<InputFieldProps> = ({ label, name, type = "text", placeholder, required, value, onChange, icon, disabled, error, maxLength }) => (
   <div className="flex flex-col">
@@ -347,9 +539,9 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, require
         onChange={onChange}
         className={`${inputBase} appearance-none pr-8 ${icon ? "pl-9" : ""} cursor-pointer`}
       >
-        <option value="" className="bg-slate-900">— Select —</option>
+        <option value="" className="bg-gray-100 text-black">— Select —</option>
         {options.map((o) => (
-          <option key={o} value={o} className="bg-slate-900">{o}</option>
+          <option key={o} value={o} className="bg-gray-100 text-black">{o}</option>
         ))}
       </select>
       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs">▾</span>
@@ -357,7 +549,7 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, require
   </div>
 );
 
-const TextareaField: React.FC<TextareaFieldProps> = ({ label, name, rows = 3, placeholder, required, value, onChange }) => (
+const TextareaField: React.FC<TextareaFieldProps> = ({ label, name, rows = 3, placeholder, required, value, onChange, resizable = false }) => (
   <div className="flex flex-col">
     <Label required={required}>{label}</Label>
     <textarea
@@ -366,7 +558,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({ label, name, rows = 3, pl
       onChange={onChange}
       placeholder={placeholder}
       rows={rows}
-      className={`${inputBase} resize-none cursor-text`}
+      className={`${inputBase} ${resizable ? 'resize-y' : 'resize-none'} cursor-text`}
     />
   </div>
 );
@@ -374,18 +566,18 @@ const TextareaField: React.FC<TextareaFieldProps> = ({ label, name, rows = 3, pl
 const FileField: React.FC<FileFieldProps> = ({ label, name, accept, required, onChange, fileName }) => (
   <div className="flex flex-col">
     <Label required={required}>{label}</Label>
-    <label className="flex items-center gap-3 bg-slate-800/60 border border-dashed border-slate-600/60 rounded-xl px-4 py-3 cursor-pointer hover:border-amber-400/60 hover:bg-slate-800 transition-all duration-200 group">
-      <span className="text-xl group-hover:scale-110 transition-transform shrink-0">📎</span>
+    <label className="flex items-center gap-2 bg-gray-100 border border-dashed border-black rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-200 transition-all duration-200 group">
+      <span className="text-base group-hover:scale-110 transition-transform shrink-0">📎</span>
       <div className="min-w-0 flex-1">
         {fileName ? (
           <>
-            <p className="text-sm text-green-400 truncate">✓ {fileName}</p>
-            <p className="text-xs text-slate-500">Click to replace</p>
+            <p className="text-xs text-black truncate">✓ {fileName}</p>
+            <p className="text-[10px] text-slate-500">Click to replace</p>
           </>
         ) : (
           <>
-            <p className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">Click to upload</p>
-            <p className="text-xs text-slate-600">{accept || "PDF, JPG, PNG · max 5MB"}</p>
+            <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors">Click to upload</p>
+            <p className="text-[10px] text-gray-600">{accept || "PDF, JPG, PNG · max 5MB"}</p>
           </>
         )}
       </div>
@@ -400,7 +592,7 @@ const SectionTitle: React.FC<SectionTitleProps> = ({ icon, title, subtitle }) =>
       {icon}
     </div>
     <div>
-      <h2 className="text-lg font-bold text-white" style={{ fontFamily: "Georgia, serif" }}>{title}</h2>
+      <h2 className="text-lg font-bold text-black" style={{ fontFamily: "Georgia, serif" }}>{title}</h2>
       {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
     </div>
     <div className="flex-1 h-px bg-gradient-to-r from-amber-400/20 to-transparent ml-2" />
@@ -455,8 +647,26 @@ const IncentiveSlabs: React.FC<IncentiveSlabsProps> = ({ slabs, onChange }) => {
 };
 
 // ─── STEP 1: BASIC INFO ─────────────────────────────────────────────────────────
-const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErrors, countries, onCountryChange, onPhoneInputChange }) => {
+const Step1: React.FC<StepComponentProps> = ({ 
+  data, 
+  onChange, 
+  onFile, 
+  fieldErrors, 
+  countries, 
+  selectedCountryCode,
+  onCountryCodeChange,
+  onPhoneInputChange 
+}) => {
   const [preview, setPreview] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showAltCountryDropdown, setShowAltCountryDropdown] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [altCountrySearch, setAltCountrySearch] = useState("");
+  
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const altCountryDropdownRef = useRef<HTMLDivElement>(null);
+
   const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -466,18 +676,34 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
     reader.readAsDataURL(file);
   };
 
-  const currentCountry = countries.find((c) => c.name === data.country);
-  const currentCallingCode = currentCountry?.callingCode || "";
-
-  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
-    if (!phoneValue) return "";
-    const trimmed = phoneValue.trim();
-    if (callingCode && trimmed.startsWith(callingCode)) {
-      return trimmed.slice(callingCode.length).trim();
-    }
-    const cleanedPhone = trimmed.replace(/^\+\d{1,4}\s*/, "");
-    return cleanedPhone;
+  const handleDateSelect = (selectedDate: Date) => {
+    const formattedDate = selectedDate.toISOString().split('T')[0];
+    onChange({ target: { name: 'dateOfJoining', value: formattedDate } } as any);
   };
+
+  const filteredCountries = countries.filter(c => 
+    c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+    c.callingCode.includes(countrySearch)
+  );
+
+  const filteredAltCountries = countries.filter(c => 
+    c.name.toLowerCase().includes(altCountrySearch.toLowerCase()) ||
+    c.callingCode.includes(altCountrySearch)
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setShowCountryDropdown(false);
+      }
+      if (altCountryDropdownRef.current && !altCountryDropdownRef.current.contains(event.target as Node)) {
+        setShowAltCountryDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div>
@@ -487,16 +713,16 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
         <div className="flex flex-col gap-1.5">
           <Label>Profile Photo</Label>
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+            <div className="w-16 h-16 rounded-full bg-gray-100 border-2 border-black flex items-center justify-center text-2xl shrink-0 overflow-hidden">
               {preview ? <img src={preview} alt="preview" className="w-full h-full object-cover" /> : "👤"}
             </div>
-            <label className="flex-1 flex items-center gap-3 bg-slate-800/60 border border-dashed border-slate-600/60 rounded-xl px-4 py-3 cursor-pointer hover:border-amber-400/60 hover:bg-slate-800 transition-all group">
-              <span className="text-xl">📸</span>
+            <label className="flex-1 flex items-center gap-2 bg-gray-100 border border-dashed border-black rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-200 transition-all group">
+              <span className="text-base">📸</span>
               <div>
-                <p className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">
+                <p className="text-xs text-black group-hover:text-gray-700 transition-colors">
                   {data.profilePhoto ? `✓ ${data.profilePhoto.name}` : "Upload photo"}
                 </p>
-                <p className="text-xs text-slate-600">JPG, PNG · max 2MB</p>
+                <p className="text-[10px] text-gray-600">JPG, PNG · max 2MB</p>
               </div>
               <input type="file" className="hidden" accept="image/*" onChange={handlePhoto} />
             </label>
@@ -509,21 +735,58 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Mobile Number with Country Code */}
+          {/* Mobile Number with Dynamic Country Code */}
           <div className="flex flex-col">
             <Label required>Mobile Number</Label>
             <div className="relative h-[40px]">
-              <div className="absolute left-0 top-0 h-full w-[60px] border border-r-0 rounded-l-xl bg-slate-700 flex items-center justify-center text-slate-300 text-xs font-medium select-none pointer-events-none z-10">
-                {currentCallingCode || "+91"}
+              <div 
+                ref={countryDropdownRef}
+                className="absolute left-0 top-0 h-full w-[70px] border border-r-0 rounded-l-xl bg-gray-100 flex items-center justify-center text-black text-xs font-medium cursor-pointer z-10 hover:bg-gray-200 transition-colors"
+                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+              >
+                {selectedCountryCode || "+91"}
+                <span className="ml-1 text-[10px]">▾</span>
               </div>
+              
+              {showCountryDropdown && (
+                <div className="absolute left-0 top-full mt-1 bg-gray-100 border border-black rounded-lg shadow-xl w-[280px] max-h-[300px] overflow-hidden z-50">
+                  <div className="p-2 border-b border-slate-600">
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      className="w-full bg-gray-100 border border-black rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black"
+                    />
+                  </div>
+                  <div className="overflow-y-auto max-h-[130px]">
+                    {filteredCountries.map((country) => (
+                      <div
+                        key={country.name}
+                        onClick={() => {
+                          onCountryCodeChange(country.callingCode);
+                          setShowCountryDropdown(false);
+                          setCountrySearch("");
+                        }}
+                        className={`px-4 py-2 cursor-pointer hover:bg-gray-200 transition-colors ${
+                          selectedCountryCode === country.callingCode ? 'bg-gray-200 text-black font-bold' : 'text-black'
+                        }`}
+                      >
+                        <div className="text-sm">{country.displayName}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <input
                 type="text"
                 name="mobileNumber"
-                value={extractPhoneNumber(data.mobileNumber || "", currentCallingCode)}
+                value={data.mobileNumber || ""}
                 onChange={(e) => onPhoneInputChange(e, "mobileNumber")}
                 placeholder="98765 43210"
                 maxLength={15}
-                className={`${inputBase} pl-[72px] h-full ${fieldErrors.mobileNumber ? "border-red-500/50 focus:border-red-500" : ""}`}
+                className={`${inputBase} pl-[82px] h-full ${fieldErrors.mobileNumber ? "border-red-500/50 focus:border-red-500" : ""}`}
               />
             </div>
             {fieldErrors.mobileNumber && (
@@ -533,21 +796,58 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
             )}
           </div>
 
-          {/* Alternate Number with Country Code */}
+          {/* Alternate Number with Dynamic Country Code */}
           <div className="flex flex-col">
             <Label>Alternate Number</Label>
             <div className="relative h-[40px]">
-              <div className="absolute left-0 top-0 h-full w-[60px] border border-r-0 rounded-l-xl bg-slate-700 flex items-center justify-center text-slate-300 text-xs font-medium select-none pointer-events-none z-10">
-                {currentCallingCode || "+91"}
+              <div 
+                ref={altCountryDropdownRef}
+                className="absolute left-0 top-0 h-full w-[70px] border border-r-0 rounded-l-xl bg-gray-100 flex items-center justify-center text-black text-xs font-medium cursor-pointer z-10 hover:bg-gray-200 transition-colors"
+                onClick={() => setShowAltCountryDropdown(!showAltCountryDropdown)}
+              >
+                {selectedCountryCode || "+91"}
+                <span className="ml-1 text-[10px]">▾</span>
               </div>
+              
+              {showAltCountryDropdown && (
+                <div className="absolute left-0 top-full mt-1 bg-gray-100 border border-black rounded-lg shadow-xl w-[280px] max-h-[300px] overflow-hidden z-50">
+                  <div className="p-2 border-b border-slate-600">
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      value={altCountrySearch}
+                      onChange={(e) => setAltCountrySearch(e.target.value)}
+                      className="w-full bg-gray-100 border border-black rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black"
+                    />
+                  </div>
+                  <div className="overflow-y-auto max-h-[130px]">
+                    {filteredAltCountries.map((country) => (
+                      <div
+                        key={country.name}
+                        onClick={() => {
+                          onCountryCodeChange(country.callingCode);
+                          setShowAltCountryDropdown(false);
+                          setAltCountrySearch("");
+                        }}
+                        className={`px-4 py-2 cursor-pointer hover:bg-gray-200 transition-colors ${
+                          selectedCountryCode === country.callingCode ? 'bg-gray-200 text-black font-bold' : 'text-black'
+                        }`}
+                      >
+                        <div className="text-sm">{country.displayName}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <input
                 type="text"
                 name="alternateNumber"
-                value={extractPhoneNumber(data.alternateNumber || "", currentCallingCode)}
+                value={data.alternateNumber || ""}
                 onChange={(e) => onPhoneInputChange(e, "alternateNumber")}
                 placeholder="98765 43210"
                 maxLength={15}
-                className={`${inputBase} pl-[72px] h-full ${fieldErrors.alternateNumber ? "border-red-500/50 focus:border-red-500" : ""}`}
+                className={`${inputBase} pl-[82px] h-full ${fieldErrors.alternateNumber ? "border-red-500/50 focus:border-red-500" : ""}`}
               />
             </div>
             {fieldErrors.alternateNumber && (
@@ -570,16 +870,45 @@ const Step1: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
             icon="✉️" 
             error={fieldErrors.emailAddress}
           />
-          <InputField 
-            label="Date of Joining" 
-            name="dateOfJoining" 
-            type="date" 
-            required 
-            value={data.dateOfJoining} 
-            onChange={onChange} 
-            icon="📅" 
-            error={fieldErrors.dateOfJoining}
-          />
+          
+          {/* Date of Joining with Custom Calendar */}
+          <div className="flex flex-col">
+            <Label required>Date of Joining</Label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none z-10">📅</span>
+              <input
+                type="text"
+                name="dateOfJoining"
+                value={data.dateOfJoining || ""}
+                onChange={onChange}
+                placeholder="YYYY-MM-DD"
+                readOnly
+                className={`${inputBase} pl-9 pr-10 cursor-pointer ${fieldErrors.dateOfJoining ? "border-red-500/50 focus:border-red-500" : ""}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="absolute right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-xl hover:bg-[#0088cc] transition-colors cursor-pointer"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+              
+              {showCalendar && (
+                <CustomCalendar
+                  date={data.dateOfJoining ? new Date(data.dateOfJoining) : new Date()}
+                  onDateSelect={handleDateSelect}
+                  onClose={() => setShowCalendar(false)}
+                />
+              )}
+            </div>
+            {fieldErrors.dateOfJoining && (
+              <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                <span>⚠</span> {fieldErrors.dateOfJoining}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -596,16 +925,16 @@ const Step2: React.FC<StepComponentProps> = ({ data, onChange, countries, onCoun
         <div className="flex flex-col">
           <Label required>Country</Label>
           <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none z-10">🌍</span>
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-100 text-sm pointer-events-none z-10">🌍</span>
             <select
               name="country"
               value={data.country}
               onChange={onCountryChange}
               className={`${inputBase} appearance-none pr-8 pl-9 cursor-pointer`}
             >
-              <option value="" className="bg-slate-900">— Select Country —</option>
+              <option value="" className="bg-gray-500">— Select Country —</option>
               {countries.map((country) => (
-                <option key={country.name} value={country.name} className="bg-slate-900">
+                <option key={country.name} value={country.name} className="bg-gray-100">
                   {country.displayName}
                 </option>
               ))}
@@ -614,7 +943,7 @@ const Step2: React.FC<StepComponentProps> = ({ data, onChange, countries, onCoun
           </div>
         </div>
 
-        <InputField label="State" name="state" placeholder="Maharashtra" required value={data.state} onChange={onChange} icon="🗺️" />
+        <InputField label="State" name="state" placeholder="state" required value={data.state} onChange={onChange} icon="🗺️" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField label="City" name="city" placeholder="Mumbai" required value={data.city} onChange={onChange} icon="🏙️" />
@@ -629,9 +958,9 @@ const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
   <div>
     <SectionTitle icon="🆔" title="Identity & KYC" subtitle="Government ID and verification documents" />
     <div className="space-y-5">
-      <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2">
-        <span className="text-blue-400 mt-0.5 shrink-0">ℹ️</span>
-        <p className="text-xs text-blue-300">All documents are encrypted and stored securely. Fields marked * are mandatory for KYC compliance.</p>
+      <div className="p-3 rounded-xl bg-gray-100 border border-black flex items-start gap-2">
+       <span className="text-black mt-0.5 shrink-0">ℹ️</span>
+<p className="text-xs text-black">All documents are encrypted and stored securely. Fields marked * are mandatory for KYC compliance.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField 
@@ -682,21 +1011,33 @@ const Step4: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => (
   <div>
     <SectionTitle icon="💼" title="Professional Details" subtitle="Experience, access levels and product assignments" />
     <div className="space-y-5">
-      <SelectField label="Product Category Access" name="productCategoryAccess"
-        options={["All Products", "Electronics", "FMCG", "Pharmaceuticals", "Automobiles", "Financial Products", "Real Estate"]}
-        required value={data.productCategoryAccess} onChange={onChange} icon="📦" />
-      <SelectField label="Lead Source Access" name="leadSourceAccess"
-        options={["All Sources", "Website", "Social Media", "Referral", "Cold Call", "Trade Show", "Email Campaign"]}
-        required value={data.leadSourceAccess} onChange={onChange} icon="🎯" />
-      <SelectField label="Access Level" name="accessLevel"
-        options={["Level 1 – View Only", "Level 2 – Edit Own Records", "Level 3 – Team Lead", "Level 4 – Manager", "Level 5 – Admin"]}
-        required value={data.accessLevel} onChange={onChange} icon="🛡️" />
-      <TextareaField label="Previous Experience" name="previousExperience"
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <SelectField label="Product Category Access" name="productCategoryAccess"
+          options={["All Products", "Electronics", "FMCG", "Pharmaceuticals", "Automobiles", "Financial Products", "Real Estate"]}
+          required value={data.productCategoryAccess} onChange={onChange} icon="📦" />
+        <SelectField label="Lead Source Access" name="leadSourceAccess"
+          options={["All Sources", "Website", "Social Media", "Referral", "Cold Call", "Trade Show", "Email Campaign"]}
+          required value={data.leadSourceAccess} onChange={onChange} icon="🎯" />
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <SelectField label="Access Level" name="accessLevel"
+          options={["Level 1 – View Only", "Level 2 – Edit Own Records", "Level 3 – Team Lead", "Level 4 – Manager", "Level 5 – Admin"]}
+          required value={data.accessLevel} onChange={onChange} icon="🛡️" />
+        <FileField label="Upload Resume / CV" name="resumeFile" accept=".pdf,.doc,.docx" required
+          onChange={(e) => onFile("resumeFile", e.target.files?.[0] || null)}
+          fileName={data.resumeFile?.name} />
+      </div>
+      
+      <TextareaField 
+        label="Previous Experience" 
+        name="previousExperience"
         placeholder="Briefly describe previous sales experience, industries, roles..."
-        value={data.previousExperience} onChange={onChange} />
-      <FileField label="Upload Resume / CV" name="resumeFile" accept=".pdf,.doc,.docx" required
-        onChange={(e) => onFile("resumeFile", e.target.files?.[0] || null)}
-        fileName={data.resumeFile?.name} />
+        value={data.previousExperience} 
+        onChange={onChange}
+        rows={4}
+        resizable={true}
+      />
     </div>
   </div>
 );
@@ -706,10 +1047,11 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
   <div>
     <SectionTitle icon="💰" title="Salary & Commission" subtitle="Compensation structure and incentive configuration" />
     <div className="space-y-5">
-      <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20 flex items-start gap-2">
-        <span className="text-green-400 mt-0.5 shrink-0">💡</span>
-        <p className="text-xs text-green-300">Salary details are confidential and accessible only to HR and Admin roles.</p>
-      </div>
+      <div className="p-3 rounded-xl bg-white border border-black flex items-start gap-2">
+  <span className="text-black mt-0.5 shrink-0">💡</span>
+  <p className="text-xs text-black">Salary details are confidential and accessible only to HR and Admin roles.</p>
+</div>
+
 
       <div className="flex flex-col">
         <Label required>Fixed Salary (₹/month)</Label>
@@ -730,18 +1072,23 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
           ].map((type) => (
             <button key={type.value} type="button"
               onClick={() => onChange({ target: { name: "commissionType", value: type.value } } as any)}
-              className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left cursor-pointer ${data.commissionType === type.value
-                  ? "bg-amber-400/10 border-amber-400/50 shadow-lg shadow-amber-400/5"
-                  : "bg-slate-800/40 border-slate-700/50 hover:border-slate-600"
-                }`}>
+              className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left cursor-pointer ${
+  data.commissionType === type.value
+    ? "bg-white border-black shadow-md"
+    : "bg-gray-100 border-black hover:bg-gray-200"
+}`}
+>
               <span className="text-xl">{type.icon}</span>
               <div>
                 <p className={`text-sm font-semibold ${data.commissionType === type.value ? "text-amber-400" : "text-slate-300"}`}>{type.label}</p>
-                <p className="text-xs text-slate-500">{type.desc}</p>
+                <p className="text-xs text-gray-600">{type.desc}</p>
               </div>
-              <div className={`ml-auto w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${data.commissionType === type.value ? "border-amber-400 bg-amber-400" : "border-slate-600"}`}>
-                {data.commissionType === type.value && <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
-              </div>
+             <div className={`ml-auto w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+  data.commissionType === type.value ? "border-black bg-black" : "border-black"
+}`}>
+  {data.commissionType === type.value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+</div>
+
             </button>
           ))}
         </div>
@@ -761,11 +1108,12 @@ const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange }) =
 
       {onSlabChange && <IncentiveSlabs slabs={data.incentiveSlabs} onChange={onSlabChange} />}
 
-      <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+      <div className="p-4 rounded-xl bg-gray-100 border border-black">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-white font-semibold">Bonus Eligibility</p>
-            <p className="text-xs text-slate-500 mt-0.5">Eligible for quarterly / annual bonuses</p>
+            <p className="text-sm text-black font-semibold">Bonus Eligibility</p>
+<p className="text-xs text-gray-600 mt-0.5">Eligible for quarterly / annual bonuses</p>
+
           </div>
           <button type="button"
             onClick={() => onChange({ target: { name: "bonusEligible", value: !data.bonusEligible } } as any)}
@@ -793,7 +1141,7 @@ const Step6: React.FC<StepComponentProps> = ({ data, onChange, onFile }) => {
     <div>
       <SectionTitle icon="🏦" title="Payout Details" subtitle="Bank account information for salary disbursement" />
       <div className="space-y-5">
-        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2">
+        <div className="p-3 rounded-xl bg-white border border-black flex items-start gap-2">
           <span className="text-blue-400 mt-0.5 shrink-0">🔒</span>
           <p className="text-xs text-blue-300">Bank details are encrypted. Only Finance & Admin roles can access this information.</p>
         </div>
@@ -972,6 +1320,7 @@ export default function SalespersonOnboardingWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdName, setCreatedName] = useState("");
+  const [selectedCountryCode, setSelectedCountryCode] = useState("+91");
   const topRef = useRef<HTMLDivElement>(null);
 
   // Countries state
@@ -1025,43 +1374,21 @@ export default function SalespersonOnboardingWizard() {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [currentStep]);
 
-  const extractPhoneNumber = (phoneValue: string, callingCode: string): string => {
-    if (!phoneValue) return "";
-    const trimmed = phoneValue.trim();
-    if (callingCode && trimmed.startsWith(callingCode)) {
-      return trimmed.slice(callingCode.length).trim();
-    }
-    const cleanedPhone = trimmed.replace(/^\+\d{1,4}\s*/, "");
-    return cleanedPhone;
-  };
-
-  const formatPhoneWithCode = (phoneNumber: string, callingCode: string): string => {
-    if (!phoneNumber) return callingCode ? `${callingCode} ` : "";
-    const cleanPhone = phoneNumber.trim();
-    if (!cleanPhone) return callingCode ? `${callingCode} ` : "";
-    return callingCode ? `${callingCode} ${cleanPhone}` : cleanPhone;
+  const handleCountryCodeChange = (code: string) => {
+    setSelectedCountryCode(code);
   };
 
   const handleCountryChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedCountryName = e.target.value;
     const selectedCountry = countries.find((c) => c.name === selectedCountryName);
-    const newCallingCode = selectedCountry?.callingCode || "";
-
-    const currentCountry = countries.find((c) => c.name === formData.country);
-    const currentCallingCode = currentCountry?.callingCode || "";
-
-    const pureMobile = extractPhoneNumber(formData.mobileNumber, currentCallingCode);
-    const pureAlternate = extractPhoneNumber(formData.alternateNumber, currentCallingCode);
-
-    const newMobile = formatPhoneWithCode(pureMobile, newCallingCode);
-    const newAlternate = formatPhoneWithCode(pureAlternate, newCallingCode);
+    const newCallingCode = selectedCountry?.callingCode || "+91";
 
     setFormData((prev) => ({
       ...prev,
       country: selectedCountryName,
-      mobileNumber: newMobile,
-      alternateNumber: newAlternate,
     }));
+
+    setSelectedCountryCode(newCallingCode);
 
     if (fieldErrors.country) {
       setFieldErrors((prev) => {
@@ -1073,14 +1400,11 @@ export default function SalespersonOnboardingWizard() {
   };
 
   const handlePhoneInputChange = (e: ChangeEvent<HTMLInputElement>, fieldName: "mobileNumber" | "alternateNumber") => {
-    const rawValue = e.target.value;
-    const currentCountry = countries.find((c) => c.name === formData.country);
-    const callingCode = currentCountry?.callingCode || "";
-    const fullValue = callingCode ? `${callingCode} ${rawValue}` : rawValue;
+    const rawValue = e.target.value.replace(/\D/g, '');
 
     setFormData((prev) => ({
       ...prev,
-      [fieldName]: fullValue,
+      [fieldName]: rawValue,
     }));
 
     if (fieldErrors[fieldName]) {
@@ -1153,16 +1477,19 @@ export default function SalespersonOnboardingWizard() {
       const lastname = nameParts.slice(1).join(" ") || "";
       const username = formData.emailAddress.split("@")[0] || firstname.toLowerCase();
 
+      const fullMobile = `${selectedCountryCode} ${formData.mobileNumber}`;
+      const fullAlternate = formData.alternateNumber ? `${selectedCountryCode} ${formData.alternateNumber}` : "";
+
       fd.append("username", username);
       fd.append("firstname", firstname);
       fd.append("lastname", lastname);
       fd.append("email", formData.emailAddress);
       fd.append("designation", formData.accessLevel || "Sales Executive");
-      fd.append("contact", formData.mobileNumber);
+      fd.append("contact", fullMobile);
       fd.append("password", "Welcome@123");
 
       fd.append("gender", formData.gender);
-      fd.append("alternateNumber", formData.alternateNumber);
+      fd.append("alternateNumber", fullAlternate);
       fd.append("dateOfJoining", formData.dateOfJoining);
       fd.append("currentAddress", formData.currentAddress);
       fd.append("city", formData.city);
@@ -1227,11 +1554,12 @@ export default function SalespersonOnboardingWizard() {
     setFormData(INITIAL_STATE);
     setStepErrors([]);
     setFieldErrors({});
+    setSelectedCountryCode("+91");
   };
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6" style={{ fontFamily: "Georgia, serif" }}>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6" style={{ fontFamily: "Georgia, serif" }}>
         <div className="text-center space-y-5 max-w-md w-full">
           <div className="w-24 h-24 rounded-full bg-green-400/20 border-2 border-green-400/40 flex items-center justify-center text-5xl mx-auto">
             ✅
@@ -1252,7 +1580,7 @@ export default function SalespersonOnboardingWizard() {
               View Salesperson List →
             </button>
             <button
-              onClick={() => { setFormData(INITIAL_STATE); setCurrentStep(1); setSubmitSuccess(false); setFieldErrors({}); }}
+              onClick={() => { setFormData(INITIAL_STATE); setCurrentStep(1); setSubmitSuccess(false); setFieldErrors({}); setSelectedCountryCode("+91"); }}
               className="px-6 py-2.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors cursor-pointer">
               Add Another
             </button>
@@ -1274,10 +1602,12 @@ export default function SalespersonOnboardingWizard() {
     countries,
     onCountryChange: handleCountryChange,
     onPhoneInputChange: handlePhoneInputChange,
+    selectedCountryCode,
+    onCountryCodeChange: handleCountryCodeChange,
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 sm:p-6" style={{ fontFamily: "Georgia, serif" }}>
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6" style={{ fontFamily: "Georgia, serif" }}>
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-400/3 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-600/4 rounded-full blur-3xl" />
@@ -1286,20 +1616,20 @@ export default function SalespersonOnboardingWizard() {
       <div className="w-full max-w-4xl mx-auto relative" ref={topRef}>
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-widest text-amber-400 font-bold mb-1">Sales Team Management</p>
-            <h1 className="text-2xl font-bold text-white">Salesperson Onboarding</h1>
+            <p className="text-xs uppercase tracking-widest text-black font-bold mb-1">Sales Team Management</p>
+            <h1 className="text-2xl font-bold text-black">Salesperson Onboarding</h1>
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-500 uppercase tracking-widest">Step</p>
-            <p className="text-2xl font-bold text-amber-400">
+            <p className="text-2xl font-bold text-black">
               {currentStep}<span className="text-slate-600 text-lg">/{STEPS.length}</span>
             </p>
           </div>
         </div>
 
-        <div className="mb-5 h-1 bg-slate-800 rounded-full overflow-hidden">
+        <div className="mb-5 h-1 bg-gray-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-500"
+            className="h-full bg-black rounded-full transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -1316,10 +1646,10 @@ export default function SalespersonOnboardingWizard() {
               }}
               className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-300 cursor-pointer
       ${currentStep === step.id
-                  ? "bg-amber-400 text-slate-900 shadow-md shadow-amber-400/20"
+                  ? "bg-gray-100 text-black border border-black shadow-md"
                   : step.id < currentStep
-                    ? "bg-slate-700 text-amber-400 border border-amber-400/20"
-                    : "bg-slate-800/60 text-slate-500 border border-slate-700/50 hover:border-slate-600"
+                    ? "bg-gray-100 text-black border border-black"
+                    : "bg-gray-100 text-gray-600 border border-black hover:bg-gray-200"
                 }`}
             >
               <span className="text-sm">{step.icon}</span>
@@ -1328,7 +1658,7 @@ export default function SalespersonOnboardingWizard() {
           ))}
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl backdrop-blur-sm shadow-2xl shadow-black/40">
+        <div className="bg-gray-100 border border-gray-300 rounded-2xl shadow-xl">
           <div className="p-6 sm:p-8">
             <StepComponent {...stepProps} />
 
