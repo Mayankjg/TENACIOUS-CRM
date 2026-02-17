@@ -120,6 +120,7 @@ interface SectionTitleProps {
   icon: string;
   title: string;
   subtitle?: string;
+  centered?: boolean;
 }
 
 interface IncentiveSlabsProps {
@@ -147,6 +148,7 @@ interface CalendarProps {
 }
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
+// ✅ FIX: Single API_BASE used everywhere consistently
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://one4-02-2026.onrender.com";
 
 const STEPS: Step[] = [
@@ -372,10 +374,21 @@ const CustomCalendar: React.FC<CalendarProps> = ({ date, onDateSelect, onClose }
               const isCurrent = day === date.getDate() &&
                 currentDate.getMonth() === date.getMonth() &&
                 currentDate.getFullYear() === date.getFullYear();
+              const todayDate = new Date();
+              todayDate.setHours(0, 0, 0, 0);
+              const thisDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+              const isPast = isValid && thisDate < todayDate;
               return (
                 <div key={i}
-                  className={`py-1.5 rounded-md ${isValid ? isCurrent ? "bg-[#0099E6] text-white font-bold cursor-pointer" : "text-gray-700 hover:bg-gray-200 cursor-pointer" : "text-gray-300"}`}
-                  onClick={() => { if (isValid) handleDayClick(day); }}>
+                  className={`py-1.5 rounded-md ${!isValid
+                      ? "text-gray-300"
+                      : isPast
+                        ? "text-gray-200 cursor-not-allowed"
+                        : isCurrent
+                          ? "bg-[#0099E6] text-white font-bold cursor-pointer"
+                          : "text-gray-700 hover:bg-gray-200 cursor-pointer"
+                    }`}
+                  onClick={() => { if (isValid && !isPast) handleDayClick(day); }}>
                   {isValid ? day : ""}
                 </div>
               );
@@ -474,16 +487,30 @@ const FileField: React.FC<FileFieldProps> = ({ label, name, accept, required, on
   </div>
 );
 
-const SectionTitle: React.FC<SectionTitleProps> = ({ icon, title, subtitle }) => (
-  <div className="flex items-center gap-3 mb-6">
-    <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-xl shrink-0">{icon}</div>
-    <div>
-      <h2 className="text-lg font-bold text-black" style={{ fontFamily: "Georgia, serif" }}>{title}</h2>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+const SectionTitle: React.FC<SectionTitleProps> = ({ icon, title, subtitle, centered }) => {
+  if (centered) {
+    return (
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-xl shrink-0">{icon}</div>
+        <div className="text-center">
+          <h2 className="text-lg font-bold text-black" style={{ fontFamily: "Georgia, serif" }}>{title}</h2>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-xl shrink-0">{icon}</div>
+      <div>
+        <h2 className="text-lg font-bold text-black" style={{ fontFamily: "Georgia, serif" }}>{title}</h2>
+        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+      </div>
+      <div className="flex-1 h-px bg-gradient-to-r from-amber-400/20 to-transparent ml-2" />
     </div>
-    <div className="flex-1 h-px bg-gradient-to-r from-amber-400/20 to-transparent ml-2" />
-  </div>
-);
+  );
+};
 
 // ─── INCENTIVE SLABS ────────────────────────────────────────────────────────────
 const IncentiveSlabs: React.FC<IncentiveSlabsProps> = ({ slabs, onChange }) => {
@@ -528,7 +555,7 @@ const IncentiveSlabs: React.FC<IncentiveSlabsProps> = ({ slabs, onChange }) => {
   );
 };
 
-// ─── STEP 1: BASIC INFO ─────────────────────────────────────────────────────────
+// ─── STEP 1: BASIC INFO ────────────────────────────────────────────────────────
 const Step1: React.FC<StepComponentProps> = ({
   data, onChange, onFile, fieldErrors, countries,
   selectedCountryCode, onCountryCodeChange, onPhoneInputChange
@@ -580,7 +607,7 @@ const Step1: React.FC<StepComponentProps> = ({
 
   return (
     <div>
-      <SectionTitle icon="👤" title="Basic Information" subtitle="Personal details of the salesperson" />
+      <SectionTitle icon="👤" title="Basic Information" subtitle="Personal details of the salesperson" centered />
       <div className="space-y-5">
         {/* Photo Upload */}
         <div className="flex flex-col gap-1.5">
@@ -630,7 +657,7 @@ const Step1: React.FC<StepComponentProps> = ({
               {showCountryDropdown && (
                 <div className="absolute left-0 top-full mt-1 bg-white border border-black rounded-lg shadow-xl w-[280px] max-h-[300px] overflow-hidden z-50">
                   <div className="p-2 border-b border-slate-600">
-                    <input type="text" placeholder="Search country..." value={countrySearch}
+                    <input autoFocus type="text" placeholder="Search country..." value={countrySearch}
                       onChange={(e) => setCountrySearch(e.target.value)}
                       className="w-full bg-gray-100 border border-black rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black" />
                   </div>
@@ -670,7 +697,7 @@ const Step1: React.FC<StepComponentProps> = ({
               {showAltCountryDropdown && (
                 <div className="absolute left-0 top-full mt-1 bg-white border border-black rounded-lg shadow-xl w-[280px] max-h-[300px] overflow-hidden z-50">
                   <div className="p-2 border-b border-slate-600">
-                    <input type="text" placeholder="Search country..." value={altCountrySearch}
+                    <input autoFocus type="text" placeholder="Search country..." value={altCountrySearch}
                       onChange={(e) => setAltCountrySearch(e.target.value)}
                       className="w-full bg-gray-100 border border-black rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black" />
                   </div>
@@ -711,7 +738,7 @@ const Step1: React.FC<StepComponentProps> = ({
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none z-10">📅</span>
               <input type="text" name="dateOfJoining" value={data.dateOfJoining || ""} onChange={onChange}
-                placeholder="YYYY-MM-DD" readOnly
+  placeholder="YYYY-MM-DD" readOnly onClick={() => setShowCalendar(!showCalendar)}
                 className={`${inputBase} pl-9 pr-10 cursor-pointer ${fieldErrors.dateOfJoining ? "border-red-500" : ""}`} />
               <button type="button" onClick={() => setShowCalendar(!showCalendar)}
                 className="absolute right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-xl hover:bg-[#0088cc] transition-colors cursor-pointer">
@@ -742,7 +769,7 @@ const Step1: React.FC<StepComponentProps> = ({
 // ─── STEP 2: ADDRESS ────────────────────────────────────────────────────────────
 const Step2: React.FC<StepComponentProps> = ({ data, onChange, countries, onCountryChange, fieldErrors }) => (
   <div>
-    <SectionTitle icon="🏠" title="Address Details" subtitle="Residential and location information" />
+    <SectionTitle icon="🏠" title="Address Details" subtitle="Residential and location information" centered />
     <div className="space-y-5">
       <TextareaField label="Current Address" name="currentAddress"
         placeholder="House/Flat No., Street, Area, Landmark..." required
@@ -795,15 +822,14 @@ const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
 
   return (
     <div>
-      <SectionTitle icon="🆔" title="Identity & KYC" subtitle="Government ID and verification documents" />
+      <SectionTitle icon="🆔" title="Identity & KYC" subtitle="Government ID and verification documents" centered />
       <div className="space-y-5">
         <div className="p-3 rounded-xl bg-white border border-black flex items-start gap-2">
           <span className="text-black mt-0.5 shrink-0">ℹ️</span>
-          <p className="text-xs text-black">All documents are encrypted and stored securely. Fields marked * are mandatory for KYC compliance.</p>
+          <p className="text-xs text-red-700">All documents are encrypted and stored securely. Fields marked * are mandatory for KYC compliance.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Aadhaar */}
           <div className="flex flex-col">
             <Label required>Aadhaar Number</Label>
             <input type="text" name="aadhaarNumber" placeholder="1234 5678 9012" value={data.aadhaarNumber}
@@ -818,7 +844,6 @@ const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
             )}
           </div>
 
-          {/* PAN */}
           <div className="flex flex-col">
             <Label required>PAN Number</Label>
             <input type="text" name="panNumber" placeholder="ABCDE1234F" value={data.panNumber}
@@ -855,7 +880,7 @@ const Step3: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
 // ─── STEP 4: PROFESSIONAL ──────────────────────────────────────────────────────
 const Step4: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErrors }) => (
   <div>
-    <SectionTitle icon="💼" title="Professional Details" subtitle="Experience, access levels and product assignments" />
+    <SectionTitle icon="💼" title="Professional Details" subtitle="Experience, access levels and product assignments" centered />
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SelectField label="Product Category Access" name="productCategoryAccess"
@@ -882,11 +907,11 @@ const Step4: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
 // ─── STEP 5: SALARY & COMMISSION ───────────────────────────────────────────────
 const Step5: React.FC<StepComponentProps> = ({ data, onChange, onSlabChange, fieldErrors }) => (
   <div>
-    <SectionTitle icon="💰" title="Salary & Commission" subtitle="Compensation structure and incentive configuration" />
+    <SectionTitle icon="💰" title="Salary & Commission" subtitle="Compensation structure and incentive configuration" centered />
     <div className="space-y-5">
       <div className="p-3 rounded-xl bg-white border border-black flex items-start gap-2">
         <span className="text-black mt-0.5 shrink-0">💡</span>
-        <p className="text-xs text-black">Salary details are confidential and accessible only to HR and Admin roles.</p>
+        <p className="text-xs text-red-700">Salary details are confidential and accessible only to HR and Admin roles.</p>
       </div>
 
       <div className="flex flex-col">
@@ -972,11 +997,11 @@ const Step6: React.FC<StepComponentProps> = ({ data, onChange, onFile, fieldErro
 
   return (
     <div>
-      <SectionTitle icon="🏦" title="Payout Details" subtitle="Bank account information for salary disbursement" />
+      <SectionTitle icon="🏦" title="Payout Details" subtitle="Bank account information for salary disbursement" centered />
       <div className="space-y-5">
         <div className="p-3 rounded-xl bg-white border border-black flex items-start gap-2">
           <span className="text-blue-400 mt-0.5 shrink-0">🔒</span>
-          <p className="text-xs text-black">Bank details are encrypted. Only Finance & Admin roles can access this information.</p>
+          <p className="text-xs text-red-700">Bank details are encrypted. Only Finance & Admin roles can access this information.</p>
         </div>
 
         <InputField label="Bank Account Holder Name" name="accountHolderName" placeholder="As printed on bank passbook"
@@ -1079,24 +1104,14 @@ function validateStep(step: number, data: FormData): { errors: string[]; fieldEr
   const fieldErrors: Record<string, string> = {};
 
   if (step === 1) {
-    if (!data.fullName.trim()) {
-      errors.push("Full Name is required");
-      fieldErrors.fullName = "Full Name is required";
-    }
-    if (!data.gender) {
-      errors.push("Gender is required");
-      fieldErrors.gender = "Gender is required";
-    }
-
+    if (!data.fullName.trim()) { errors.push("Full Name is required"); fieldErrors.fullName = "Full Name is required"; }
+    if (!data.gender) { errors.push("Gender is required"); fieldErrors.gender = "Gender is required"; }
     const mobileError = validateMobileNumber(data.mobileNumber);
     if (mobileError) { errors.push(mobileError); fieldErrors.mobileNumber = mobileError; }
-
     const alternateError = validateAlternateNumber(data.alternateNumber);
     if (alternateError) { errors.push(alternateError); fieldErrors.alternateNumber = alternateError; }
-
     const emailError = validateEmail(data.emailAddress);
     if (emailError) { errors.push(emailError); fieldErrors.emailAddress = emailError; }
-
     const dateError = validateDateOfJoining(data.dateOfJoining);
     if (dateError) { errors.push(dateError); fieldErrors.dateOfJoining = dateError; }
   }
@@ -1112,7 +1127,6 @@ function validateStep(step: number, data: FormData): { errors: string[]; fieldEr
   if (step === 3) {
     const aadhaarError = validateAadhaarNumber(data.aadhaarNumber);
     if (aadhaarError) { errors.push(aadhaarError); fieldErrors.aadhaarNumber = aadhaarError; }
-
     const panError = validatePanNumber(data.panNumber);
     if (panError) { errors.push(panError); fieldErrors.panNumber = panError; }
   }
@@ -1241,6 +1255,7 @@ export default function SalespersonOnboardingWizard() {
     setCurrentStep((s) => Math.max(s - 1, 1));
   };
 
+  // ✅ FIX: handleSubmit — correct response check + proper error handling
   const handleSubmit = async () => {
     const validation = validateStep(currentStep, formData);
     if (validation.errors.length > 0) {
@@ -1249,25 +1264,42 @@ export default function SalespersonOnboardingWizard() {
     }
 
     setIsSubmitting(true);
-    try {
-      const token = localStorage.getItem("ts-token");
-      if (!token) throw new Error("No authentication token found");
+    setFieldErrors({});
 
-      const fd = new FormData();
+    try {
+      // ✅ FIX 1: Token from localStorage — same as apiGet/apiPut/apiDelete use kare che
+      const token = localStorage.getItem("ts-token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const fd = new globalThis.FormData();
+
+      // ✅ FIX 2: Name parts correctly split
       const nameParts = formData.fullName.trim().split(" ");
       const firstname = nameParts[0] || "";
       const lastname = nameParts.slice(1).join(" ") || "";
-      const username = formData.emailAddress.split("@")[0] || firstname.toLowerCase();
+
+      // ✅ FIX 3: Username from email prefix (lowercase, no special chars)
+      const username = formData.emailAddress.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "") || firstname.toLowerCase();
+
+      // ✅ FIX 4: Full mobile with country code
       const fullMobile = `${selectedCountryCode} ${formData.mobileNumber}`;
       const fullAlternate = formData.alternateNumber ? `${selectedCountryCode} ${formData.alternateNumber}` : "";
 
+      // ─── Core fields (required for SalespersonCard to show) ───────────────
       fd.append("username", username);
       fd.append("firstname", firstname);
       fd.append("lastname", lastname);
       fd.append("email", formData.emailAddress);
-      fd.append("designation", formData.accessLevel || "Sales Executive");
       fd.append("contact", fullMobile);
       fd.append("password", "Welcome@123");
+
+      // ✅ FIX 5: designation = accessLevel (SalespersonCard shows sp.designation)
+      fd.append("designation", formData.accessLevel || "Sales Executive");
+
+      // ─── Additional fields ─────────────────────────────────────────────────
       fd.append("gender", formData.gender);
       fd.append("alternateNumber", fullAlternate);
       fd.append("dateOfJoining", formData.dateOfJoining);
@@ -1276,8 +1308,8 @@ export default function SalespersonOnboardingWizard() {
       fd.append("state", formData.state);
       fd.append("country", formData.country);
       fd.append("postalCode", formData.postalCode);
-      fd.append("aadhaarNumber", formData.aadhaarNumber);
-      fd.append("panNumber", formData.panNumber);
+      fd.append("aadhaarNumber", formData.aadhaarNumber.replace(/\s/g, ""));
+      fd.append("panNumber", formData.panNumber.toUpperCase());
       fd.append("productCategoryAccess", formData.productCategoryAccess);
       fd.append("leadSourceAccess", formData.leadSourceAccess);
       fd.append("accessLevel", formData.accessLevel);
@@ -1292,9 +1324,10 @@ export default function SalespersonOnboardingWizard() {
       fd.append("branchName", formData.branchName);
       fd.append("accountHolderName", formData.accountHolderName);
       fd.append("accountNumber", formData.accountNumber);
-      fd.append("ifscCode", formData.ifscCode);
+      fd.append("ifscCode", formData.ifscCode.toUpperCase());
       fd.append("accountType", formData.accountType);
 
+      // ─── File uploads ──────────────────────────────────────────────────────
       if (formData.profilePhoto) fd.append("profileImage", formData.profilePhoto);
       if (formData.aadhaarFile) fd.append("aadhaarFile", formData.aadhaarFile);
       if (formData.panFile) fd.append("panFile", formData.panFile);
@@ -1304,21 +1337,38 @@ export default function SalespersonOnboardingWizard() {
       if (formData.cancelledChequeFile) fd.append("cancelledChequeFile", formData.cancelledChequeFile);
 
       const res = await axios.post(
-        `${API_BASE}/api/salespersons/create-salesperson`, fd,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }, withCredentials: true }
+        `${API_BASE}/api/salespersons/create-salesperson`,
+        fd,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+          withCredentials: true,
+        }
       );
 
-      if (res.data?.message || res.status === 201) {
+      // ✅ FIX 6: Correct success check — backend 200 or 201 dono handle kare
+      if (res.status === 200 || res.status === 201) {
         setCreatedName(formData.fullName);
         setSubmitSuccess(true);
+      } else {
+        throw new Error(res.data?.message || "Unexpected response from server");
       }
+
     } catch (error: any) {
       console.error("❌ Onboarding submit error:", error);
+      console.error("❌ Response data:", error.response?.data);
+
       if (error.response?.status === 401) {
         alert("Session expired. Please login again.");
         router.push("/login");
+      } else if (error.response?.status === 409) {
+        // ✅ FIX 7: Duplicate email/username handle karo
+        const msg = error.response?.data?.message || "A salesperson with this email already exists";
+        setFieldErrors({ submit: msg });
       } else {
-        const msg = error.response?.data?.message || error.message || "Failed to create salesperson";
+        const msg = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to create salesperson. Please try again.";
         setFieldErrors({ submit: msg });
       }
     } finally {
@@ -1331,21 +1381,29 @@ export default function SalespersonOnboardingWizard() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6" style={{ fontFamily: "Georgia, serif" }}>
         <div className="text-center space-y-5 max-w-md w-full">
           <div className="w-24 h-24 rounded-full bg-green-400/20 border-2 border-green-400/40 flex items-center justify-center text-5xl mx-auto">✅</div>
-          <h2 className="text-3xl font-bold text-white">Onboarding Complete!</h2>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            <strong className="text-white">{createdName}</strong> has been successfully added to your team.
+          <h2 className="text-3xl font-bold text-black">Onboarding Complete!</h2>
+          <p className="text-slate-600 text-sm leading-relaxed">
+            <strong className="text-black">{createdName}</strong> has been successfully added to your team.
             <br />
-            <span className="text-amber-400">Default password: </span>
-            <code className="bg-slate-800 px-2 py-0.5 rounded text-amber-300 text-xs">Welcome@123</code>
+            <span className="text-amber-600">Default password: </span>
+            <code className="bg-gray-200 px-2 py-0.5 rounded text-amber-700 text-xs">Welcome@123</code>
             <br />
             <span className="text-slate-500 text-xs mt-1 block">Admin can change it from the Salesperson List page.</span>
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
-            <button onClick={() => router.push("/manage-salespersons/salesperson-list/managesalesperson")}
+            <button
+              onClick={() => router.push("/manage-salespersons/salesperson-list/managesalesperson")}
               className="px-6 py-2.5 bg-amber-400 text-slate-900 rounded-xl text-sm font-bold hover:bg-amber-300 transition-colors cursor-pointer">
               View Salesperson List →
             </button>
-            <button onClick={() => { setFormData(INITIAL_STATE); setCurrentStep(1); setSubmitSuccess(false); setFieldErrors({}); setSelectedCountryCode("+91"); }}
+            <button
+              onClick={() => {
+                setFormData(INITIAL_STATE);
+                setCurrentStep(1);
+                setSubmitSuccess(false);
+                setFieldErrors({});
+                setSelectedCountryCode("+91");
+              }}
               className="px-6 py-2.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors cursor-pointer">
               Add Another
             </button>
@@ -1372,11 +1430,11 @@ export default function SalespersonOnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
+      {/* <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-400/3 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-600/4 rounded-full blur-3xl" />
-      </div>
+      </div> */}
 
       <div className="w-full max-w-4xl mx-auto relative" ref={topRef}>
         <div className="mb-6 flex items-center justify-between">
@@ -1394,7 +1452,7 @@ export default function SalespersonOnboardingWizard() {
           </div>
         </div>
 
-        <div className="mb-5 h-1 bg-black rounded-full overflow-hidden">
+        <div className="mb-5 h-1 bg-gray-400 rounded-full overflow-hidden">
           <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
         </div>
 
@@ -1410,14 +1468,17 @@ export default function SalespersonOnboardingWizard() {
           ))}
         </div>
 
-        <div className="bg-white border border-gray-500 rounded-2xl shadow-xl">
+        <div className="bg-gray-100 border rounded-2xl">
+          {/* <div className="fixed inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-400/3 rounded-full blur-3xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-600/4 rounded-full blur-3xl" />
+          </div> */}
           <div className="p-6 sm:p-8">
             <StepComponent {...stepProps} />
 
-            {/* Submit error only */}
             {fieldErrors.submit && (
               <div className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-                <p className="text-xs text-red-400 flex items-center gap-1">
+                <p className="text-xs text-red-500 flex items-center gap-1">
                   <span>⚠</span> {fieldErrors.submit}
                 </p>
               </div>
@@ -1427,7 +1488,7 @@ export default function SalespersonOnboardingWizard() {
           <div className="px-6 sm:px-8 pb-6 flex items-center justify-between gap-4 border-t border-slate-800/60 pt-5">
             <button type="button"
               onClick={() => router.push("/manage-salespersons/salesperson-list/managesalesperson")}
-              className="text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer underline underline-offset-2">
+              className="text-10 text-black transition-colors cursor-pointer">
               Cancel
             </button>
 
@@ -1441,7 +1502,7 @@ export default function SalespersonOnboardingWizard() {
             <div className="flex gap-3">
               {currentStep > 1 && (
                 <button type="button" onClick={handlePrev}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-600/50 text-sm text-slate-400 hover:text-white hover:border-slate-500 transition-all duration-200 cursor-pointer">
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-black text-sm text-black transition-all duration-200 cursor-pointer">
                   ← Prev
                 </button>
               )}
