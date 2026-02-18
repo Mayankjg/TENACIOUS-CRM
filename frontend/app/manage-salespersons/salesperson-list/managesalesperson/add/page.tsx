@@ -641,9 +641,11 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-white border border-black rounded-lg shadow-2xl overflow-hidden"
+          // ✅ FIX: NO overflow-hidden on outer — it blocks inner scroll
+          className="bg-white border border-black rounded-lg shadow-2xl flex flex-col"
         >
-          <div className="p-2 border-b border-gray-200">
+          {/* Search box — fixed at top, never scrolls */}
+          <div className="p-2 border-b border-gray-200 shrink-0">
             <input
               autoFocus
               type="text"
@@ -653,7 +655,10 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
               className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black"
             />
           </div>
-          <div className="overflow-y-auto max-h-[140px]">
+          {/* ✅ FIX: Scrollable list — explicit height so scrollbar shows */}
+          <div
+            style={{ maxHeight: "140px", overflowY: "scroll" }}
+          >
             {filtered.length === 0 ? (
               <p className="text-xs text-gray-500 px-4 py-3">No results found</p>
             ) : (
@@ -661,12 +666,12 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
                 <div
                   key={country.name}
                   onMouseDown={(e) => {
-                    e.preventDefault(); // prevent blur before click registers
+                    e.preventDefault();
                     onSelect(country.callingCode);
                     setShowDropdown(false);
                     setSearch("");
                   }}
-                  className={`px-4 py-2.5 cursor-pointer hover:bg-gray-100 transition-colors text-sm ${selectedCode === country.callingCode ? "bg-gray-100 text-black font-bold" : "text-black"}`}>
+                  className={`px-4 py-2.5 cursor-pointer hover:bg-gray-100 transition-colors text-sm ${selectedCode === country.callingCode ? "bg-blue-50 text-blue-700 font-bold" : "text-black"}`}>
                   {country.displayName}
                 </div>
               ))
@@ -698,7 +703,12 @@ const Step1: React.FC<StepComponentProps> = ({
   };
 
   const handleDateSelect = (selectedDate: Date) => {
-    const formattedDate = selectedDate.toISOString().split('T')[0];
+    // ✅ FIX: toISOString() UTC convert કરે → IST ma 1 day back થઈ જાય
+    // Local year/month/day directly use કરો — timezone issue નહીં
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(selectedDate.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
     onChange({ target: { name: 'dateOfJoining', value: formattedDate } } as any);
   };
 
