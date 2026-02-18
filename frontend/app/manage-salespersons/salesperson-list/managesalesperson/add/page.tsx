@@ -138,7 +138,6 @@ interface StepComponentProps {
   countries: Country[];
   onCountryChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   onPhoneInputChange: (e: ChangeEvent<HTMLInputElement>, fieldName: "mobileNumber" | "alternateNumber") => void;
-  // ✅ FIXED: Two separate country codes
   mobileCountryCode: string;
   altCountryCode: string;
   onMobileCountryCodeChange: (code: string) => void;
@@ -384,12 +383,12 @@ const CustomCalendar: React.FC<CalendarProps> = ({ date, onDateSelect, onClose }
               return (
                 <div key={i}
                   className={`py-1.5 rounded-md ${!isValid
-                      ? "text-gray-300"
-                      : isPast
-                        ? "text-gray-200 cursor-not-allowed"
-                        : isCurrent
-                          ? "bg-[#0099E6] text-white font-bold cursor-pointer"
-                          : "text-gray-700 hover:bg-gray-200 cursor-pointer"
+                    ? "text-gray-300"
+                    : isPast
+                      ? "text-gray-200 cursor-not-allowed"
+                      : isCurrent
+                        ? "bg-[#0099E6] text-white font-bold cursor-pointer"
+                        : "text-gray-700 hover:bg-gray-200 cursor-pointer"
                     }`}
                   onClick={() => { if (isValid && !isPast) handleDayClick(day); }}>
                   {isValid ? day : ""}
@@ -576,15 +575,12 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
     c.name.toLowerCase().includes(search.toLowerCase()) || c.callingCode.includes(search)
   );
 
-  // ✅ Calculate exact position using getBoundingClientRect — no more overlay issues
   const openDropdown = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const dropdownHeight = 300;
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
-
-      // Open upward if not enough space below
       const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
       setDropdownStyle({
@@ -626,7 +622,6 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
 
   return (
     <>
-      {/* ✅ Trigger button — absolute inside parent input container */}
       <div
         ref={triggerRef}
         className="absolute left-0 top-0 h-full w-[70px] z-10 border border-r-0 rounded-l-xl bg-gray-200 flex items-center justify-center text-black text-xs font-medium cursor-pointer hover:bg-gray-300 transition-colors select-none"
@@ -636,15 +631,12 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
         <span className="ml-0.5 text-[9px] shrink-0">▾</span>
       </div>
 
-      {/* ✅ Dropdown rendered at fixed position — completely outside parent stacking context */}
       {showDropdown && (
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          // ✅ FIX: NO overflow-hidden on outer — it blocks inner scroll
           className="bg-white border border-black rounded-lg shadow-2xl flex flex-col"
         >
-          {/* Search box — fixed at top, never scrolls */}
           <div className="p-2 border-b border-gray-200 shrink-0">
             <input
               autoFocus
@@ -655,7 +647,6 @@ const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, se
               className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black"
             />
           </div>
-          {/* ✅ FIX: Scrollable list — explicit height so scrollbar shows */}
           <div
             style={{ maxHeight: "140px", overflowY: "scroll" }}
           >
@@ -703,8 +694,6 @@ const Step1: React.FC<StepComponentProps> = ({
   };
 
   const handleDateSelect = (selectedDate: Date) => {
-    // ✅ FIX: toISOString() UTC convert કરે → IST ma 1 day back થઈ જાય
-    // Local year/month/day directly use કરો — timezone issue નહીં
     const year = selectedDate.getFullYear();
     const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
     const day = String(selectedDate.getDate()).padStart(2, "0");
@@ -716,7 +705,6 @@ const Step1: React.FC<StepComponentProps> = ({
     <div>
       <SectionTitle icon="👤" title="Basic Information" subtitle="Personal details of the salesperson" centered />
       <div className="space-y-5">
-        {/* Photo Upload */}
         <div className="flex flex-col gap-1.5">
           <Label>Profile Photo</Label>
           <div className="flex items-center gap-4">
@@ -751,7 +739,6 @@ const Step1: React.FC<StepComponentProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* ✅ FIXED: Mobile Number with its own independent country code */}
           <div className="flex flex-col">
             <Label required>Mobile Number</Label>
             <div className="relative h-[40px]">
@@ -777,7 +764,6 @@ const Step1: React.FC<StepComponentProps> = ({
             )}
           </div>
 
-          {/* ✅ FIXED: Alternate Number with its own independent country code */}
           <div className="flex flex-col">
             <Label>Alternate Number</Label>
             <div className="relative h-[40px]">
@@ -811,7 +797,6 @@ const Step1: React.FC<StepComponentProps> = ({
             error={fieldErrors.emailAddress}
           />
 
-          {/* Date of Joining */}
           <div className="flex flex-col">
             <Label required>Date of Joining</Label>
             <div className="relative">
@@ -1246,7 +1231,6 @@ export default function SalespersonOnboardingWizard() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdName, setCreatedName] = useState("");
 
-  // ✅ FIXED: Two separate country code states
   const [mobileCountryCode, setMobileCountryCode] = useState("+91");
   const [altCountryCode, setAltCountryCode] = useState("+91");
 
@@ -1289,7 +1273,6 @@ export default function SalespersonOnboardingWizard() {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [currentStep]);
 
-  // ✅ FIXED: Address country change → sync BOTH mobile and alternate country codes
   const handleCountryChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedCountryName = e.target.value;
     const selectedCountry = countries.find((c) => c.name === selectedCountryName);
@@ -1297,7 +1280,6 @@ export default function SalespersonOnboardingWizard() {
 
     setFormData((prev) => ({ ...prev, country: selectedCountryName }));
 
-    // ✅ Sync both mobile and alternate country codes when address country changes
     setMobileCountryCode(newCallingCode);
     setAltCountryCode(newCallingCode);
 
@@ -1364,7 +1346,6 @@ export default function SalespersonOnboardingWizard() {
       const lastname = nameParts.slice(1).join(" ") || "";
       const username = formData.emailAddress.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "") || firstname.toLowerCase();
 
-      // ✅ FIXED: Use separate country codes for mobile and alternate
       const fullMobile = `${mobileCountryCode} ${formData.mobileNumber}`;
       const fullAlternate = formData.alternateNumber ? `${altCountryCode} ${formData.alternateNumber}` : "";
 
@@ -1472,7 +1453,6 @@ export default function SalespersonOnboardingWizard() {
                 setCurrentStep(1);
                 setSubmitSuccess(false);
                 setFieldErrors({});
-                // ✅ FIXED: Reset both country codes
                 setMobileCountryCode("+91");
                 setAltCountryCode("+91");
               }}
@@ -1488,7 +1468,6 @@ export default function SalespersonOnboardingWizard() {
   const StepComponent = STEP_COMPONENTS[currentStep - 1];
   const progressPct = ((currentStep - 1) / (STEPS.length - 1)) * 100;
 
-  // ✅ FIXED: Pass separate country codes via stepProps
   const stepProps: StepComponentProps = {
     data: formData,
     onChange: handleChange,
