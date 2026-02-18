@@ -31,7 +31,7 @@ interface TenantInfo {
 // ============================================
 // API CONFIGURATION
 // ============================================
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://two9-01-2026.onrender.com";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://one4-02-2026.onrender.com";
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE;
