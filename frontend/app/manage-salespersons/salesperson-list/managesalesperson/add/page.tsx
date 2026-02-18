@@ -128,6 +128,7 @@ interface IncentiveSlabsProps {
   onChange: (slabs: IncentiveSlab[]) => void;
 }
 
+// ✅ FIXED: Separate country codes for mobile and alternate
 interface StepComponentProps {
   data: FormData;
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
@@ -137,8 +138,11 @@ interface StepComponentProps {
   countries: Country[];
   onCountryChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   onPhoneInputChange: (e: ChangeEvent<HTMLInputElement>, fieldName: "mobileNumber" | "alternateNumber") => void;
-  selectedCountryCode: string;
-  onCountryCodeChange: (code: string) => void;
+  // ✅ FIXED: Two separate country codes
+  mobileCountryCode: string;
+  altCountryCode: string;
+  onMobileCountryCodeChange: (code: string) => void;
+  onAltCountryCodeChange: (code: string) => void;
 }
 
 interface CalendarProps {
@@ -148,7 +152,6 @@ interface CalendarProps {
 }
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
-// ✅ FIX: Single API_BASE used everywhere consistently
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://one4-02-2026.onrender.com";
 
 const STEPS: Step[] = [
@@ -555,20 +558,135 @@ const IncentiveSlabs: React.FC<IncentiveSlabsProps> = ({ slabs, onChange }) => {
   );
 };
 
+// ─── COUNTRY CODE DROPDOWN (Reusable) — Fixed positioning to avoid overlay issues ──
+interface CountryCodeDropdownProps {
+  countries: Country[];
+  selectedCode: string;
+  onSelect: (code: string) => void;
+}
+
+const CountryCodeDropdown: React.FC<CountryCodeDropdownProps> = ({ countries, selectedCode, onSelect }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filtered = countries.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) || c.callingCode.includes(search)
+  );
+
+  // ✅ Calculate exact position using getBoundingClientRect — no more overlay issues
+  const openDropdown = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const dropdownHeight = 300;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // Open upward if not enough space below
+      const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+
+      setDropdownStyle({
+        position: "fixed",
+        left: rect.left,
+        width: 280,
+        zIndex: 99999,
+        ...(openUpward
+          ? { bottom: window.innerHeight - rect.top + 4 }
+          : { top: rect.bottom + 4 }),
+      });
+    }
+    setShowDropdown(true);
+  };
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        triggerRef.current && !triggerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
+        setShowDropdown(false);
+        setSearch("");
+      }
+    };
+    const handleScroll = () => {
+      setShowDropdown(false);
+      setSearch("");
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [showDropdown]);
+
+  return (
+    <>
+      {/* ✅ Trigger button — absolute inside parent input container */}
+      <div
+        ref={triggerRef}
+        className="absolute left-0 top-0 h-full w-[70px] z-10 border border-r-0 rounded-l-xl bg-gray-200 flex items-center justify-center text-black text-xs font-medium cursor-pointer hover:bg-gray-300 transition-colors select-none"
+        onClick={() => showDropdown ? (setShowDropdown(false), setSearch("")) : openDropdown()}
+      >
+        <span className="truncate max-w-[44px] text-center">{selectedCode || "+91"}</span>
+        <span className="ml-0.5 text-[9px] shrink-0">▾</span>
+      </div>
+
+      {/* ✅ Dropdown rendered at fixed position — completely outside parent stacking context */}
+      {showDropdown && (
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white border border-black rounded-lg shadow-2xl overflow-hidden"
+        >
+          <div className="p-2 border-b border-gray-200">
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search country..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black"
+            />
+          </div>
+          <div className="overflow-y-auto max-h-[140px]">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-gray-500 px-4 py-3">No results found</p>
+            ) : (
+              filtered.map((country) => (
+                <div
+                  key={country.name}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // prevent blur before click registers
+                    onSelect(country.callingCode);
+                    setShowDropdown(false);
+                    setSearch("");
+                  }}
+                  className={`px-4 py-2.5 cursor-pointer hover:bg-gray-100 transition-colors text-sm ${selectedCode === country.callingCode ? "bg-gray-100 text-black font-bold" : "text-black"}`}>
+                  {country.displayName}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 // ─── STEP 1: BASIC INFO ────────────────────────────────────────────────────────
 const Step1: React.FC<StepComponentProps> = ({
   data, onChange, onFile, fieldErrors, countries,
-  selectedCountryCode, onCountryCodeChange, onPhoneInputChange
+  mobileCountryCode, altCountryCode,
+  onMobileCountryCodeChange, onAltCountryCodeChange,
+  onPhoneInputChange
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [showAltCountryDropdown, setShowAltCountryDropdown] = useState(false);
-  const [countrySearch, setCountrySearch] = useState("");
-  const [altCountrySearch, setAltCountrySearch] = useState("");
-
-  const countryDropdownRef = useRef<HTMLDivElement>(null);
-  const altCountryDropdownRef = useRef<HTMLDivElement>(null);
 
   const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -583,27 +701,6 @@ const Step1: React.FC<StepComponentProps> = ({
     const formattedDate = selectedDate.toISOString().split('T')[0];
     onChange({ target: { name: 'dateOfJoining', value: formattedDate } } as any);
   };
-
-  const filteredCountries = countries.filter(c =>
-    c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.callingCode.includes(countrySearch)
-  );
-
-  const filteredAltCountries = countries.filter(c =>
-    c.name.toLowerCase().includes(altCountrySearch.toLowerCase()) || c.callingCode.includes(altCountrySearch)
-  );
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
-        setShowCountryDropdown(false);
-      }
-      if (altCountryDropdownRef.current && !altCountryDropdownRef.current.contains(event.target as Node)) {
-        setShowAltCountryDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <div>
@@ -644,38 +741,24 @@ const Step1: React.FC<StepComponentProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Mobile Number */}
+          {/* ✅ FIXED: Mobile Number with its own independent country code */}
           <div className="flex flex-col">
             <Label required>Mobile Number</Label>
             <div className="relative h-[40px]">
-              <div ref={countryDropdownRef}
-                className="absolute left-0 top-0 h-full w-[70px] border border-r-0 rounded-l-xl bg-gray-200 flex items-center justify-center text-black text-xs font-medium cursor-pointer z-10 hover:bg-gray-200 transition-colors"
-                onClick={() => setShowCountryDropdown(!showCountryDropdown)}>
-                {selectedCountryCode || "+91"}
-                <span className="ml-1 text-[10px]">▾</span>
-              </div>
-              {showCountryDropdown && (
-                <div className="absolute left-0 top-full mt-1 bg-white border border-black rounded-lg shadow-xl w-[280px] max-h-[300px] overflow-hidden z-50">
-                  <div className="p-2 border-b border-slate-600">
-                    <input autoFocus type="text" placeholder="Search country..." value={countrySearch}
-                      onChange={(e) => setCountrySearch(e.target.value)}
-                      className="w-full bg-gray-100 border border-black rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black" />
-                  </div>
-                  <div className="overflow-y-auto max-h-[130px]">
-                    {filteredCountries.map((country) => (
-                      <div key={country.name}
-                        onClick={() => { onCountryCodeChange(country.callingCode); setShowCountryDropdown(false); setCountrySearch(""); }}
-                        className={`px-4 py-2 cursor-pointer hover:bg-gray-200 transition-colors ${selectedCountryCode === country.callingCode ? 'bg-gray-200 text-black font-bold' : 'text-black'}`}>
-                        <div className="text-sm">{country.displayName}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <input type="text" name="mobileNumber" value={data.mobileNumber || ""}
+              <CountryCodeDropdown
+                countries={countries}
+                selectedCode={mobileCountryCode}
+                onSelect={onMobileCountryCodeChange}
+              />
+              <input
+                type="text"
+                name="mobileNumber"
+                value={data.mobileNumber || ""}
                 onChange={(e) => onPhoneInputChange(e, "mobileNumber")}
-                placeholder="Mobile Number" maxLength={15}
-                className={`${inputBase} pl-[82px] h-full ${fieldErrors.mobileNumber ? "border-red-500" : ""}`} />
+                placeholder="Mobile Number"
+                maxLength={15}
+                className={`${inputBase} pl-[82px] h-full ${fieldErrors.mobileNumber ? "border-red-500" : ""}`}
+              />
             </div>
             {fieldErrors.mobileNumber && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -684,38 +767,24 @@ const Step1: React.FC<StepComponentProps> = ({
             )}
           </div>
 
-          {/* Alternate Number */}
+          {/* ✅ FIXED: Alternate Number with its own independent country code */}
           <div className="flex flex-col">
             <Label>Alternate Number</Label>
             <div className="relative h-[40px]">
-              <div ref={altCountryDropdownRef}
-                className="absolute left-0 top-0 h-full w-[70px] border border-r-0 rounded-l-xl bg-gray-200 flex items-center justify-center text-black text-xs font-medium cursor-pointer z-10 hover:bg-gray-200 transition-colors"
-                onClick={() => setShowAltCountryDropdown(!showAltCountryDropdown)}>
-                {selectedCountryCode || "+91"}
-                <span className="ml-1 text-[10px]">▾</span>
-              </div>
-              {showAltCountryDropdown && (
-                <div className="absolute left-0 top-full mt-1 bg-white border border-black rounded-lg shadow-xl w-[280px] max-h-[300px] overflow-hidden z-50">
-                  <div className="p-2 border-b border-slate-600">
-                    <input autoFocus type="text" placeholder="Search country..." value={altCountrySearch}
-                      onChange={(e) => setAltCountrySearch(e.target.value)}
-                      className="w-full bg-gray-100 border border-black rounded px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:border-black" />
-                  </div>
-                  <div className="overflow-y-auto max-h-[130px]">
-                    {filteredAltCountries.map((country) => (
-                      <div key={country.name}
-                        onClick={() => { onCountryCodeChange(country.callingCode); setShowAltCountryDropdown(false); setAltCountrySearch(""); }}
-                        className={`px-4 py-2 cursor-pointer hover:bg-gray-200 transition-colors ${selectedCountryCode === country.callingCode ? 'bg-gray-200 text-black font-bold' : 'text-black'}`}>
-                        <div className="text-sm">{country.displayName}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <input type="text" name="alternateNumber" value={data.alternateNumber || ""}
+              <CountryCodeDropdown
+                countries={countries}
+                selectedCode={altCountryCode}
+                onSelect={onAltCountryCodeChange}
+              />
+              <input
+                type="text"
+                name="alternateNumber"
+                value={data.alternateNumber || ""}
                 onChange={(e) => onPhoneInputChange(e, "alternateNumber")}
-                placeholder="Alternate Number" maxLength={15}
-                className={`${inputBase} pl-[82px] h-full ${fieldErrors.alternateNumber ? "border-red-500" : ""}`} />
+                placeholder="Alternate Number"
+                maxLength={15}
+                className={`${inputBase} pl-[82px] h-full ${fieldErrors.alternateNumber ? "border-red-500" : ""}`}
+              />
             </div>
             {fieldErrors.alternateNumber && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -738,7 +807,7 @@ const Step1: React.FC<StepComponentProps> = ({
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none z-10">📅</span>
               <input type="text" name="dateOfJoining" value={data.dateOfJoining || ""} onChange={onChange}
-  placeholder="YYYY-MM-DD" readOnly onClick={() => setShowCalendar(!showCalendar)}
+                placeholder="YYYY-MM-DD" readOnly onClick={() => setShowCalendar(!showCalendar)}
                 className={`${inputBase} pl-9 pr-10 cursor-pointer ${fieldErrors.dateOfJoining ? "border-red-500" : ""}`} />
               <button type="button" onClick={() => setShowCalendar(!showCalendar)}
                 className="absolute right-0 top-0 h-full bg-[#0099E6] px-3 flex items-center justify-center rounded-r-xl hover:bg-[#0088cc] transition-colors cursor-pointer">
@@ -1166,9 +1235,12 @@ export default function SalespersonOnboardingWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdName, setCreatedName] = useState("");
-  const [selectedCountryCode, setSelectedCountryCode] = useState("+91");
-  const topRef = useRef<HTMLDivElement>(null);
 
+  // ✅ FIXED: Two separate country code states
+  const [mobileCountryCode, setMobileCountryCode] = useState("+91");
+  const [altCountryCode, setAltCountryCode] = useState("+91");
+
+  const topRef = useRef<HTMLDivElement>(null);
   const [countries, setCountries] = useState<Country[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
 
@@ -1207,14 +1279,18 @@ export default function SalespersonOnboardingWizard() {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [currentStep]);
 
-  const handleCountryCodeChange = (code: string) => setSelectedCountryCode(code);
-
+  // ✅ FIXED: Address country change → sync BOTH mobile and alternate country codes
   const handleCountryChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedCountryName = e.target.value;
     const selectedCountry = countries.find((c) => c.name === selectedCountryName);
     const newCallingCode = selectedCountry?.callingCode || "+91";
+
     setFormData((prev) => ({ ...prev, country: selectedCountryName }));
-    setSelectedCountryCode(newCallingCode);
+
+    // ✅ Sync both mobile and alternate country codes when address country changes
+    setMobileCountryCode(newCallingCode);
+    setAltCountryCode(newCallingCode);
+
     if (fieldErrors.country) {
       setFieldErrors((prev) => { const n = { ...prev }; delete n.country; return n; });
     }
@@ -1237,7 +1313,6 @@ export default function SalespersonOnboardingWizard() {
   };
 
   const handleFile = (name: string, file: File | null) => setFormData((prev) => ({ ...prev, [name]: file }));
-
   const handleSlabChange = (newSlabs: IncentiveSlab[]) => setFormData((prev) => ({ ...prev, incentiveSlabs: newSlabs }));
 
   const handleNext = () => {
@@ -1255,7 +1330,6 @@ export default function SalespersonOnboardingWizard() {
     setCurrentStep((s) => Math.max(s - 1, 1));
   };
 
-  // ✅ FIX: handleSubmit — correct response check + proper error handling
   const handleSubmit = async () => {
     const validation = validateStep(currentStep, formData);
     if (validation.errors.length > 0) {
@@ -1267,7 +1341,6 @@ export default function SalespersonOnboardingWizard() {
     setFieldErrors({});
 
     try {
-      // ✅ FIX 1: Token from localStorage — same as apiGet/apiPut/apiDelete use kare che
       const token = localStorage.getItem("ts-token");
       if (!token) {
         router.push("/login");
@@ -1276,30 +1349,22 @@ export default function SalespersonOnboardingWizard() {
 
       const fd = new globalThis.FormData();
 
-      // ✅ FIX 2: Name parts correctly split
       const nameParts = formData.fullName.trim().split(" ");
       const firstname = nameParts[0] || "";
       const lastname = nameParts.slice(1).join(" ") || "";
-
-      // ✅ FIX 3: Username from email prefix (lowercase, no special chars)
       const username = formData.emailAddress.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "") || firstname.toLowerCase();
 
-      // ✅ FIX 4: Full mobile with country code
-      const fullMobile = `${selectedCountryCode} ${formData.mobileNumber}`;
-      const fullAlternate = formData.alternateNumber ? `${selectedCountryCode} ${formData.alternateNumber}` : "";
+      // ✅ FIXED: Use separate country codes for mobile and alternate
+      const fullMobile = `${mobileCountryCode} ${formData.mobileNumber}`;
+      const fullAlternate = formData.alternateNumber ? `${altCountryCode} ${formData.alternateNumber}` : "";
 
-      // ─── Core fields (required for SalespersonCard to show) ───────────────
       fd.append("username", username);
       fd.append("firstname", firstname);
       fd.append("lastname", lastname);
       fd.append("email", formData.emailAddress);
       fd.append("contact", fullMobile);
       fd.append("password", "Welcome@123");
-
-      // ✅ FIX 5: designation = accessLevel (SalespersonCard shows sp.designation)
       fd.append("designation", formData.accessLevel || "Sales Executive");
-
-      // ─── Additional fields ─────────────────────────────────────────────────
       fd.append("gender", formData.gender);
       fd.append("alternateNumber", fullAlternate);
       fd.append("dateOfJoining", formData.dateOfJoining);
@@ -1327,7 +1392,6 @@ export default function SalespersonOnboardingWizard() {
       fd.append("ifscCode", formData.ifscCode.toUpperCase());
       fd.append("accountType", formData.accountType);
 
-      // ─── File uploads ──────────────────────────────────────────────────────
       if (formData.profilePhoto) fd.append("profileImage", formData.profilePhoto);
       if (formData.aadhaarFile) fd.append("aadhaarFile", formData.aadhaarFile);
       if (formData.panFile) fd.append("panFile", formData.panFile);
@@ -1348,7 +1412,6 @@ export default function SalespersonOnboardingWizard() {
         }
       );
 
-      // ✅ FIX 6: Correct success check — backend 200 or 201 dono handle kare
       if (res.status === 200 || res.status === 201) {
         setCreatedName(formData.fullName);
         setSubmitSuccess(true);
@@ -1358,13 +1421,10 @@ export default function SalespersonOnboardingWizard() {
 
     } catch (error: any) {
       console.error("❌ Onboarding submit error:", error);
-      console.error("❌ Response data:", error.response?.data);
-
       if (error.response?.status === 401) {
         alert("Session expired. Please login again.");
         router.push("/login");
       } else if (error.response?.status === 409) {
-        // ✅ FIX 7: Duplicate email/username handle karo
         const msg = error.response?.data?.message || "A salesperson with this email already exists";
         setFieldErrors({ submit: msg });
       } else {
@@ -1402,7 +1462,9 @@ export default function SalespersonOnboardingWizard() {
                 setCurrentStep(1);
                 setSubmitSuccess(false);
                 setFieldErrors({});
-                setSelectedCountryCode("+91");
+                // ✅ FIXED: Reset both country codes
+                setMobileCountryCode("+91");
+                setAltCountryCode("+91");
               }}
               className="px-6 py-2.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors cursor-pointer">
               Add Another
@@ -1416,6 +1478,7 @@ export default function SalespersonOnboardingWizard() {
   const StepComponent = STEP_COMPONENTS[currentStep - 1];
   const progressPct = ((currentStep - 1) / (STEPS.length - 1)) * 100;
 
+  // ✅ FIXED: Pass separate country codes via stepProps
   const stepProps: StepComponentProps = {
     data: formData,
     onChange: handleChange,
@@ -1425,17 +1488,14 @@ export default function SalespersonOnboardingWizard() {
     countries,
     onCountryChange: handleCountryChange,
     onPhoneInputChange: handlePhoneInputChange,
-    selectedCountryCode,
-    onCountryCodeChange: handleCountryCodeChange,
+    mobileCountryCode,
+    altCountryCode,
+    onMobileCountryCodeChange: setMobileCountryCode,
+    onAltCountryCodeChange: setAltCountryCode,
   };
 
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
-      {/* <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-400/3 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-600/4 rounded-full blur-3xl" />
-      </div> */}
-
       <div className="w-full max-w-4xl mx-auto relative" ref={topRef}>
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -1469,10 +1529,6 @@ export default function SalespersonOnboardingWizard() {
         </div>
 
         <div className="bg-gray-100 border rounded-2xl">
-          {/* <div className="fixed inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-0 left-1/3 w-96 h-96 bg-amber-400/3 rounded-full blur-3xl" />
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-600/4 rounded-full blur-3xl" />
-          </div> */}
           <div className="p-6 sm:p-8">
             <StepComponent {...stepProps} />
 
